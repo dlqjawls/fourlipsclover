@@ -1,4 +1,4 @@
-package com.example.frontend
+package com.patriot.fourlipsclover
 
 import io.flutter.embedding.android.FlutterActivity
 
