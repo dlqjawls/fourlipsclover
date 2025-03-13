@@ -10,7 +10,7 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
     signingConfigs {
-        create("debug") {
+         val debugSigningConfig = signingConfigs.findByName("debug") ?: create("debug")  {
             storeFile = file("debug.keystore")  // 프로젝트 내부 keystore 사용
             storePassword = "android"
             keyAlias = "androiddebugkey"
