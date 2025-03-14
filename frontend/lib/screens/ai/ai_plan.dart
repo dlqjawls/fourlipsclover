@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
-class JournalScreen extends StatelessWidget {
-  const JournalScreen({Key? key}) : super(key: key);
+class AIPlanScreen extends StatelessWidget {
+  const AIPlanScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
       body: Center(
         child: Text(
-          '데일리 로그 화면',
+          'AI 추천 화면',
           style: TextStyle(fontSize: 24),
         ),
       ),
