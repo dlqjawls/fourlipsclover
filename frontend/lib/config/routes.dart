@@ -12,7 +12,7 @@ class AppRoutes {
     '/group': (context) => const BaseScreen(),
     '/login': (context) => const LoginScreen(),
     '/user': (context) => const UserScreen(),
-    '/home' : (context) => const HomeScreen(),
+    '/home' : (context) => const BaseScreen(),
     // 앱의 경로를 여기에 등록
     // 예시: '/': (context) => HomeScreen(),
     // 예시: '/login': (context) => LoginScreen(),

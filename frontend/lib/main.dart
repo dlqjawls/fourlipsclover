@@ -27,8 +27,8 @@ class MyApp extends StatelessWidget {
           splashColor: Colors.transparent,
           highlightColor: Colors.transparent,
         ),
-        //home: const LoginScreen(), // home 속성 추가
-        home: const BaseScreen(), // home 속성 추가
+        home: const LoginScreen(), // home 속성 추가
+        //home: const BaseScreen(), // home 속성 추가
         routes: AppRoutes.routes,
       ),
     );
