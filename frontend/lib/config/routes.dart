@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/home/home_screen.dart';
 // 여기에 화면 import 추가 예정
 import '../screens/auth/login_screen.dart';
 import '../screens/user/user.dart';
@@ -7,9 +8,7 @@ class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
     '/login': (context) => const LoginScreen(),
     '/user': (context) => const UserScreen(),
-    // 앱의 경로를 여기에 등록
-    // 예시: '/': (context) => HomeScreen(),
-    // 예시: '/login': (context) => LoginScreen(),
+    '/home' : (context) => const HomeScreen(),
   };
 
   // 네비게이션 헬퍼 메서드
