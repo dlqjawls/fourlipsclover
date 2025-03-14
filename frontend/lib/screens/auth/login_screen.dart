@@ -38,12 +38,12 @@ class _LoginScreenState extends State<LoginScreen> {
               Image.asset('assets/images/logo.png', width: 250, height: 250),
               const SizedBox(height: 50),
               const Text(
-                '네잎클로버',
+                '네입클로버',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
               const Text(
-                '당신의 건강한 식습관 파트너',
+                '니입에 행운을 더하다',
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
 

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AppProvider with ChangeNotifier {
   bool _isLoggedIn = false;
@@ -11,34 +14,73 @@ class AppProvider with ChangeNotifier {
   Future<void> kakaoLogin() async {
     try {
       bool isInstalled = await isKakaoTalkInstalled();
+      OAuthToken? token;
 
       if (isInstalled) {
         try {
-          await UserApi.instance.loginWithKakaoTalk();
+          token = await UserApi.instance.loginWithKakaoTalk();
         } catch (error) {
-          await UserApi.instance.loginWithKakaoAccount();
+          debugPrint('카카오톡 로그인 실패, 계정 로그인 시도: $error');
+          token = await UserApi.instance.loginWithKakaoAccount();
         }
       } else {
-        await UserApi.instance.loginWithKakaoAccount();
+        token = await UserApi.instance.loginWithKakaoAccount();
       }
 
-      _user = await UserApi.instance.me();
-      _isLoggedIn = true;
-      notifyListeners();
+      if (token == null) {
+        throw Exception('카카오 로그인 실패: 토큰을 가져오지 못했습니다.');
+      }
+
+      final response = await http.post(
+        Uri.parse('http:/아마도백엔드주소가 이러겠지?/auth/kakao'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'access_token': token.accessToken}),
+      );
+
+      if (response.statusCode == 200) {
+        _user = await UserApi.instance.me();
+        _isLoggedIn = true;
+        await saveLoginState();
+        notifyListeners();
+      } else {
+        debugPrint('백엔드 로그인 실패: ${response.body}');
+        throw Exception('서버 응답 오류: ${response.statusCode}');
+      }
     } catch (error) {
+      debugPrint('로그인 오류 발생: $error');
       _isLoggedIn = false;
       _user = null;
       notifyListeners();
-      rethrow;
+      throw error;
     }
   }
 
-  void logout() {
+  Future<void> logout() async {
+    try {
+      await UserApi.instance.logout();
+    } catch (error) {
+      debugPrint('카카오 로그아웃 실패: $error');
+    }
+
     _isLoggedIn = false;
     _user = null;
+    await saveLoginState();
+    notifyListeners();
+  }
+
+  Future<void> saveLoginState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', _isLoggedIn);
+  }
+
+  Future<void> loadLoginState() async {
+    final prefs = await SharedPreferences.getInstance();
+    _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
     notifyListeners();
   }
 }
+
+
 // // ChangeNotifier를 상속받아 상태 변경을 알림
 // class AppProvider with ChangeNotifier {
 //   // 앱에서 관리할 상태 변수들 (밑줄로 시작하는 private 변수)
