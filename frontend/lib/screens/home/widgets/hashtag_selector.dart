@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/theme.dart';
+import '../../../screens/search_results/search_results_screen.dart';
 
 class HashtagSelector extends StatefulWidget {
   const HashtagSelector({Key? key}) : super(key: key);
@@ -38,15 +39,22 @@ class _HashtagSelectorState extends State<HashtagSelector> {
   // 초기에 보여줄 해시태그 개수
   final int initialTagCount = 3;
 
-  void _handleTagSelection(String hashtag) {
-    setState(() {
-      selectedHashtag = hashtag;
-    });
+ void _handleTagSelection(String hashtag) {
+  setState(() {
+    selectedHashtag = hashtag;
+  });
 
-    // TODO: API 연동 - 선택된 해시태그로 검색 요청
-    print('선택된 해시태그로 검색: $hashtag');
-    // 예: searchProvider.searchByTag(hashtag);
-  }
+  // 검색 결과 페이지로 이동
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => SearchResultsScreen(
+        searchQuery: "맛집",  // 기본 검색어
+        selectedTag: hashtag,  // 선택된 해시태그
+      ),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
