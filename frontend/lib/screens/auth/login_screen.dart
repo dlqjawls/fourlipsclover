@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../config/routes.dart';
+import '../../config/theme.dart'; // 테마 import 추가
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -81,6 +82,38 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
+
+              // 여기부터 임시 홈 화면 이동 버튼
+              const SizedBox(height: 20),
+              Container(
+                width: 300,
+                height: 45,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      // 임시로 홈 화면으로 이동
+                      AppRoutes.navigateTo(context, '/home');
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: const Center(
+                      child: Text(
+                        '임시: 홈 화면으로 이동',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // 여기까지 임시 홈 화면 이동 버튼
             ],
           ),
         ),
