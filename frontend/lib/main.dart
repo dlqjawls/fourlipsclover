@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'config/routes.dart';
+import 'config/theme.dart'; // AppTheme 클래스 임포트
 import 'providers/app_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'services/kakao_service.dart';
@@ -21,12 +22,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: '네입클로버',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFFEE500)),
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-        ),
+        theme: AppTheme.lightTheme, // AppTheme 클래스의 lightTheme 적용
         home: const LoginScreen(), // home 속성 추가
         //home: const BaseScreen(), // home 속성 추가
         routes: AppRoutes.routes,

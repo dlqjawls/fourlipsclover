@@ -6,6 +6,7 @@ import 'widgets/local_favorites.dart';
 import 'widgets/category_recommendations.dart';
 import 'widgets/search_mode_view.dart';
 import '../../../models/search_history.dart';
+import '../search_results/search_results_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -17,7 +18,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isSearchMode = false;
   final TextEditingController _searchController = TextEditingController();
-  
+
   final List<SearchHistory> _searchHistory = [
     SearchHistory(query: "수완지구 양식", date: "03.14"),
     SearchHistory(query: "수완지구 술집", date: "03.10"),
@@ -56,7 +57,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _handleSearch(String query) {
     print('검색어: $query');
-    // 검색 기능 구현
+
+    // 검색 결과 페이지로 이동
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SearchResultsScreen(searchQuery: query),
+      ),
+    );
   }
 
   @override
@@ -74,24 +82,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
-          child: _isSearchMode
-              ? SearchModeView(
-                  controller: _searchController,
-                  searchHistory: _searchHistory,
-                  onBack: () => _toggleSearchMode(false),
-                  onSearch: _handleSearch,
-                  onClearHistory: () {
-                    setState(() {
-                      _searchHistory.clear();
-                    });
-                  },
-                  onRemoveHistoryItem: (index) {
-                    setState(() {
-                      _searchHistory.removeAt(index);
-                    });
-                  },
-                )
-              : _buildNormalModeUI(screenHeight),
+          child:
+              _isSearchMode
+                  ? SearchModeView(
+                    controller: _searchController,
+                    searchHistory: _searchHistory,
+                    onBack: () => _toggleSearchMode(false),
+                    onSearch: _handleSearch,
+                    onClearHistory: () {
+                      setState(() {
+                        _searchHistory.clear();
+                      });
+                    },
+                    onRemoveHistoryItem: (index) {
+                      setState(() {
+                        _searchHistory.removeAt(index);
+                      });
+                    },
+                  )
+                  : _buildNormalModeUI(screenHeight),
         ),
       ),
     );
