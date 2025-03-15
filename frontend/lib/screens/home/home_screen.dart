@@ -1,55 +1,132 @@
 import 'package:flutter/material.dart';
-import '../../../config/theme.dart';
 import 'widgets/logo_section.dart';
 import 'widgets/search_bar.dart';
 import 'widgets/hashtag_selector.dart';
 import 'widgets/local_favorites.dart';
 import 'widgets/category_recommendations.dart';
+import 'widgets/search_mode_view.dart';
+import '../../../models/search_history.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  bool _isSearchMode = false;
+  final TextEditingController _searchController = TextEditingController();
+  
+  final List<SearchHistory> _searchHistory = [
+    SearchHistory(query: "수완지구 양식", date: "03.14"),
+    SearchHistory(query: "수완지구 술집", date: "03.10"),
+    SearchHistory(query: "각화동", date: "03.08"),
+    SearchHistory(query: "우츠", date: "03.07"),
+    SearchHistory(query: "대전", date: "03.07"),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _isSearchMode) {
+      setState(() {
+        _isSearchMode = false;
+      });
+    }
+  }
+
+  void _toggleSearchMode(bool value) {
+    setState(() {
+      _isSearchMode = value;
+    });
+  }
+
+  void _handleSearch(String query) {
+    print('검색어: $query');
+    // 검색 기능 구현
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // 화면 크기 정보 가져오기
     final screenHeight = MediaQuery.of(context).size.height;
 
-    return Scaffold(
-      backgroundColor: Colors.white, // 명시적으로 흰색 배경 지정
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 로고 섹션과 상단 여백 추가
-              Padding(
-                padding: const EdgeInsets.only(top: 24.0),
-                child: LogoSection(),
-              ),
-
-              // 상단 섹션 (위젯 간 간격 증가)
-              const SizedBox(height: 32.0),
-
-              // 검색바
-              CustomSearchBar(),
-
-              // 해시태그 선택기 (약간의 음수 마진으로 더 가깝게 배치)
-              Transform.translate(
-                offset: const Offset(0, -10),
-                child: HashtagSelector(),
-              ),
-
-              // 첫 화면에서 보이는 상단 섹션과 하단 콘텐츠 사이 공간
-              SizedBox(height: screenHeight * 0.12),
-
-              // 하단 콘텐츠
-              LocalFavorites(),
-              const SizedBox(height: 24),
-              CategoryRecommendations(),
-              const SizedBox(height: 32), // 하단 여백 추가
-            ],
-          ),
+    return WillPopScope(
+      onWillPop: () async {
+        if (_isSearchMode) {
+          _toggleSearchMode(false);
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: _isSearchMode
+              ? SearchModeView(
+                  controller: _searchController,
+                  searchHistory: _searchHistory,
+                  onBack: () => _toggleSearchMode(false),
+                  onSearch: _handleSearch,
+                  onClearHistory: () {
+                    setState(() {
+                      _searchHistory.clear();
+                    });
+                  },
+                  onRemoveHistoryItem: (index) {
+                    setState(() {
+                      _searchHistory.removeAt(index);
+                    });
+                  },
+                )
+              : _buildNormalModeUI(screenHeight),
         ),
+      ),
+    );
+  }
+
+  Widget _buildNormalModeUI(double screenHeight) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 로고 섹션
+          Padding(
+            padding: const EdgeInsets.only(top: 24.0),
+            child: LogoSection(),
+          ),
+
+          // 검색창 - 탭하면 검색 모드로 전환
+          GestureDetector(
+            onTap: () => _toggleSearchMode(true),
+            child: CustomSearchBar(
+              onSearch: (query) {
+                _searchController.text = query;
+                _handleSearch(query);
+              },
+            ),
+          ),
+
+          // 나머지 UI 요소들
+          HashtagSelector(),
+          SizedBox(height: screenHeight * 0.05),
+          LocalFavorites(),
+          const SizedBox(height: 24),
+          CategoryRecommendations(),
+          const SizedBox(height: 32),
+        ],
       ),
     );
   }
