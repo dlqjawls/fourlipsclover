@@ -1,6 +1,6 @@
-package com.patriot.fourlipsclover.restaurant.infrastructure.repository;
+package com.patriot.fourlipsclover.restaurant.repository;
 
-import com.patriot.fourlipsclover.restaurant.domain.Restaurant;
+import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
