@@ -1,12 +1,18 @@
+// lib/screens/home/widgets/search_bar.dart
+
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../../../config/theme.dart';
+import '../../../utils/text_style_extensions.dart';
 
 class CustomSearchBar extends StatefulWidget {
-  // 검색 콜백 함수 추가
+  // 검색 콜백 함수
   final Function(String)? onSearch;
+  // 탭 콜백 함수 추가
+  final VoidCallback? onTap;
 
-  const CustomSearchBar({Key? key, this.onSearch}) : super(key: key);
+  const CustomSearchBar({Key? key, this.onSearch, this.onTap})
+    : super(key: key);
 
   @override
   _CustomSearchBarState createState() => _CustomSearchBarState();
@@ -97,22 +103,17 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
             text: TextSpan(
               children: [
                 TextSpan(
-                  text: '내 주변에서\n',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkGray,
-                    height: 1.3,
-                  ),
+                  text: '내 주변',
+                  style:
+                      Theme.of(context).textTheme.bodyMedium
+                          ?.copyWith(fontSize: 22, height: 1.3)
+                          .emphasized, 
                 ),
                 TextSpan(
-                  text: '랭킹이 높은 곳은 어디일까요?',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.normal,
-                    color: AppColors.darkGray,
-                    height: 1.3,
-                  ),
+                  text: '에서\n랭킹이 높은 곳은 어디일까요?',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontSize: 22, height: 1.3),
                 ),
               ],
             ),
@@ -120,67 +121,71 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
 
           const SizedBox(height: 80),
 
-          Container(
-            height: 60,
-            decoration: BoxDecoration(
-              color: AppColors.verylightGray,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  TextField(
-                    controller: _textController,
-                    textAlignVertical: TextAlignVertical.center,
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: "",
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 0,
-                      ),
-                      suffixIcon: GestureDetector(
-                        onTap: _performSearch,
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 16.0),
-                          child: Icon(
-                            Icons.search,
-                            color: AppColors.primary,
-                            size: 28,
-                          ),
-                        ),
-                      ),
-                    ),
-                    style: const TextStyle(fontSize: 16),
-                    // 키보드에서 검색/완료 버튼을 눌렀을 때 검색 실행
-                    onSubmitted: (value) => _performSearch(),
+          GestureDetector(
+            onTap: widget.onTap,
+            behavior: HitTestBehavior.opaque, // 중요! 이 옵션을 추가
+            child: Container(
+              height: 60,
+              decoration: BoxDecoration(
+                color: AppColors.verylightGray,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
+                ],
+              ),
+              child: Center(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    AbsorbPointer(
+                      // 추가: TextField의 탭 이벤트 차단
+                      absorbing: true, // TextField의 터치 이벤트를 흡수
+                      child: TextField(
+                        controller: _textController,
+                        enabled: false, // 비활성화하여 포커스 받지 않도록 설정
+                        textAlignVertical: TextAlignVertical.center,
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          hintText: "",
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 0,
+                          ),
+                          suffixIcon: Padding(
+                            padding: const EdgeInsets.only(right: 16.0),
+                            child: Icon(
+                              Icons.search,
+                              color: AppColors.primary,
+                              size: 28,
+                            ),
+                          ),
+                        ),
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
 
-                  if (_textController.text.isEmpty)
-                    Positioned(
-                      left: 20,
-                      child: AnimatedOpacity(
-                        opacity: _showHint ? 1.0 : 0.0,
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeInOut,
-                        child: Text(
-                          _hintTexts[_currentHintIndex],
-                          style: TextStyle(
-                            color: AppColors.mediumGray,
-                            fontSize: 16,
+                    if (_textController.text.isEmpty)
+                      Positioned(
+                        left: 20,
+                        child: AnimatedOpacity(
+                          opacity: _showHint ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeInOut,
+                          child: Text(
+                            _hintTexts[_currentHintIndex],
+                            style: TextStyle(
+                              color: AppColors.mediumGray,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

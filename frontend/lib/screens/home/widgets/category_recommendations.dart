@@ -1,58 +1,116 @@
 import 'package:flutter/material.dart';
 import '../../../config/theme.dart';
+import '../../../utils/text_style_extensions.dart';
 
 class CategoryRecommendations extends StatelessWidget {
   const CategoryRecommendations({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final baseStyle = Theme.of(context).textTheme.bodyMedium;
+
     // 카테고리 데이터 (나중에 동적으로 불러오기)
     final categories = [
       {
         'name': '한식',
         'restaurants': [
-          {'name': '갓잡은 생선구이', 'location': '서울 강남구', 'distance': 0.8, 'likes': 187},
-          {'name': '청담 손칼국수', 'location': '서울 강남구', 'distance': 1.2, 'likes': 142},
-          {'name': '한우 명가', 'location': '서울 강남구', 'distance': 0.5, 'likes': 231},
-          {'name': '역전 할머니 맥주', 'location': '서울 강남구', 'distance': 1.7, 'likes': 176},
-        ]
+          {
+            'name': '갓잡은 생선구이',
+            'location': '서울 강남구',
+            'distance': 0.8,
+            'likes': 187,
+          },
+          {
+            'name': '청담 손칼국수',
+            'location': '서울 강남구',
+            'distance': 1.2,
+            'likes': 142,
+          },
+          {
+            'name': '한우 명가',
+            'location': '서울 강남구',
+            'distance': 0.5,
+            'likes': 231,
+          },
+          {
+            'name': '역전 할머니 맥주',
+            'location': '서울 강남구',
+            'distance': 1.7,
+            'likes': 176,
+          },
+        ],
       },
       {
         'name': '카페',
         'restaurants': [
-          {'name': '글래드 커피', 'location': '서울 강남구', 'distance': 0.3, 'likes': 156},
+          {
+            'name': '글래드 커피',
+            'location': '서울 강남구',
+            'distance': 0.3,
+            'likes': 156,
+          },
           {'name': '커피빈', 'location': '서울 강남구', 'distance': 0.6, 'likes': 122},
           {'name': '블루보틀', 'location': '서울 강남구', 'distance': 1.1, 'likes': 198},
           {'name': '테라로사', 'location': '서울 강남구', 'distance': 0.9, 'likes': 165},
-        ]
+        ],
       },
       {
         'name': '술집',
         'restaurants': [
           {'name': '강남포차', 'location': '서울 강남구', 'distance': 0.4, 'likes': 213},
-          {'name': '이자카야 미코', 'location': '서울 강남구', 'distance': 0.7, 'likes': 189},
-          {'name': '브루어리 304', 'location': '서울 강남구', 'distance': 1.5, 'likes': 201},
-          {'name': '와인바 르', 'location': '서울 강남구', 'distance': 1.0, 'likes': 167},
-        ]
+          {
+            'name': '이자카야 미코',
+            'location': '서울 강남구',
+            'distance': 0.7,
+            'likes': 189,
+          },
+          {
+            'name': '브루어리 304',
+            'location': '서울 강남구',
+            'distance': 1.5,
+            'likes': 201,
+          },
+          {
+            'name': '와인바 르',
+            'location': '서울 강남구',
+            'distance': 1.0,
+            'likes': 167,
+          },
+        ],
       },
       {
         'name': '디저트',
         'restaurants': [
           {'name': '설빙', 'location': '서울 강남구', 'distance': 0.6, 'likes': 145},
-          {'name': '생크림 케이크', 'location': '서울 강남구', 'distance': 0.9, 'likes': 162},
-          {'name': '쿠키프렌즈', 'location': '서울 강남구', 'distance': 1.3, 'likes': 178},
-          {'name': '베이크 치즈타르트', 'location': '서울 강남구', 'distance': 0.5, 'likes': 193},
-        ]
+          {
+            'name': '생크림 케이크',
+            'location': '서울 강남구',
+            'distance': 0.9,
+            'likes': 162,
+          },
+          {
+            'name': '쿠키프렌즈',
+            'location': '서울 강남구',
+            'distance': 1.3,
+            'likes': 178,
+          },
+          {
+            'name': '베이크 치즈타르트',
+            'location': '서울 강남구',
+            'distance': 0.5,
+            'likes': 193,
+          },
+        ],
       },
     ];
-    
+
     return ListView.builder(
       shrinkWrap: true,
       physics: NeverScrollableScrollPhysics(),
       itemCount: categories.length,
       itemBuilder: (context, index) {
         final category = categories[index];
-        
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -73,22 +131,20 @@ class CategoryRecommendations extends StatelessWidget {
                         ),
                         child: Text(
                           '#',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
+                          style:
+                              baseStyle
+                                  ?.copyWith(
+                                    fontSize: 16,
+                                    color: AppColors.primary,
+                                  )
+                                  .emphasized,
                         ),
                       ),
                       const SizedBox(width: 8),
                       // 카테고리명
                       Text(
                         '${category['name']} 추천',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.darkGray,
-                        ),
+                        style: baseStyle?.copyWith(fontSize: 18).emphasized,
                       ),
                     ],
                   ),
@@ -102,7 +158,7 @@ class CategoryRecommendations extends StatelessWidget {
                     ),
                     child: Text(
                       '더보기 >',
-                      style: TextStyle(
+                      style: baseStyle?.copyWith(
                         fontSize: 12,
                         color: AppColors.mediumGray,
                       ),
@@ -111,7 +167,7 @@ class CategoryRecommendations extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // 카테고리별 맛집 리스트
             SizedBox(
               height: 210,
@@ -120,11 +176,13 @@ class CategoryRecommendations extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 16, right: 8),
                 itemCount: (category['restaurants'] as List).length,
                 itemBuilder: (context, restaurantIndex) {
-                  final restaurant = (category['restaurants'] as List)[restaurantIndex] as Map<String, dynamic>;
-                  
+                  final restaurant =
+                      (category['restaurants'] as List)[restaurantIndex]
+                          as Map<String, dynamic>;
+
                   return Container(
                     width: 150,
-                    margin: const EdgeInsets.only(right: 12),
+                    margin: const EdgeInsets.only(right: 12, bottom: 8),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
@@ -152,13 +210,16 @@ class CategoryRecommendations extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            
+
                             // 거리 표시
                             Positioned(
                               top: 8,
                               left: 8,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.black.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(12),
@@ -173,11 +234,13 @@ class CategoryRecommendations extends StatelessWidget {
                                     const SizedBox(width: 2),
                                     Text(
                                       '${restaurant['distance'] ?? 0.0}km',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      style:
+                                          baseStyle
+                                              ?.copyWith(
+                                                color: Colors.white,
+                                                fontSize: 10,
+                                              )
+                                              .emphasized,
                                     ),
                                   ],
                                 ),
@@ -185,7 +248,7 @@ class CategoryRecommendations extends StatelessWidget {
                             ),
                           ],
                         ),
-                        
+
                         // 맛집 정보
                         Padding(
                           padding: const EdgeInsets.all(10.0),
@@ -194,16 +257,16 @@ class CategoryRecommendations extends StatelessWidget {
                             children: [
                               // 이름과 좋아요 수
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
                                     child: Text(
                                       restaurant['name']?.toString() ?? '이름 없음',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.darkGray,
-                                      ),
+                                      style:
+                                          baseStyle
+                                              ?.copyWith(fontSize: 14)
+                                              .emphasized,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -218,7 +281,7 @@ class CategoryRecommendations extends StatelessWidget {
                                       const SizedBox(width: 2),
                                       Text(
                                         restaurant['likes']?.toString() ?? '0',
-                                        style: TextStyle(
+                                        style: baseStyle?.copyWith(
                                           fontSize: 10,
                                           color: AppColors.mediumGray,
                                         ),
@@ -227,12 +290,13 @@ class CategoryRecommendations extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              
+
                               // 위치
                               const SizedBox(height: 4),
                               Text(
-                                restaurant['location']?.toString() ?? '위치 정보 없음',
-                                style: TextStyle(
+                                restaurant['location']?.toString() ??
+                                    '위치 정보 없음',
+                                style: baseStyle?.copyWith(
                                   fontSize: 12,
                                   color: AppColors.mediumGray,
                                 ),
@@ -246,16 +310,22 @@ class CategoryRecommendations extends StatelessWidget {
                 },
               ),
             ),
-            
+
             // 카테고리 간 구분선
             if (index < categories.length - 1)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Divider(
-                  color: AppColors.verylightGray,
-                  thickness: 1,
-                ),
+              Column(
+                children: [
+                  SizedBox(height: 30),
+                  Divider(
+                    color: AppColors.verylightGray,
+                    thickness: 10,
+                    height: 1,
+                    // indent: 0, // 왼쪽 여백 0
+                    // endIndent: 0, // 오른쪽 여백 0
+                  ),
+                ],
               ),
+            SizedBox(height: 24),
           ],
         );
       },

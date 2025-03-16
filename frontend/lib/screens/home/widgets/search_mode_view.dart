@@ -1,3 +1,4 @@
+// lib/screens/home/widgets/search_mode_view.dart
 import 'package:flutter/material.dart';
 import '../../../config/theme.dart';
 import '../../../../models/search_history.dart';

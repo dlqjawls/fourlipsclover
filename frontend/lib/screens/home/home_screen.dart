@@ -1,11 +1,13 @@
+// lib/screens/home/home_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'widgets/logo_section.dart';
 import 'widgets/search_bar.dart';
 import 'widgets/hashtag_selector.dart';
 import 'widgets/local_favorites.dart';
 import 'widgets/category_recommendations.dart';
 import 'widgets/search_mode_view.dart';
-import '../../../models/search_history.dart';
+import '../../providers/search_provider.dart';
 import '../search_results/search_results_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,21 +18,21 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  bool _isSearchMode = false;
   final TextEditingController _searchController = TextEditingController();
-
-  final List<SearchHistory> _searchHistory = [
-    SearchHistory(query: "수완지구 양식", date: "03.14"),
-    SearchHistory(query: "수완지구 술집", date: "03.10"),
-    SearchHistory(query: "각화동", date: "03.08"),
-    SearchHistory(query: "우츠", date: "03.07"),
-    SearchHistory(query: "대전", date: "03.07"),
-  ];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // Provider 초기화 - 앱 시작 시 검색 기록 불러오기
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final searchProvider = Provider.of<SearchProvider>(
+        context,
+        listen: false,
+      );
+      searchProvider.initialize();
+    });
   }
 
   @override
@@ -42,39 +44,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _isSearchMode) {
-      setState(() {
-        _isSearchMode = false;
-      });
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    if (state == AppLifecycleState.resumed && searchProvider.isSearchMode) {
+      searchProvider.toggleSearchMode(false, null);
     }
-  }
-
-  void _toggleSearchMode(bool value) {
-    setState(() {
-      _isSearchMode = value;
-    });
   }
 
   void _handleSearch(String query) {
     print('검색어: $query');
 
-    // 검색 결과 페이지로 이동
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SearchResultsScreen(searchQuery: query),
-      ),
-    );
+    // 검색 기록에 추가
+    if (query.trim().isNotEmpty) {
+      final searchProvider = Provider.of<SearchProvider>(
+        context,
+        listen: false,
+      );
+      searchProvider.addSearchHistory(query);
+
+      // 검색 결과 페이지로 이동
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SearchResultsScreen(searchQuery: query),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
 
+    // Provider 사용
+    final searchProvider = Provider.of<SearchProvider>(context);
+
     return WillPopScope(
       onWillPop: () async {
-        if (_isSearchMode) {
-          _toggleSearchMode(false);
+        if (searchProvider.isSearchMode) {
+          searchProvider.toggleSearchMode(false, null);
           return false;
         }
         return true;
@@ -83,57 +90,67 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         backgroundColor: Colors.white,
         body: SafeArea(
           child:
-              _isSearchMode
+              searchProvider.isSearchMode
                   ? SearchModeView(
                     controller: _searchController,
-                    searchHistory: _searchHistory,
-                    onBack: () => _toggleSearchMode(false),
+                    searchHistory: searchProvider.searchHistory,
+                    onBack: () => searchProvider.toggleSearchMode(false, null),
                     onSearch: _handleSearch,
-                    onClearHistory: () {
-                      setState(() {
-                        _searchHistory.clear();
-                      });
-                    },
-                    onRemoveHistoryItem: (index) {
-                      setState(() {
-                        _searchHistory.removeAt(index);
-                      });
-                    },
+                    onClearHistory: () => searchProvider.clearSearchHistory(),
+                    onRemoveHistoryItem:
+                        (index) =>
+                            searchProvider.removeSearchHistoryItem(index),
                   )
-                  : _buildNormalModeUI(screenHeight),
+                  : _buildNormalModeUI(screenHeight, searchProvider),
         ),
       ),
     );
   }
 
-  Widget _buildNormalModeUI(double screenHeight) {
+  Widget _buildNormalModeUI(
+    double screenHeight,
+    SearchProvider searchProvider,
+  ) {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 로고 섹션
-          Padding(
-            padding: const EdgeInsets.only(top: 24.0),
+          const Padding(
+            padding: EdgeInsets.only(top: 24.0),
             child: LogoSection(),
           ),
 
+          const SizedBox(height: 50),
+
           // 검색창 - 탭하면 검색 모드로 전환
-          GestureDetector(
-            onTap: () => _toggleSearchMode(true),
-            child: CustomSearchBar(
-              onSearch: (query) {
-                _searchController.text = query;
-                _handleSearch(query);
-              },
-            ),
+          CustomSearchBar(
+            onSearch: (query) {
+              _searchController.text = query;
+              _handleSearch(query);
+            },
+            onTap: () {
+              final searchProvider = Provider.of<SearchProvider>(
+                context,
+                listen: false,
+              );
+              searchProvider.toggleSearchMode(true, _searchController);
+            },
           ),
 
-          // 나머지 UI 요소들
-          HashtagSelector(),
+          // 해시태그 선택기
+          const HashtagSelector(),
+
           SizedBox(height: screenHeight * 0.05),
-          LocalFavorites(),
+
+          // 지역 인기 장소
+          const LocalFavorites(),
+
           const SizedBox(height: 24),
-          CategoryRecommendations(),
+
+          // 카테고리 추천
+          const CategoryRecommendations(),
+
           const SizedBox(height: 32),
         ],
       ),

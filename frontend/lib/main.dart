@@ -6,6 +6,7 @@ import 'providers/app_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'services/kakao_service.dart';
 import 'screens/common/base_screen.dart';
+import 'providers/search_provider.dart';
 
 void main() async {
   await AppInitializer.initialize();
@@ -17,14 +18,16 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AppProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppProvider()),
+        ChangeNotifierProvider(create: (_) => SearchProvider()), // 추가
+      ],
       child: MaterialApp(
         title: '네입클로버',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme, // AppTheme 클래스의 lightTheme 적용
-        home: const LoginScreen(), // home 속성 추가
-        //home: const BaseScreen(), // home 속성 추가
+        theme: AppTheme.lightTheme,
+        home: const LoginScreen(),
         routes: AppRoutes.routes,
       ),
     );
