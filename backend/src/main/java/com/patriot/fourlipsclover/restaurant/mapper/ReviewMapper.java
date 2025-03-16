@@ -1,0 +1,48 @@
+package com.patriot.fourlipsclover.restaurant.mapper;
+
+import com.patriot.fourlipsclover.member.entity.Member;
+import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
+import com.patriot.fourlipsclover.restaurant.dto.response.ReviewMemberResponse;
+import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
+import com.patriot.fourlipsclover.restaurant.dto.response.ReviewRestaurantResponse;
+import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
+import com.patriot.fourlipsclover.restaurant.entity.Review;
+import org.springframework.stereotype.Component;
+
+@Component
+public class ReviewMapper {
+
+	private ReviewRestaurantResponse toRestaurantResponse(Restaurant restaurant) {
+		return ReviewRestaurantResponse.builder().restaurantId(restaurant.getRestaurantId())
+				.addressName(restaurant.getAddressName())
+				.category(restaurant.getCategory()).categoryName(restaurant.getCategoryName())
+				.kakaoPlaceId(restaurant.getKakaoPlaceId())
+				.roadAddressName(restaurant.getRoadAddressName())
+				.build();
+	}
+
+	private ReviewMemberResponse toReviewer(Member member) {
+		return ReviewMemberResponse.builder().email(member.getEmail())
+				.memberId(member.getMemberId()).nickname(member.getNickname())
+				.build();
+	}
+
+	public Review toEntity(ReviewCreate dto, Restaurant restaurant) {
+		return Review.builder()
+				.content(dto.getContent())
+				.restaurant(restaurant)
+				.build();
+	}
+
+	public ReviewResponse toDto(Review entity) {
+		return ReviewResponse.builder()
+				.reviewId(entity.getReviewId())
+				.content(entity.getContent())
+				.restaurant(toRestaurantResponse(entity.getRestaurant()))
+				.reviewer(toReviewer(entity.getMember()))
+				.visitedAt(entity.getVisitedAt())
+				.createdAt(entity.getCreatedAt())
+				.updatedAt(entity.getUpdatedAt())
+				.build();
+	}
+}
