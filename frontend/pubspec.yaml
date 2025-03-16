@@ -27,3 +27,10 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+  fonts:
+    - family : Anemone_air
+      fonts : 
+        - asset : assets/fonts/Anemone_air.ttf
+    - family: Anemone
+      fonts:
+        - asset: assets/fonts/Anemone.ttf
