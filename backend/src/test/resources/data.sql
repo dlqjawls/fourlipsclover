@@ -16,3 +16,20 @@ VALUES (2, '광주 광산구 장덕동 1457', '음식점 > 한식', null, '26792
         35.1914320553405);
 
 
+INSERT INTO reviews (review_id, member_id,
+                     restaurant_id,
+                     content,
+                     visited_at,
+                     created_at,
+                     updated_at,
+                     deleted_at,
+                     is_delete)
+VALUES (1, 1, -- member_id (예시 값)
+        1, -- restaurant_id (예시 값)
+        '테스트컨텐츠',
+        '2023-05-15 18:30:00', -- visited_at
+        '2023-05-16 10:20:00', -- created_at
+        NULL, -- updated_at (아직 업데이트되지 않음)
+        NULL, -- deleted_at (아직 삭제되지 않음)
+        FALSE -- is_delete
+       );

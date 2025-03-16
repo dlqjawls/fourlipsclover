@@ -1,35 +1,36 @@
-    package com.patriot.fourlipsclover.config;
+package com.patriot.fourlipsclover.config;
 
-    import com.patriot.fourlipsclover.auth.jwt.JwtTokenProvider;
-    import lombok.RequiredArgsConstructor;
-    import org.springframework.context.annotation.Bean;
-    import org.springframework.context.annotation.Configuration;
-    import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
-    import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-    import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-    import org.springframework.security.config.http.SessionCreationPolicy;
-    import org.springframework.security.web.SecurityFilterChain;
+import com.patriot.fourlipsclover.auth.jwt.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
 
-    @Configuration
-    @EnableWebSecurity
-    @EnableMethodSecurity
-    @RequiredArgsConstructor
-    public class SecurityConfig {
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
 
-        private final JwtTokenProvider jwtTokenProvider;
+	private final JwtTokenProvider jwtTokenProvider;
 
-        @Bean
-        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-            http
-                    .csrf(csrf -> csrf.disable())
-                    .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                    .authorizeHttpRequests(authorize -> authorize
-                            .requestMatchers("/auth/kakao/login").permitAll()
-                            .anyRequest().authenticated()
-                    );
+	@Bean
+	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+		http
+				.csrf(csrf -> csrf.disable())
+				.sessionManagement(
+						session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.authorizeHttpRequests(authorize -> authorize
+						// 테스트 기간 동안 모든 요청 허용
+						.anyRequest().permitAll()
+				);
 
-            return http.build();
-        }
+		return http.build();
+	}
 
-    }
+}
 

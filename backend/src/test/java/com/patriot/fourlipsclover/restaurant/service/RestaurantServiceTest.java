@@ -39,4 +39,17 @@ class RestaurantServiceTest {
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 		assertThat(Objects.requireNonNull(response.getBody()).getContent()).isEqualTo("정말 맛있어요");
 	}
+
+
+	@Test
+	void findById() {
+		//given
+		//when
+		ResponseEntity<ReviewResponse> response = restTemplate.exchange(
+				"/api/restaurant/" + 1 + "/reviews", HttpMethod.GET, HttpEntity.EMPTY,
+				ReviewResponse.class);
+		//then
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(Objects.requireNonNull(response.getBody()).getContent()).isEqualTo("테스트컨텐츠");
+	}
 }

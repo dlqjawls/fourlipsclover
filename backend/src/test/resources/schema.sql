@@ -32,14 +32,14 @@ CREATE TABLE restaurant
 
 CREATE TABLE reviews
 (
-    review_id  BIGINT AUTO_INCREMENT PRIMARY KEY,
-    content    TEXT,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    deleted_at TIMESTAMP,
-    is_delete  BOOLEAN DEFAULT FALSE,
-    member_id  BIGINT,
-    place_id   VARCHAR(255),
-    visited_at TIMESTAMP,
+    review_id     BIGINT AUTO_INCREMENT PRIMARY KEY,
+    content       TEXT,
+    created_at    TIMESTAMP,
+    updated_at    TIMESTAMP,
+    deleted_at    TIMESTAMP,
+    is_delete     BOOLEAN DEFAULT FALSE,
+    member_id     BIGINT,
+    restaurant_id VARCHAR(255),
+    visited_at    TIMESTAMP,
     FOREIGN KEY (member_id) REFERENCES member (member_id)
 );
