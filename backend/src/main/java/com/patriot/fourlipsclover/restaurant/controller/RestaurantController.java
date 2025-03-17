@@ -25,8 +25,8 @@ public class RestaurantController {
 		return ResponseEntity.ok(response);
 	}
 
-	@GetMapping("/{reviewId}/reviews")
-	public ResponseEntity<ReviewResponse> detail(
+	@GetMapping("/{kakaoPlaceId}/reviews/{reviewId}")
+	public ResponseEntity<ReviewResponse> reviewDetail(
 			@PathVariable(name = "reviewId") Integer reviewId) {
 		ReviewResponse response = restaurantService.findById(reviewId);
 		return ResponseEntity.ok(response);
