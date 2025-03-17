@@ -14,7 +14,9 @@ class _UserEditScreenState extends State<UserEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.verylightGray,
       appBar: AppBar(
+        backgroundColor: AppColors.verylightGray,
         title: const Text('나의 정보 수정'),
         centerTitle: true,
         leading: IconButton(

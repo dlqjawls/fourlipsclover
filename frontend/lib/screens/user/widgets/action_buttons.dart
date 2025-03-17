@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/config/theme.dart';
 import 'package:frontend/config/routes.dart';
 import 'package:frontend/screens/user/user_edit.dart';
+import 'package:frontend/screens/user/user_profile.dart';
 
 class ActionButtons extends StatelessWidget {
   const ActionButtons({super.key});
@@ -15,7 +16,9 @@ class ActionButtons extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const UserEditScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const MyConsumptionPatternScreen(),
+                ),
               );
             },
             style: OutlinedButton.styleFrom(
