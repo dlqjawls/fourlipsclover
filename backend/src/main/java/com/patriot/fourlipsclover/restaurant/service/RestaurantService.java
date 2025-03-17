@@ -8,6 +8,7 @@ import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberJpaRepository;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
+import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
 import com.patriot.fourlipsclover.restaurant.entity.Review;
@@ -89,5 +90,20 @@ public class RestaurantService {
 		if (!Objects.equals(currentMember.getMemberId(), reviewMemberId)) {
 			throw new UnauthorizedAccessException("현재 User ID가 작성자 ID와 다릅니다.");
 		}
+	}
+
+	@Transactional
+	public ReviewDeleteResponse delete(Integer reviewId) {
+		Review review = reviewRepository.findById(reviewId)
+				.orElseThrow(() -> new ReviewNotFoundException(reviewId));
+		if (review.getIsDelete()) {
+			throw new DeletedResourceAccessException("이미 삭제된 리뷰입니다.");
+		}
+		//TODO : 유저 로그인 후 autnentication 등록 구현 후에 주석 해제하기.
+//		checkReviewerIsCurrentUser(review.getMember().getMemberId());
+		review.setIsDelete(true);
+		review.setDeletedAt(LocalDateTime.now());
+		reviewRepository.save(review);
+		return new ReviewDeleteResponse("리뷰를 삭제하였습니다.", reviewId);
 	}
 }
