@@ -30,9 +30,9 @@ class AppProvider with ChangeNotifier {
       if (token == null) {
         throw Exception('카카오 로그인 실패: 토큰을 가져오지 못했습니다.');
       }
-
+      debugPrint('카카오 로그인 성공: ${token.accessToken}');
       final response = await http.post(
-        Uri.parse('http:/아마도백엔드주소가 이러겠지?/auth/kakao'),
+        Uri.parse('http:/아마도백엔드주소가 이러겠지?/auth/kakao/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'access_token': token.accessToken}),
       );
@@ -48,6 +48,7 @@ class AppProvider with ChangeNotifier {
       }
     } catch (error) {
       debugPrint('로그인 오류 발생: $error');
+
       _isLoggedIn = false;
       _user = null;
       notifyListeners();

@@ -1,4 +1,4 @@
-# frontend
+keytool -exportcert -alias androiddebugkey -keystore %USERPROFILE%\.android\debug.keystore | openssl sha1 -binary | openssl base64# frontend
 
 A new Flutter project.
 

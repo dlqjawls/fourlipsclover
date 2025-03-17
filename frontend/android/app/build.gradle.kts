@@ -24,11 +24,11 @@ android {
             storePassword = keystoreProperties["storePassword"] as String
         }
         
-        val debugSigningConfig = signingConfigs.findByName("debug") ?: create("debug") {
-            storeFile = file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+         getByName("debug") {  
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+            storeFile = file(keystoreProperties["storeFile"] as String)
+            storePassword = keystoreProperties["storePassword"] as String
         }
     }
 
@@ -47,6 +47,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["NATIVE_APP_KEY"] = "eed918aa9f0ef754a93dec5247e9f38e"
     }
 
     buildTypes {
