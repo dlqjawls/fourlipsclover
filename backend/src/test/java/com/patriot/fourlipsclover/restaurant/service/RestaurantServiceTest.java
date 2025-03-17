@@ -3,10 +3,12 @@ package com.patriot.fourlipsclover.restaurant.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
+import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -48,7 +50,7 @@ class RestaurantServiceTest {
 		//given
 		//when
 		ResponseEntity<ReviewResponse> response = restTemplate.exchange(
-				"/api/restaurant/" + 1 + "/reviews", HttpMethod.GET, HttpEntity.EMPTY,
+				"/api/restaurant/" + "2114253032" + "/reviews/1", HttpMethod.GET, HttpEntity.EMPTY,
 				ReviewResponse.class);
 		//then
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -56,7 +58,7 @@ class RestaurantServiceTest {
 	}
 
 	@Test
-	void 사용자는_리뷰목록을_kakaoplaceid를_활용하여_제공받을_수_있다(){
+	void 사용자는_리뷰목록을_kakaoplaceid를_활용하여_제공받을_수_있다() {
 		//given
 		String kakaoId = "2114253032";
 		//when
@@ -67,6 +69,25 @@ class RestaurantServiceTest {
 		//then
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 		assertThat(response.getBody().get(0).getContent()).isEqualTo("테스트컨텐츠");
-		assertThat(response.getBody().get(0).getRestaurant().getKakaoPlaceId()).isEqualTo("2114253032");
+		assertThat(response.getBody().get(0).getRestaurant().getKakaoPlaceId()).isEqualTo(
+				"2114253032");
+	}
+
+	@Test
+	@Order(1000)
+	void 사용자는_자신이_작성한_리뷰의_content와visitedAt을_수정할수있다() {
+		LocalDateTime currentTime = LocalDateTime.now();
+		//given
+		final int reviewId = 1;
+		ReviewUpdate reviewUpdate = new ReviewUpdate();
+		reviewUpdate.setContent("컨텐츠 변경");
+		reviewUpdate.setVisitedAt(currentTime);
+		//when
+		ResponseEntity<ReviewResponse> response = restTemplate.exchange(
+				"/api/restaurant/reviews/" + reviewId, HttpMethod.PUT,
+				new HttpEntity<>(reviewUpdate), ReviewResponse.class);
+		//then
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(response.getBody().getContent()).isEqualTo("컨텐츠 변경");
 	}
 }
