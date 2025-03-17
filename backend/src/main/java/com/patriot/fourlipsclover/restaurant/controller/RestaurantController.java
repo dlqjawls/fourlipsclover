@@ -3,6 +3,7 @@ package com.patriot.fourlipsclover.restaurant.controller;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.service.RestaurantService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,4 +32,14 @@ public class RestaurantController {
 		ReviewResponse response = restaurantService.findById(reviewId);
 		return ResponseEntity.ok(response);
 	}
+
+	@GetMapping("/{kakaoPlaceId}/reviews")
+	public ResponseEntity<List<ReviewResponse>> reviewList(@PathVariable(name = "kakaoPlaceId") String kakaoPlaceId){
+		if (kakaoPlaceId == null || kakaoPlaceId.isBlank()) {
+			throw new IllegalArgumentException("kakaoPlaceId는 비어있을 수 없습니다");
+		}
+		List<ReviewResponse> response = restaurantService.findByKakaoPlaceId(kakaoPlaceId);
+		return ResponseEntity.ok(response);
+	}
+
 }
