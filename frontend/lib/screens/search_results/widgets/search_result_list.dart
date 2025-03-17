@@ -96,11 +96,15 @@ class SearchResultList extends StatelessWidget {
           ),
           trailing: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              restaurant["image"] as String,
+            child: SizedBox(
               width: 80,
               height: 80,
-              fit: BoxFit.cover,
+              child: Container(
+                color: Colors.grey[300],
+                child: Center(
+                  child: Text('이미지'),
+                ),
+              ),
             ),
           ),
           onTap: () {

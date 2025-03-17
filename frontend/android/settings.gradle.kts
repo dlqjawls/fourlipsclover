@@ -13,6 +13,18 @@ pluginManagement {
         google()
         mavenCentral()
         gradlePluginPortal()
+        maven { url = uri("https://devrepo.kakao.com/nexus/repository/kakaomap-releases/") }
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://devrepo.kakao.com/nexus/repository/kakaomap-releases/") }
+        // Flutter SDK 저장소 추가
+        maven { url = uri("https://storage.googleapis.com/download.flutter.io") }
     }
 }
 

@@ -11,6 +11,9 @@ val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties()
 keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 
+// API 키를 가져오기 (없으면 빈 문자열 반환)
+val kakaoMapApiKey = keystoreProperties.getProperty("kakao.map.api.key", "")
+
 android {
     namespace = "com.patriot.fourlipsclover"
     compileSdk = flutter.compileSdkVersion
@@ -43,10 +46,13 @@ android {
 
     defaultConfig {
         applicationId = "com.patriot.fourlipsclover"
-        minSdk = flutter.minSdkVersion
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // 카카오맵 API 키를 매니페스트 플레이스홀더로 추가
+        manifestPlaceholders["kakaoMapApiKey"] = kakaoMapApiKey
     }
 
     buildTypes {
@@ -56,6 +62,10 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
         }
     }
+}
+
+dependencies {
+    implementation("com.kakao.maps.open:android:2.12.8")
 }
 
 flutter {
