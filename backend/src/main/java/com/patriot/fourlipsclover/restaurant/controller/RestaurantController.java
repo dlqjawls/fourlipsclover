@@ -2,6 +2,7 @@ package com.patriot.fourlipsclover.restaurant.controller;
 
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
+import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.service.RestaurantService;
 import jakarta.validation.Valid;
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -60,4 +62,11 @@ public class RestaurantController {
 		return ResponseEntity.ok(response);
 	}
 
+	@DeleteMapping("/reviews/{reviewId}")
+	public ResponseEntity<ReviewDeleteResponse> reviewDelete(
+			@PathVariable(name = "reviewId") Integer reviewId) {
+		ReviewDeleteResponse response = restaurantService.delete(reviewId);
+
+		return ResponseEntity.ok(response);
+	}
 }
