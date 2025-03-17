@@ -15,8 +15,8 @@ class ActionButtons extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                 MaterialPageRoute(builder: (context) => const UserEditScreen()),
-              )
+                MaterialPageRoute(builder: (context) => const UserEditScreen()),
+              );
             },
             style: OutlinedButton.styleFrom(
               backgroundColor: AppColors.background,
