@@ -1,4 +1,4 @@
-package com.patriot.fourlipsclover.restaurant.service;
+package com.patriot.fourlipsclover.restaurant.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -15,14 +15,17 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.context.jdbc.Sql.ExecutionPhase;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-class RestaurantServiceTest {
+@Sql(scripts = {"/schema.sql", "/data.sql"}, executionPhase = ExecutionPhase.BEFORE_TEST_CLASS)
+@Sql(scripts = {"/cleanup.sql"}, executionPhase = ExecutionPhase.AFTER_TEST_CLASS)
+public class RestaurantCreateTest {
 
 	@Autowired
 	private TestRestTemplate restTemplate;
-
 
 	@Test
 	void create_리뷰생성_API_테스트() throws Exception {
@@ -40,16 +43,4 @@ class RestaurantServiceTest {
 		assertThat(Objects.requireNonNull(response.getBody()).getContent()).isEqualTo("정말 맛있어요");
 	}
 
-
-	@Test
-	void findById() {
-		//given
-		//when
-		ResponseEntity<ReviewResponse> response = restTemplate.exchange(
-				"/api/restaurant/" + 1 + "/reviews", HttpMethod.GET, HttpEntity.EMPTY,
-				ReviewResponse.class);
-		//then
-		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-		assertThat(Objects.requireNonNull(response.getBody()).getContent()).isEqualTo("테스트컨텐츠");
-	}
 }

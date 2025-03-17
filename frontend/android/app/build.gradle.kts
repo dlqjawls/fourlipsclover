@@ -27,11 +27,11 @@ android {
             storePassword = keystoreProperties["storePassword"] as String
         }
         
-        val debugSigningConfig = signingConfigs.findByName("debug") ?: create("debug") {
-            storeFile = file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+         getByName("debug") {  
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+            storeFile = file(keystoreProperties["storeFile"] as String)
+            storePassword = keystoreProperties["storePassword"] as String
         }
     }
 
@@ -49,10 +49,10 @@ android {
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
-        versionName = flutter.versionName
-        
-        // 카카오맵 API 키를 매니페스트 플레이스홀더로 추가
+        versionName = flutter.versionName     
+
         manifestPlaceholders["kakaoMapApiKey"] = kakaoMapApiKey
+        manifestPlaceholders["NATIVE_APP_KEY"] = "eed918aa9f0ef754a93dec5247e9f38e"
     }
 
     buildTypes {
