@@ -4,7 +4,7 @@ import 'package:frontend/screens/home/home_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/common/base_screen.dart';
 import '../screens/user/user.dart';
-
+import '../screens/user/user_edit.dart';
 class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
     '/journal' : (context) => const BaseScreen(),
@@ -13,6 +13,7 @@ class AppRoutes {
     '/login': (context) => const LoginScreen(),
     '/user': (context) => const UserScreen(),
     '/home' : (context) => const BaseScreen(),
+    '/user_edit' : (context) => const UserEditScreen(),
     // 앱의 경로를 여기에 등록
     // 예시: '/': (context) => HomeScreen(),
     // 예시: '/login': (context) => LoginScreen(),
