@@ -1,14 +1,18 @@
 package com.patriot.fourlipsclover.restaurant.controller;
 
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
+import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.service.RestaurantService;
+import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,11 +38,25 @@ public class RestaurantController {
 	}
 
 	@GetMapping("/{kakaoPlaceId}/reviews")
-	public ResponseEntity<List<ReviewResponse>> reviewList(@PathVariable(name = "kakaoPlaceId") String kakaoPlaceId){
+	public ResponseEntity<List<ReviewResponse>> reviewList(
+			@PathVariable(name = "kakaoPlaceId") String kakaoPlaceId) {
 		if (kakaoPlaceId == null || kakaoPlaceId.isBlank()) {
 			throw new IllegalArgumentException("kakaoPlaceId는 비어있을 수 없습니다");
 		}
 		List<ReviewResponse> response = restaurantService.findByKakaoPlaceId(kakaoPlaceId);
+		return ResponseEntity.ok(response);
+	}
+
+	@PutMapping("/reviews/{reviewId}")
+	public ResponseEntity<ReviewResponse> reviewUpdate(
+			@PathVariable(name = "reviewId") Integer reviewId,
+			@Valid @RequestBody ReviewUpdate reviewUpdate) {
+
+		if (Objects.isNull(reviewId)) {
+			throw new IllegalArgumentException("reviewId는 비어있을 수 없습니다");
+		}
+
+		ReviewResponse response = restaurantService.update(reviewId, reviewUpdate);
 		return ResponseEntity.ok(response);
 	}
 
