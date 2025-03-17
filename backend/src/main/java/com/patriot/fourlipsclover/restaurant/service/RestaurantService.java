@@ -12,6 +12,8 @@ import com.patriot.fourlipsclover.restaurant.mapper.ReviewMapper;
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,5 +48,14 @@ public class RestaurantService {
 		Review review = reviewRepository.findById(reviewId)
 				.orElseThrow(() -> new ReviewNotFoundException(reviewId));
 		return reviewMapper.toDto(review);
+	}
+
+	@Transactional(readOnly = true)
+	public List<ReviewResponse> findByKakaoPlaceId(String kakaoPlaceId) {
+		if(Objects.isNull(kakaoPlaceId) || kakaoPlaceId.isBlank()){
+			throw new IllegalArgumentException("올바른 kakaoPlaceId 값을 입력하세요.");
+		}
+		List<Review> reviews = reviewRepository.findByKakaoPlaceId(kakaoPlaceId);
+		return reviews.stream().map(reviewMapper::toDto).toList();
 	}
 }
