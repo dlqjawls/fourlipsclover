@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/config/theme.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -8,117 +9,156 @@ class BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 80,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey, width: 1)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildNavItem(0, 'assets/icons/home', '홈'),
-            _buildNavItem(1, 'assets/icons/daily_log', '데일리 로그'),
-            _buildAiItem(2, 'assets/icons/ai_recommendation', 'AI 추천'), // ✅ AI 추천 버튼 애니메이션 추가
-            _buildNavItem(3, 'assets/icons/group_matching', '그룹·매칭'),
-            _buildNavItem(4, 'assets/icons/mypage', '마이페이지'),
-          ],
+    return Stack(
+      children: [
+        // ✅ 맛집 버튼 선택 시만 둥근 보더 적용
+        if (currentIndex == 2)
+          Positioned.fill(
+            child: CustomPaint(
+              painter: RoundedBorderPainter(),
+            ),
+          ),
+        Container(
+          height: 75,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: currentIndex == 2
+                ? null // ✅ 맛집 선택 시 기존 보더 제거
+                : const Border(top: BorderSide(color: Color(0xFFF3F3F3), width: 0.5)), // 기본 직선 보더 유지
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(0, 'assets/icons/group', '그룹'),
+              _buildNavItem(1, 'assets/icons/matching', '매칭'),
+              _buildAiItem(2, 'assets/icons/recommendation', '맛집'),
+              _buildNavItem(3, 'assets/icons/daily_log', '스토리'),
+              _buildNavItem(4, 'assets/icons/mypage', '마이'),
+            ],
+          ),
         ),
+      ],
+    );
+  }
+
+  // 일반 네비게이션 아이템
+  Widget _buildNavItem(int index, String assetPath, String label) {
+    return GestureDetector(
+      onTap: () => onTap(index),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            '$assetPath${currentIndex == index ? "_selected" : "_unselected"}.png',
+            width: 24,
+            height: 24,
+          ),
+          const SizedBox(height: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: AppColors.darkGray,
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }
 
-  // 일반 네비게이션 아이템 (선택 시 약간 확대)
-  Widget _buildNavItem(int index, String assetPath, String label) {
-    return GestureDetector(
-      onTap: () => onTap(index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-        transform: currentIndex == index
-            ? (Matrix4.identity()..scale(1.1)) // ✅ 올바른 문법
-            : Matrix4.identity(),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              '$assetPath${currentIndex == index ? "_selected" : "_unselected"}.png',
-              width: 24,
-              height: 24,
-            ),
-            const SizedBox(height: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: currentIndex == index ? const Color(0xFF189E1E) : Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ); // ✅ 여기에 세미콜론 추가하여 `AnimatedContainer`를 닫아줌
-  }
-
-  // AI 추천 버튼 (부드러운 이동 애니메이션 추가)
+  // AI 추천 버튼 (맛집 버튼)
   Widget _buildAiItem(int index, String assetPath, String label) {
     return GestureDetector(
       onTap: () => onTap(index),
       child: SizedBox(
-        width: 50,
-        height: 50,
+        width: 40,
+        height: 60,
         child: Stack(
           alignment: Alignment.center,
           clipBehavior: Clip.none,
           children: [
+            // ✅ 초록색 원 (애니메이션)
             AnimatedPositioned(
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
-              top: currentIndex == index ? -30 : 0, // ✅ 선택 시 부드럽게 올라감
+              top: currentIndex == index ? -10 : -10,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 50),
                 curve: Curves.easeOut,
-                width: currentIndex == index ? 65 : 50, // ✅ 선택 시 크기 증가
-                height: currentIndex == index ? 65 : 50,
+                width: currentIndex == index ? 50 : 0,
+                height: currentIndex == index ? 50 : 0,
                 decoration: BoxDecoration(
-                  color: currentIndex == index ? const Color(0xFF189E1E) : Colors.transparent, // ✅ 초록색 원 애니메이션
+                  color: currentIndex == index ? AppColors.primary : Colors.transparent,
                   shape: BoxShape.circle,
-                  boxShadow: currentIndex == index
-                      ? [
-                    BoxShadow(
-                      color: Colors.green.withOpacity(0.4),
-                      blurRadius: 8,
-                      spreadRadius: 2,
-                    ),
-                  ]
-                      : [],
                 ),
               ),
             ),
+            // 아이콘
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOut,
-              top: currentIndex == index ? -13 : 0, // ✅ 부드러운 아이콘 이동
+              top: currentIndex == index ? 0 : 0,
               child: Image.asset(
                 '$assetPath${currentIndex == index ? "_selected" : "_unselected"}.png',
                 width: 24,
                 height: 24,
-                color: currentIndex == index ? Colors.white : Colors.grey,
+                color: currentIndex == index ? Colors.black : AppColors.darkGray,
               ),
             ),
+            // ✅ "맛집" 선택 시 텍스트 숨김
             if (currentIndex != index)
-              const Positioned(
-                top: 30,
+              Positioned(
+                top: 29,
                 child: Text(
-                  'AI 추천',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: AppColors.darkGray,
+                  ),
                 ),
               ),
           ],
         ),
       ),
     );
+  }
+}
+
+// ✅ 둥근 보더 배경을 그리는 CustomPainter (맛집 선택 시만 적용)
+class RoundedBorderPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    final borderPaint = Paint()
+      ..color = Color(0xFFF3F3F3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+
+    final path = Path();
+    final double width = size.width;
+    final double height = size.height;
+    final double notchWidth = 52; // 둥근 부분의 너비
+    final double notchHeight = 20; // 둥근 부분의 높이
+    final double centerX = width * 0.5 - 1; // 가운데 정렬
+
+    // ✅ 둥근 보더 영역 그리기
+    path.moveTo(0, 0);
+    path.lineTo(centerX - notchWidth / 2, 0);
+    path.quadraticBezierTo(centerX, -notchHeight, centerX + notchWidth / 2, 0);
+    path.lineTo(width, 0);
+    path.lineTo(width, height);
+    path.lineTo(0, height);
+    path.close();
+    canvas.drawPath(path, paint);
+    canvas.drawPath(path, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return true;
   }
 }
