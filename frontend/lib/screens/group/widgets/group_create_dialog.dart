@@ -1,122 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../config/theme.dart';
-import '../../widgets/custom_switch.dart';
+import 'package:provider/provider.dart';
+import '../../../config/theme.dart';
+import '../../../providers/group_provider.dart';
+import '../../../widgets/custom_switch.dart';
 
-class GroupScreen extends StatelessWidget {
-  const GroupScreen({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          // 우측 하단에 배경 이미지
-          Positioned(
-            bottom: -250,
-            right: -280,
-            child: Opacity(
-              opacity: 0.3,
-              child: Image.asset(
-                'assets/images/logo.png',
-                width: 800,
-                height: 800,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-
-          // 콘텐츠
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // 화면 가운데보다 살짝 위에 배치
-                Transform.translate(
-                  offset: const Offset(0, -70),
-                  child: Column(
-                    children: [
-                      RichText(
-                        text: TextSpan(
-                          style: TextStyle(
-                            fontFamily: 'Anemone_air',
-                            fontSize: 40,
-                          ),
-                          children: [
-                            TextSpan(
-                              text: '그룹 ',
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            TextSpan(
-                              text: '을 추가해주세요',
-                              style: TextStyle(
-                                color: AppColors.mediumGray,
-                                fontSize: 32,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 30), // 텍스트와 버튼 사이 간격
-                      GestureDetector(
-                        onTap: () => _showGroupCreateDialog(context),
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.primary,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                spreadRadius: 2,
-                                blurRadius: 5,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.add,
-                              color: Colors.white,
-                              size: 40,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 그룹 생성 다이얼로그
-  void _showGroupCreateDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return _GroupCreateDialog();
-      },
-    );
-  }
-}
-
-// 그룹 생성 다이얼로그를 StatefulWidget으로 분리
-class _GroupCreateDialog extends StatefulWidget {
+class GroupCreateDialog extends StatefulWidget {
   @override
   _GroupCreateDialogState createState() => _GroupCreateDialogState();
 }
 
-class _GroupCreateDialogState extends State<_GroupCreateDialog> {
+class _GroupCreateDialogState extends State<GroupCreateDialog> {
   final TextEditingController _groupNameController = TextEditingController();
   final TextEditingController _groupDescriptionController =
       TextEditingController();
@@ -320,12 +214,13 @@ class _GroupCreateDialogState extends State<_GroupCreateDialog> {
                 _isNameEmpty = true;
               });
             } else {
-              // TODO: Provider를 사용해 그룹 추가 로직 구현
-              // 예시: Provider.of<GroupProvider>(context, listen: false).addGroup(
-              //   name: groupName,
-              //   description: _groupDescriptionController.text.trim(),
-              //   isPublic: _isPublic
-              // );
+              // GroupProvider를 사용해 그룹 추가
+              Provider.of<GroupProvider>(context, listen: false).addGroup(
+                name: groupName,
+                description: _groupDescriptionController.text.trim(),
+                isPublic: _isPublic,
+                memberId: 1, // 현재 로그인한 사용자 ID - 실제 구현에서는 로그인 정보에서 가져와야 함
+              );
               Navigator.of(context).pop();
             }
           },
