@@ -1,20 +1,26 @@
 package com.patriot.fourlipsclover.restaurant.service;
 
 import com.patriot.fourlipsclover.exception.DeletedResourceAccessException;
+import com.patriot.fourlipsclover.exception.InvalidDataException;
 import com.patriot.fourlipsclover.exception.ReviewNotFoundException;
 import com.patriot.fourlipsclover.exception.UnauthorizedAccessException;
 import com.patriot.fourlipsclover.exception.UserNotFoundException;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberJpaRepository;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
+import com.patriot.fourlipsclover.restaurant.dto.request.ReviewLikeCreate;
+import com.patriot.fourlipsclover.restaurant.dto.request.ReviewLikeCreate.LikeStatus;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
 import com.patriot.fourlipsclover.restaurant.entity.Review;
+import com.patriot.fourlipsclover.restaurant.entity.ReviewLike;
+import com.patriot.fourlipsclover.restaurant.entity.ReviewLikePK;
 import com.patriot.fourlipsclover.restaurant.mapper.ReviewMapper;
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
+import com.patriot.fourlipsclover.restaurant.repository.ReviewLikeJpaRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -29,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class RestaurantService {
 
 	private final RestaurantJpaRepository restaurantRepository;
+	private final ReviewLikeJpaRepository reviewLikeJpaRepository;
 	private final MemberJpaRepository memberRepository;
 	private final ReviewMapper reviewMapper;
 	private final ReviewJpaRepository reviewRepository;
@@ -105,5 +112,46 @@ public class RestaurantService {
 		review.setDeletedAt(LocalDateTime.now());
 		reviewRepository.save(review);
 		return new ReviewDeleteResponse("리뷰를 삭제하였습니다.", reviewId);
+	}
+
+	@Transactional
+	public String like(ReviewLikeCreate request) {
+		Member likedMember = memberRepository.findById(request.getMemberId())
+				.orElseThrow(UserNotFoundException::new);
+		Review likedReview = reviewRepository.findById(request.getReviewId())
+				.orElseThrow(() -> new ReviewNotFoundException(request.getReviewId()));
+
+		if (likedMember.getMemberId() == likedReview.getMember().getMemberId()) {
+			throw new InvalidDataException("작성자는 본인 글에 좋아요/싫어요를 생성할 수 없습니다.");
+		}
+		final String[] result = new String[1];
+
+		ReviewLikePK id = ReviewLikePK.builder().reviewId(request.getReviewId())
+				.memberId(request.getMemberId()).build();
+		reviewLikeJpaRepository.findById(id).ifPresentOrElse(
+				existsReviewLike -> {
+					if (request.getLikeStatus().equals(existsReviewLike.getLikeStatus())) {
+						reviewLikeJpaRepository.delete(existsReviewLike);
+						result[0] =
+								(request.getLikeStatus().equals(LikeStatus.LIKE)) ? "좋아요를 취소했습니다"
+										: "싫어요를 취소했습니다";
+					} else {
+						existsReviewLike.setLikeStatus(request.getLikeStatus());
+						reviewLikeJpaRepository.save(existsReviewLike);
+						result[0] =
+								(request.getLikeStatus().equals(LikeStatus.LIKE)) ? "좋아요로 변경했습니다"
+										: "싫어요로 변경했습니다";
+					}
+				},
+				() -> {
+					ReviewLike reviewLike = ReviewLike.builder().id(id)
+							.likeStatus(request.getLikeStatus())
+							.review(likedReview).member(likedMember).build();
+					reviewLikeJpaRepository.save(reviewLike);
+					result[0] = (request.getLikeStatus().equals(LikeStatus.LIKE)) ? "좋아요를 했습니다"
+							: "싫어요를 했습니다";
+				}
+		);
+		return result[0];
 	}
 }
