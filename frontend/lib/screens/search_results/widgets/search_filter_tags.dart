@@ -104,9 +104,6 @@ class SearchFilterTags extends StatelessWidget {
                 }).toList(),
           ),
         ),
-
-        // 아래 콘텐츠와의 간격을 위한 구분선
-        Divider(height: 1, thickness: 1, color: AppColors.verylightGray),
         // 추가 간격
         SizedBox(height: 12),
       ],

@@ -14,84 +14,48 @@ class SearchResultList extends StatefulWidget {
 }
 
 class _SearchResultListState extends State<SearchResultList> {
-  final ScrollController _scrollController = ScrollController();
   final int _initialItemCount = 5; // 초기에 보여줄 아이템 수
-  final int _loadMoreCount = 15; // 추가로 보여줄 아이템 수
+  final int _loadMoreCount = 10; // 추가로 보여줄 아이템 수
   int _displayCount = 5; // 현재 보여주는 아이템 수
   bool _isAllLoaded = false; // 모든 데이터가 로드되었는지 여부
   bool _isLoading = false; // 로딩 중인지 여부
-  late List<Map<String, dynamic>> _filteredRestaurants;
+  
+  // 모든 음식점 데이터
+  List<Map<String, dynamic>> _restaurants = [];
+  // 필터링된 음식점 데이터
+  List<Map<String, dynamic>> _filteredRestaurants = [];
+
+  void _onScroll() {
+  // 빈 메서드
+}
 
   @override
   void initState() {
     super.initState();
     _displayCount = _initialItemCount;
-    _scrollController.addListener(_scrollListener);
-
-    // 위젯이 화면에서 제거되었다가 다시 표시될 때마다 초기화
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // didChangeAppLifecycleState나 route 변경을 감지하는 방법도 고려할 수 있습니다
-      _displayCount = _initialItemCount;
-      _isAllLoaded = false;
-      setState(() {});
-    });
+    
+    // 데이터 초기화
+    _initializeData();
   }
 
   @override
-  void dispose() {
-    _scrollController.removeListener(_scrollListener);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _scrollListener() {
-    if (_scrollController.position.pixels ==
-        _scrollController.position.maxScrollExtent) {
-      // 스크롤이 맨 아래에 도달했을 때 추가 데이터 로드
-      _loadMoreItems();
-    }
-  }
-
-  void _loadMoreItems() {
-    if (!_isAllLoaded && !_isLoading) {
+  void didUpdateWidget(SearchResultList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 필터가 변경된 경우
+    if (widget.filter != oldWidget.filter) {
+      _applyFilter();
+      // 필터 변경 시 초기 아이템 수로 리셋
       setState(() {
-        _isLoading = true; // 로딩 시작
-      });
-
-      // 1초 후에 데이터 로드 (로딩 시간 추가)
-      Future.delayed(Duration(seconds: 1), () {
-        if (mounted) {
-          setState(() {
-            _displayCount = _displayCount + _loadMoreCount;
-            if (_displayCount >= _filteredRestaurants.length) {
-              _displayCount = _filteredRestaurants.length;
-              _isAllLoaded = true;
-            }
-            _isLoading = false; // 로딩 완료
-          });
-        }
+        _displayCount = _initialItemCount;
+        _isAllLoaded = false;
       });
     }
   }
-
-  // 로딩 인디케이터 위젯
-  Widget _buildLoadingIndicator() {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 16),
-      color: Colors.white,
-      child: Center(
-        child: CircularProgressIndicator(
-          color: AppColors.primary,
-          strokeWidth: 3,
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  
+  // 데이터 초기 로드
+  void _initializeData() {
     // 임시 데이터 (실제로는 API에서 가져올 것)
-    final restaurants = [
+    _restaurants = [
       {
         "id": 1,
         "name": "스시타케 광주점",
@@ -324,205 +288,301 @@ class _SearchResultListState extends State<SearchResultList> {
         "reviewCount": 26,
       },
     ];
+    
+    // 필터 적용
+    _applyFilter();
+  }
+  
+  // 필터 적용
+  void _applyFilter() {
+    setState(() {
+      if (widget.filter != null && widget.filter!.isNotEmpty) {
+        _filteredRestaurants = _restaurants
+            .where((restaurant) => (restaurant["tags"] as List).contains(widget.filter))
+            .toList();
+      } else {
+        _filteredRestaurants = List.from(_restaurants);
+      }
+    });
+  }
 
-    // 필터링 적용
-    _filteredRestaurants = restaurants;
-    if (widget.filter != null && widget.filter!.isNotEmpty) {
-      _filteredRestaurants =
-          restaurants
-              .where(
-                (restaurant) =>
-                    (restaurant["tags"] as List).contains(widget.filter),
-              )
-              .toList();
+  // 더 많은 항목 로드
+  void _loadMoreItems() {
+    if (!_isAllLoaded && !_isLoading) {
+      setState(() {
+        _isLoading = true; // 로딩 시작
+      });
+
+      // 1초 후에 데이터 로드 (로딩 시간 추가)
+      Future.delayed(Duration(seconds: 1), () {
+        if (mounted) {
+          setState(() {
+            _displayCount = _displayCount + _loadMoreCount;
+            if (_displayCount >= _filteredRestaurants.length) {
+              _displayCount = _filteredRestaurants.length;
+              _isAllLoaded = true;
+            }
+            _isLoading = false; // 로딩 완료
+          });
+        }
+      });
     }
+  }
 
-    return Column(
-      children: [
-        // 메인 리스트
-        Expanded(
-          child: ListView.separated(
-            controller: _scrollController,
-            itemCount:
-                _isLoading
-                    ? _displayCount +
-                        1 // +1은 로딩 인디케이터를 위한 공간
-                    : _displayCount,
-            separatorBuilder:
-                (context, index) => Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: AppColors.verylightGray,
-                ),
-            itemBuilder: (context, index) {
-              // 로딩 인디케이터 표시
-              if (_isLoading && index == _displayCount) {
-                return _buildLoadingIndicator();
-              }
-
-              // 모든 항목이 표시된 경우
-              if (index >= _filteredRestaurants.length) {
-                return SizedBox.shrink();
-              }
-
-              final restaurant = _filteredRestaurants[index];
-
-              // ListTile 대신 직접 구성한 Row 레이아웃 사용
-              return GestureDetector(
-                onTap: () {
-                  // 음식점 상세 페이지로 이동
-                },
-                child: Container(
-                  color: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 왼쪽 콘텐츠 (랭킹, 식당명, 정보 등)
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 랭킹 표시
-                            Container(
-                              width: 30,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                color: AppColors.verylightGray,
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                "${index + 1}",
-                                style: TextStyle(
-                                  fontFamily: 'Anemone',
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.darkGray,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 10),
-
-                            // 식당 정보 영역
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // 식당명
-                                  Text(
-                                    "${restaurant["name"]}",
-                                    style: TextStyle(
-                                      fontFamily: 'Anemone_air',
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                      color: AppColors.darkGray,
-                                    ),
-                                  ),
-
-                                  // 해시태그
-                                  SizedBox(height: 2),
-                                  Wrap(
-                                    spacing: 8,
-                                    children:
-                                        (restaurant["tags"] as List)
-                                            .map(
-                                              (tag) => Text(
-                                                "#$tag",
-                                                style: TextStyle(
-                                                  fontFamily: 'Anemone_air',
-                                                  fontSize: 12,
-                                                  color: AppColors.darkGray,
-                                                ),
-                                              ),
-                                            )
-                                            .toList(),
-                                  ),
-
-                                  SizedBox(height: 6),
-                                  // 점수, 거리, 리뷰수
-                                  Row(
-                                    children: [
-                                      // 점수
-                                      Text(
-                                        "${restaurant["score"]}점",
-                                        style: TextStyle(
-                                          fontFamily: 'Anemone',
-                                          color: AppColors.primary,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                      SizedBox(width: 10),
-                                      // 거리
-                                      Text(
-                                        "${restaurant["distance"]}",
-                                        style: TextStyle(
-                                          fontFamily: 'Anemone_air',
-                                          color: AppColors.darkGray,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                      SizedBox(width: 10),
-                                      // 리뷰 수 추가
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.rate_review_outlined,
-                                            size: 14,
-                                            color: AppColors.mediumGray,
-                                          ),
-                                          SizedBox(width: 2),
-                                          Text(
-                                            "${restaurant["reviewCount"]}",
-                                            style: TextStyle(
-                                              fontFamily: 'Anemone_air',
-                                              color: AppColors.mediumGray,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-
-                                  SizedBox(height: 4),
-                                  // 주소 추가
-                                  Text(
-                                    "${restaurant["address"]}",
-                                    style: TextStyle(
-                                      fontFamily: 'Anemone_air',
-                                      color: AppColors.mediumGray,
-                                      fontSize: 12,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // 이미지 (ListTile의 trailing 대신 Row에 직접 배치)
-                      SizedBox(width: 12),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: SizedBox(
-                          width: 100,
-                          height: 100,
-                          child: Container(
-                            color: Colors.grey[300],
-                            child: Center(child: Text('이미지')),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+  // 로딩 인디케이터 위젯
+  Widget _buildLoadingIndicator() {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 16),
+      color: Colors.white,
+      child: Center(
+        child: CircularProgressIndicator(
+          color: AppColors.primary,
+          strokeWidth: 3,
+        ),
+      ),
+    );
+  }
+  
+  // 더보기 버튼 위젯
+  Widget _buildLoadMoreButton() {
+    return GestureDetector(
+      onTap: _loadMoreItems,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: AppColors.verylightGray,
+              width: 1,
+            ),
           ),
         ),
-      ],
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "더보기",
+                style: TextStyle(
+                  fontFamily: 'Anemone_air',
+                  fontSize: 14,
+                  color: AppColors.darkGray,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(width: 4),
+              Icon(
+                Icons.keyboard_arrow_down,
+                size: 18,
+                color: AppColors.darkGray,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 현재 표시할 항목 수 (더보기 버튼 또는 로딩 인디케이터 때문에 +1)
+    int itemCount = _displayCount;
+    
+    // 아직 모든 항목을 로드하지 않았으면 더보기 버튼 또는 로딩 인디케이터 위한 공간 추가
+    if (!_isAllLoaded) {
+      itemCount += 1;
+    }
+    
+    return ListView.builder(
+      // 부모 NestedScrollView와 통합하기 위한 설정
+      primary: true, // PrimaryScrollController 사용 (NestedScrollView에서 제공)
+      physics: AlwaysScrollableScrollPhysics(),
+      
+      // 아이템 목록 + 버튼 또는 로딩 인디케이터
+      itemCount: itemCount,
+      
+      itemBuilder: (context, index) {
+        // 마지막 항목인 경우 더보기 버튼 또는 로딩 인디케이터 표시
+        if (index == _displayCount) {
+          if (_isLoading) {
+            return _buildLoadingIndicator();
+          } else {
+            return _buildLoadMoreButton();
+          }
+        }
+
+        // 인덱스가 범위를 벗어나는 경우 빈 위젯 반환 (안전장치)
+        if (index >= _filteredRestaurants.length) {
+          return SizedBox.shrink();
+        }
+
+        final restaurant = _filteredRestaurants[index];
+
+        // 음식점 아이템 UI 구성
+        return Column(
+          children: [
+            // 첫 번째 항목 이전에는 구분선 없음
+            if (index > 0)
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: AppColors.verylightGray,
+              ),
+            GestureDetector(
+              onTap: () {
+                // 음식점 상세 페이지로 이동
+              },
+              child: Container(
+                color: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 왼쪽 콘텐츠 (랭킹, 식당명, 정보 등)
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 랭킹 표시
+                          Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: AppColors.verylightGray,
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              "${index + 1}",
+                              style: TextStyle(
+                                fontFamily: 'Anemone',
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.darkGray,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 10),
+
+                          // 식당 정보 영역
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 식당명
+                                Text(
+                                  "${restaurant["name"]}",
+                                  style: TextStyle(
+                                    fontFamily: 'Anemone_air',
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: AppColors.darkGray,
+                                  ),
+                                ),
+
+                                // 해시태그
+                                SizedBox(height: 2),
+                                Wrap(
+                                  spacing: 8,
+                                  children: (restaurant["tags"] as List)
+                                      .map(
+                                        (tag) => Text(
+                                          "#$tag",
+                                          style: TextStyle(
+                                            fontFamily: 'Anemone_air',
+                                            fontSize: 12,
+                                            color: AppColors.darkGray,
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+
+                                SizedBox(height: 6),
+                                // 점수, 거리, 리뷰수
+                                Row(
+                                  children: [
+                                    // 점수
+                                    Text(
+                                      "${restaurant["score"]}점",
+                                      style: TextStyle(
+                                        fontFamily: 'Anemone',
+                                        color: AppColors.primary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    SizedBox(width: 10),
+                                    // 거리
+                                    Text(
+                                      "${restaurant["distance"]}",
+                                      style: TextStyle(
+                                        fontFamily: 'Anemone_air',
+                                        color: AppColors.darkGray,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    SizedBox(width: 10),
+                                    // 리뷰 수 추가
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.rate_review_outlined,
+                                          size: 14,
+                                          color: AppColors.mediumGray,
+                                        ),
+                                        SizedBox(width: 2),
+                                        Text(
+                                          "${restaurant["reviewCount"]}",
+                                          style: TextStyle(
+                                            fontFamily: 'Anemone_air',
+                                            color: AppColors.mediumGray,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+
+                                SizedBox(height: 4),
+                                // 주소 추가
+                                Text(
+                                  "${restaurant["address"]}",
+                                  style: TextStyle(
+                                    fontFamily: 'Anemone_air',
+                                    color: AppColors.mediumGray,
+                                    fontSize: 12,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // 이미지
+                    SizedBox(width: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: SizedBox(
+                        width: 100,
+                        height: 100,
+                        child: Container(
+                          color: Colors.grey[300],
+                          child: Center(child: Text('이미지')),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
