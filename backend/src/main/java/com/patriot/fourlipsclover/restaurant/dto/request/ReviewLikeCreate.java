@@ -10,21 +10,5 @@ import lombok.NoArgsConstructor;
 public class ReviewLikeCreate {
 
 	private Integer memberId;
-	private Integer reviewId;
 	private LikeStatus likeStatus;
-
-	public enum LikeStatus {
-		LIKE("LIKE"),
-		DISLIKE("DISLIKE");
-
-		private final String status;
-
-		LikeStatus(String status) {
-			this.status = status;
-		}
-
-		public String getStatus() {
-			return status;
-		}
-	}
 }

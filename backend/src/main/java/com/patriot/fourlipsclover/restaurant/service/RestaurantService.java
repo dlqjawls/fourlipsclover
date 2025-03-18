@@ -7,9 +7,9 @@ import com.patriot.fourlipsclover.exception.UnauthorizedAccessException;
 import com.patriot.fourlipsclover.exception.UserNotFoundException;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberJpaRepository;
+import com.patriot.fourlipsclover.restaurant.dto.request.LikeStatus;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewLikeCreate;
-import com.patriot.fourlipsclover.restaurant.dto.request.ReviewLikeCreate.LikeStatus;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
@@ -90,6 +90,7 @@ public class RestaurantService {
 	}
 
 	private void checkReviewerIsCurrentUser(Integer reviewMemberId) {
+		// AOP로 분리해서 controller에서
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		String currentUsername = authentication.getName();
 		Member currentMember = memberRepository.findByEmail(currentUsername)
@@ -115,18 +116,18 @@ public class RestaurantService {
 	}
 
 	@Transactional
-	public String like(ReviewLikeCreate request) {
+	public String like(Integer reviewId, ReviewLikeCreate request) {
 		Member likedMember = memberRepository.findById(request.getMemberId())
 				.orElseThrow(UserNotFoundException::new);
-		Review likedReview = reviewRepository.findById(request.getReviewId())
-				.orElseThrow(() -> new ReviewNotFoundException(request.getReviewId()));
+		Review likedReview = reviewRepository.findById(reviewId)
+				.orElseThrow(() -> new ReviewNotFoundException(reviewId));
 
 		if (likedMember.getMemberId() == likedReview.getMember().getMemberId()) {
 			throw new InvalidDataException("작성자는 본인 글에 좋아요/싫어요를 생성할 수 없습니다.");
 		}
 		final String[] result = new String[1];
 
-		ReviewLikePK id = ReviewLikePK.builder().reviewId(request.getReviewId())
+		ReviewLikePK id = ReviewLikePK.builder().reviewId(reviewId)
 				.memberId(request.getMemberId()).build();
 		reviewLikeJpaRepository.findById(id).ifPresentOrElse(
 				existsReviewLike -> {

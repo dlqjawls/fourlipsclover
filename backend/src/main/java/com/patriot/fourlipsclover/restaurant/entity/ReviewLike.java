@@ -1,7 +1,7 @@
 package com.patriot.fourlipsclover.restaurant.entity;
 
 import com.patriot.fourlipsclover.member.entity.Member;
-import com.patriot.fourlipsclover.restaurant.dto.request.ReviewLikeCreate.LikeStatus;
+import com.patriot.fourlipsclover.restaurant.dto.request.LikeStatus;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

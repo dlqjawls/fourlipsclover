@@ -55,7 +55,6 @@ public class RestaurantController {
 	public ResponseEntity<ReviewResponse> reviewUpdate(
 			@PathVariable(name = "reviewId") Integer reviewId,
 			@Valid @RequestBody ReviewUpdate reviewUpdate) {
-
 		if (Objects.isNull(reviewId)) {
 			throw new IllegalArgumentException("reviewId는 비어있을 수 없습니다");
 		}
@@ -72,10 +71,11 @@ public class RestaurantController {
 		return ResponseEntity.ok(response);
 	}
 
-	@PostMapping("/reviews/{reviewId}/like")
-	public ResponseEntity<ApiResponse<Void>> reviewLike(@RequestBody ReviewLikeCreate request) {
-		String result = restaurantService.like(request);
-		ApiResponse<Void> response = ApiResponse.<Void>builder().message(result)
+	@PostMapping(value = "/reviews/{reviewId}/like")
+	public ResponseEntity<ApiResponse<String>> reviewLike(@PathVariable Integer reviewId,
+			@RequestBody ReviewLikeCreate request) {
+		String result = restaurantService.like(reviewId, request);
+		ApiResponse<String> response = ApiResponse.<String>builder().data(result).message(result)
 				.success(true).build();
 
 		return ResponseEntity.ok(response);
