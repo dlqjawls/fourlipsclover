@@ -3,7 +3,7 @@ import 'package:frontend/screens/home/home_screen.dart';
 // 여기에 화면 import 추가 예정
 import 'package:frontend/screens/auth/login_screen.dart';
 import 'package:frontend/screens/common/base_screen.dart';
-import 'package:frontend/screens/user/user.dart';
+import 'package:frontend/screens/user/user_screen.dart';
 import 'package:frontend/screens/user/user_edit.dart'; // 추가
 import 'package:frontend/screens/user/user_profile.dart'; // 추가
 

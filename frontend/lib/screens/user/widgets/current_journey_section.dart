@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../config/theme.dart';
+import 'package:frontend/config/theme.dart';
 
 class CurrentJourneySection extends StatelessWidget {
   const CurrentJourneySection({super.key});
