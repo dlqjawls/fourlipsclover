@@ -1,7 +1,9 @@
 package com.patriot.fourlipsclover.restaurant.controller;
 
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
+import com.patriot.fourlipsclover.restaurant.dto.request.ReviewLikeCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
+import com.patriot.fourlipsclover.restaurant.dto.response.ApiResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.service.RestaurantService;
@@ -66,6 +68,15 @@ public class RestaurantController {
 	public ResponseEntity<ReviewDeleteResponse> reviewDelete(
 			@PathVariable(name = "reviewId") Integer reviewId) {
 		ReviewDeleteResponse response = restaurantService.delete(reviewId);
+
+		return ResponseEntity.ok(response);
+	}
+
+	@PostMapping("/reviews/{reviewId}/like")
+	public ResponseEntity<ApiResponse<Void>> reviewLike(@RequestBody ReviewLikeCreate request) {
+		restaurantService.like(request);
+		ApiResponse<Void> response = ApiResponse.<Void>builder().message("좋아요/싫어요가 등록 됐습니다.")
+				.success(true).build();
 
 		return ResponseEntity.ok(response);
 	}
