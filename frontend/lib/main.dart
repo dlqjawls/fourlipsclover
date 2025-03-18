@@ -10,6 +10,8 @@ import 'providers/search_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'services/kakao_map_service.dart';
 import 'providers/auth_provider.dart';
+import 'providers/group_provider.dart';
+
 
 void main() async {
   // Flutter 엔진 초기화
@@ -31,6 +33,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AppProvider()),
         ChangeNotifierProvider(create: (_) => SearchProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
+        ChangeNotifierProvider(create: (_) => GroupProvider()),
       ],
       child: MaterialApp(
         title: '네입클로버',

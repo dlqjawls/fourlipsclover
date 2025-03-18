@@ -3,8 +3,11 @@ import '../../widgets/common_widgets.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/journal/journal.dart';
 import '../../screens/ai/ai_plan.dart';
-import '../../screens/group/group.dart';
+<<<<<<< frontend/lib/screens/common/base_screen.dart
 import '../user/user_screen.dart';
+import '../group/group_screen.dart';
+
+>>>>>>> frontend/lib/screens/common/base_screen.dart
 
 class BaseScreen extends StatefulWidget {
   const BaseScreen({Key? key}) : super(key: key);
