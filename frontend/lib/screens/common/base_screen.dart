@@ -14,7 +14,7 @@ class BaseScreen extends StatefulWidget {
 }
 
 class _BaseScreenState extends State<BaseScreen> {
-  int _selectedIndex = 0;
+  int _selectedIndex = 2;
 
   final List<Widget> _screens = [
     const HomeScreen(),
