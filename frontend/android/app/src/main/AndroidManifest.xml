@@ -4,11 +4,19 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- 위치 권한 추가 -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
       
     <application
         android:label="네입 클로버"
-        android:name="${applicationName}"
-        android:icon="@mipmap/logo">
+        android:name=".FourLipsCloverApplication"
+        android:icon="@mipmap/logo"
+        android:usesCleartextTraffic="true">
+
+        <meta-data
+            android:name="com.kakao.vectormap.APP_KEY"
+            android:value="${kakaoMapApiKey}" />
         
         <!-- 카카오 커스텀 탭 실행 설정 -->
         <activity 

@@ -11,6 +11,9 @@ val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties()
 keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 
+// API 키를 가져오기 (없으면 빈 문자열 반환)
+val kakaoMapApiKey = keystoreProperties.getProperty("kakao.map.api.key", "")
+
 android {
     namespace = "com.patriot.fourlipsclover"
     compileSdk = flutter.compileSdkVersion
@@ -43,10 +46,12 @@ android {
 
     defaultConfig {
         applicationId = "com.patriot.fourlipsclover"
-        minSdk = flutter.minSdkVersion
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionName = flutter.versionName     
+
+        manifestPlaceholders["kakaoMapApiKey"] = kakaoMapApiKey
         manifestPlaceholders["NATIVE_APP_KEY"] = "eed918aa9f0ef754a93dec5247e9f38e"
     }
 
@@ -57,6 +62,10 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
         }
     }
+}
+
+dependencies {
+    implementation("com.kakao.maps.open:android:2.12.8")
 }
 
 flutter {

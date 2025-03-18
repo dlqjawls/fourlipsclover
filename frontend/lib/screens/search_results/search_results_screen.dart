@@ -1,6 +1,6 @@
 // search_results_screen.dart
 import 'package:flutter/material.dart';
-import 'widgets/map_preview.dart';
+import '../../widgets/map_preview.dart';
 import 'widgets/search_filter_tags.dart';
 import 'widgets/search_result_list.dart';
 
@@ -94,6 +94,8 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
           MapPreview(
             location: _currentQuery,
             onTapViewMap: _openFullMap,
+            latitude: 35.1958,
+            longitude: 126.8149,
           ),
 
           // 필터 태그
