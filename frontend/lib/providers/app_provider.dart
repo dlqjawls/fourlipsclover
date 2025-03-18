@@ -7,9 +7,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AppProvider with ChangeNotifier {
   bool _isLoggedIn = false;
   User? _user;
+  String? _jwtToken;
 
   bool get isLoggedIn => _isLoggedIn;
   User? get user => _user;
+  String? get jwtToken => _jwtToken;
 
   Future<void> kakaoLogin() async {
     try {
@@ -38,6 +40,9 @@ class AppProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+
+        _jwtToken = responseData['jwttoken'];
         _user = await UserApi.instance.me();
         _isLoggedIn = true;
         await saveLoginState();
@@ -65,6 +70,9 @@ class AppProvider with ChangeNotifier {
 
     _isLoggedIn = false;
     _user = null;
+    _jwtToken = null; // JWT 토큰도 제거
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('jwtToken'); // 저장된 JWT 토큰 삭제
     await saveLoginState();
     notifyListeners();
   }
@@ -72,6 +80,9 @@ class AppProvider with ChangeNotifier {
   Future<void> saveLoginState() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', _isLoggedIn);
+    if (_jwtToken != null) {
+      await prefs.setString('jwtToken', _jwtToken!);
+    }
   }
 
   Future<void> loadLoginState() async {

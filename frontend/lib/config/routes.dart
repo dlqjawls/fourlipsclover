@@ -1,22 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/screens/home/home_screen.dart';
 // 여기에 화면 import 추가 예정
-import '../screens/auth/login_screen.dart';
-import '../screens/common/base_screen.dart';
-import '../screens/user/user.dart';
+import 'package:frontend/screens/auth/login_screen.dart';
+import 'package:frontend/screens/common/base_screen.dart';
+import 'package:frontend/screens/user/user.dart';
+import 'package:frontend/screens/user/user_edit.dart'; // 추가
+import 'package:frontend/screens/user/user_profile.dart'; // 추가
 
 class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
-    '/journal' : (context) => const BaseScreen(),
-    '/ai_plan' : (context) => const BaseScreen(),
+    '/journal': (context) => const BaseScreen(),
+    '/ai_plan': (context) => const BaseScreen(),
     '/group': (context) => const BaseScreen(),
     '/login': (context) => const LoginScreen(),
     '/user': (context) => const UserScreen(),
-    '/home' : (context) => const BaseScreen(),
+    '/home': (context) => const BaseScreen(),
+    '/user_edit': (context) => const UserEditScreen(),
+    '/user_profile': (context) => const MyConsumptionPatternScreen(),
+
     // 앱의 경로를 여기에 등록
     // 예시: '/': (context) => HomeScreen(),
     // 예시: '/login': (context) => LoginScreen(),
-
   };
 
   // 네비게이션 헬퍼 메서드

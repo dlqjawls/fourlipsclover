@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../config/theme.dart';
+import 'package:frontend/config/theme.dart';
+import 'package:frontend/config/routes.dart';
+import 'package:frontend/screens/user/user_edit.dart';
+import 'package:frontend/screens/user/user_profile.dart';
 
 class ActionButtons extends StatelessWidget {
   const ActionButtons({super.key});
@@ -10,7 +13,14 @@ class ActionButtons extends StatelessWidget {
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MyConsumptionPatternScreen(),
+                ),
+              );
+            },
             style: OutlinedButton.styleFrom(
               backgroundColor: AppColors.background,
               foregroundColor: AppColors.primary,
@@ -28,7 +38,13 @@ class ActionButtons extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                // pushReplacement 대신 push 사용
+                context,
+                MaterialPageRoute(builder: (context) => const UserEditScreen()),
+              );
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.background,
               foregroundColor: AppColors.primary,
