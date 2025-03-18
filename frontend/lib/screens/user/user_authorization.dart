@@ -2,13 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:frontend/config/theme.dart';
-<<<<<<< HEAD
 import 'package:frontend/screens/user/auth_widgets/location_check_button.dart';
 import 'package:frontend/screens/user/auth_widgets/location_status_card.dart';
-=======
-import 'auth_widgets/location_status_card.dart';
-import 'auth_widgets/location_check_button.dart';
->>>>>>> a8bfbbc656f1e66b91b0573cdc48b4c2109ea8e9
 
 class UserAuthorizationScreen extends StatefulWidget {
   const UserAuthorizationScreen({super.key});
@@ -44,7 +39,6 @@ class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
   Future<void> _getCurrentLocation() async {
     if (_isLoading) return;
 
-<<<<<<< HEAD
     final status = await Permission.location.status;
 
     // 권한이 영구적으로 거부된 경우
@@ -88,8 +82,6 @@ class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
       }
     }
 
-=======
->>>>>>> a8bfbbc656f1e66b91b0573cdc48b4c2109ea8e9
     setState(() {
       _isLoading = true;
       _message = '위치를 확인하는 중...';
@@ -97,7 +89,6 @@ class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
 
     try {
       print('위치 정보 요청 시작');
-<<<<<<< HEAD
       // 위치 서비스 활성화 여부 확인
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -107,8 +98,6 @@ class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
         return;
       }
 
-=======
->>>>>>> a8bfbbc656f1e66b91b0573cdc48b4c2109ea8e9
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -155,7 +144,6 @@ class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-<<<<<<< HEAD
           child: Center(
             child: SingleChildScrollView(
               child: LocationStatusCard(
@@ -165,29 +153,6 @@ class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
                 onPressed: _getCurrentLocation,
               ),
             ),
-=======
-          child: Column(
-            children: [
-              const SizedBox(height: 40),
-              Expanded(
-                child: Center(
-                  child: SingleChildScrollView(
-                    child: LocationStatusCard(
-                      currentPosition: _currentPosition,
-                      message: _message,
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: LocationCheckButton(
-                  isLoading: _isLoading,
-                  onPressed: _getCurrentLocation,
-                ),
-              ),
-            ],
->>>>>>> a8bfbbc656f1e66b91b0573cdc48b4c2109ea8e9
           ),
         ),
       ),
