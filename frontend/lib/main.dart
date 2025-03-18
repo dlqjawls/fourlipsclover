@@ -12,11 +12,10 @@ import 'services/kakao_map_service.dart';
 import 'providers/auth_provider.dart';
 
 void main() async {
-  await AppInitializer.initialize();
-
   // Flutter 엔진 초기화
   WidgetsFlutterBinding.ensureInitialized();
-
+  await dotenv.load(fileName: ".env");
+  await AppInitializer.initialize();
   runApp(const MyApp());
 }
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ...existing code...
 
 class AuthProvider with ChangeNotifier {
   bool _isAuthorized = false;

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:frontend/config/theme.dart';
-import 'auth_widgets/location_status_card.dart';
-import 'auth_widgets/location_check_button.dart';
+import 'package:frontend/screens/user/auth_widgets/location_check_button.dart';
+import 'package:frontend/screens/user/auth_widgets/location_status_card.dart';
 
 class UserAuthorizationScreen extends StatefulWidget {
   const UserAuthorizationScreen({super.key});
@@ -39,6 +39,49 @@ class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
   Future<void> _getCurrentLocation() async {
     if (_isLoading) return;
 
+    final status = await Permission.location.status;
+
+    // 권한이 영구적으로 거부된 경우
+    if (status.isPermanentlyDenied) {
+      // 설정으로 이동하는 다이얼로그 표시
+      if (mounted) {
+        final shouldOpenSettings = await showDialog<bool>(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('위치 권한 필요'),
+                content: const Text('위치 권한이 필요합니다.\n설정에서 권한을 허용해주세요.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('취소'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('설정으로 이동'),
+                  ),
+                ],
+              ),
+        );
+
+        if (shouldOpenSettings == true) {
+          await openAppSettings();
+        }
+      }
+      return;
+    }
+
+    // 권한이 없는 경우 권한 재요청
+    if (!status.isGranted) {
+      final result = await Permission.location.request();
+      if (!result.isGranted) {
+        setState(() {
+          _message = '위치 권한이 필요합니다';
+        });
+        return;
+      }
+    }
+
     setState(() {
       _isLoading = true;
       _message = '위치를 확인하는 중...';
@@ -46,6 +89,15 @@ class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
 
     try {
       print('위치 정보 요청 시작');
+      // 위치 서비스 활성화 여부 확인
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _message = '기기의 위치 서비스를 켜주세요';
+        });
+        return;
+      }
+
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -92,27 +144,15 @@ class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            children: [
-              const SizedBox(height: 40),
-              Expanded(
-                child: Center(
-                  child: SingleChildScrollView(
-                    child: LocationStatusCard(
-                      currentPosition: _currentPosition,
-                      message: _message,
-                    ),
-                  ),
-                ),
+          child: Center(
+            child: SingleChildScrollView(
+              child: LocationStatusCard(
+                currentPosition: _currentPosition,
+                message: _message,
+                isLoading: _isLoading,
+                onPressed: _getCurrentLocation,
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: LocationCheckButton(
-                  isLoading: _isLoading,
-                  onPressed: _getCurrentLocation,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
