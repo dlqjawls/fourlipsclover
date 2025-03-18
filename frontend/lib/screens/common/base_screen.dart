@@ -3,7 +3,7 @@ import '../../widgets/common_widgets.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/journal/journal.dart';
 import '../../screens/ai/ai_plan.dart';
-import '../../screens/group/group.dart';
+import '../../screens/group/group_screen.dart';
 import '../../screens/user/user.dart';
 
 class BaseScreen extends StatefulWidget {

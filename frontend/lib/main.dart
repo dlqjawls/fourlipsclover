@@ -9,6 +9,7 @@ import 'screens/common/base_screen.dart';
 import 'providers/search_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'services/kakao_map_service.dart';
+import 'providers/group_provider.dart';
 
 void main() async {
   await AppInitializer.initialize();
@@ -30,6 +31,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AppProvider()),
         ChangeNotifierProvider(create: (_) => SearchProvider()),
+        ChangeNotifierProvider(create: (_) => GroupProvider()),
       ],
       child: MaterialApp(
         title: '네입클로버',
