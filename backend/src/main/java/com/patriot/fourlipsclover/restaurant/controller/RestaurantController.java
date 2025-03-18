@@ -74,8 +74,8 @@ public class RestaurantController {
 
 	@PostMapping("/reviews/{reviewId}/like")
 	public ResponseEntity<ApiResponse<Void>> reviewLike(@RequestBody ReviewLikeCreate request) {
-		restaurantService.like(request);
-		ApiResponse<Void> response = ApiResponse.<Void>builder().message("좋아요/싫어요가 등록 됐습니다.")
+		String result = restaurantService.like(request);
+		ApiResponse<Void> response = ApiResponse.<Void>builder().message(result)
 				.success(true).build();
 
 		return ResponseEntity.ok(response);
