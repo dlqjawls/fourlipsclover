@@ -3,7 +3,6 @@ import '../../widgets/common_widgets.dart';
 import '../home/home_screen.dart';
 import '../journal/journal.dart';
 import '../ai/ai_plan.dart';
-import '../user/user.dart';
 import '../user/user_screen.dart';
 import '../group/group_screen.dart';
 import '../review/restaurant_detail.dart';
