@@ -29,7 +29,7 @@ class GroupCalendar extends StatefulWidget {
 }
 
 class _GroupCalendarState extends State<GroupCalendar> {
-  // 달력 보기 모드 (월간/주간)
+  // 달력 보기 모드 (월간만 유지)
   CalendarFormat _calendarFormat = CalendarFormat.month;
   late DateTime _focusedDay;
 
@@ -49,43 +49,50 @@ class _GroupCalendarState extends State<GroupCalendar> {
       children: [
         // 달력 헤더 액션 버튼 추가
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 주간/월간 전환 버튼
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _calendarFormat =
-                        _calendarFormat == CalendarFormat.month
-                            ? CalendarFormat.week
-                            : CalendarFormat.month;
-                  });
-                },
-                icon: Icon(
-                  _calendarFormat == CalendarFormat.month
-                      ? Icons.view_week
-                      : Icons.calendar_view_month,
-                  color: AppColors.primary,
+              // 얇은 화살표와 오늘 텍스트를 둥근 테두리로 감싼 버튼
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.darkGray),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                label: Text(
-                  _calendarFormat == CalendarFormat.month ? '주간 보기' : '월간 보기',
-                  style: TextStyle(color: AppColors.primary),
+                child: InkWell(
+                  onTap: () {
+                    final today = DateTime.now();
+                    setState(() {
+                      _focusedDay = today;
+                    });
+                    widget.onFocusedDayChanged(today);
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12.0,
+                      vertical: 5.0,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.refresh,
+                          size: 14,
+                          color: AppColors.darkGray,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '오늘',
+                          style: TextStyle(
+                            color: AppColors.darkGray,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-
-              // 오늘 날짜로 이동 버튼
-              TextButton.icon(
-                onPressed: () {
-                  final today = DateTime.now();
-                  setState(() {
-                    _focusedDay = today;
-                  });
-                  widget.onFocusedDayChanged(today);
-                },
-                icon: Icon(Icons.today, color: AppColors.primary),
-                label: Text('오늘', style: TextStyle(color: AppColors.primary)),
               ),
             ],
           ),
