@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../config/theme.dart';
+import 'package:frontend/config/theme.dart';
 
 class ProgressIndicatorSection extends StatelessWidget {
   const ProgressIndicatorSection({super.key});

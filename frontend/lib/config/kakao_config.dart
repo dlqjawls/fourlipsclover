@@ -1,9 +1,11 @@
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class KakaoConfig {
-  static const String nativeAppKey = 'eed918aa9f0ef754a93dec5247e9f38e';
+  static String get nativeAppKey => dotenv.env['KAKAO_NATIVE_APP_KEY'] ?? '';
 
   static Future<void> initialize() async {
+    await dotenv.load(fileName: ".env");
     KakaoSdk.init(nativeAppKey: nativeAppKey);
   }
 }

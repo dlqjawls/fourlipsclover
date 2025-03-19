@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/config/theme.dart';
-import 'edit_widgets/profile_image_section.dart';
-import 'edit_widgets/info_tile.dart';
+import 'package:frontend/screens/user/edit_widgets/profile_image_section.dart';
+import 'package:frontend/screens/user/edit_widgets/info_tile.dart';
 
 class UserEditScreen extends StatefulWidget {
   const UserEditScreen({super.key});

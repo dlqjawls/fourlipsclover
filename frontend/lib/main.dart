@@ -8,13 +8,15 @@ import 'services/kakao_service.dart';
 import 'providers/search_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'services/kakao_map_service.dart';
+import 'providers/auth_provider.dart';
+import 'providers/group_provider.dart';
+
 
 void main() async {
-  await AppInitializer.initialize();
-
   // Flutter 엔진 초기화
   WidgetsFlutterBinding.ensureInitialized();
-
+  await dotenv.load(fileName: ".env");
+  await AppInitializer.initialize();
   runApp(const MyApp());
 }
 
@@ -29,6 +31,8 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AppProvider()),
         ChangeNotifierProvider(create: (_) => SearchProvider()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
+        ChangeNotifierProvider(create: (_) => GroupProvider()),
       ],
       child: MaterialApp(
         title: '네입클로버',
