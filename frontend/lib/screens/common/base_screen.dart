@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../widgets/common_widgets.dart';
-import '../../screens/home/home_screen.dart';
-import '../../screens/journal/journal.dart';
-import '../../screens/ai/ai_plan.dart';
-import '../../screens/group/group.dart';
-import '../../screens/user/user.dart';
+import '../home/home_screen.dart';
+import '../journal/journal.dart';
+import '../ai/ai_plan.dart';
+import '../group/group.dart';
+import '../user/user.dart';
+import '../review/restaurant_detail.dart';
 
 class BaseScreen extends StatefulWidget {
   const BaseScreen({Key? key}) : super(key: key);
@@ -16,18 +17,34 @@ class BaseScreen extends StatefulWidget {
 class _BaseScreenState extends State<BaseScreen> {
   int _selectedIndex = 2;
 
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const JournalScreen(),
-    const AIPlanScreen(),
-    const GroupScreen(),
-    const UserScreen(),
-  ];
+  final List<Widget> _screens = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _screens.addAll([
+      const HomeScreen(),
+      RestaurantDetailScreen(restaurantId: "1"),
+      const AIPlanScreen(),
+      const GroupScreen(),
+      const UserScreen(),
+    ]);
+  }
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  /// ✅ 가게 상세 페이지로 이동하는 함수
+  void navigateToRestaurant(BuildContext context, String restaurantId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RestaurantDetailScreen(restaurantId: restaurantId),
+      ),
+    );
   }
 
   @override
