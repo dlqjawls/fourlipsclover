@@ -17,10 +17,10 @@ class _BaseScreenState extends State<BaseScreen> {
   int _selectedIndex = 2;
 
   final List<Widget> _screens = [
+    const GroupScreen(),
+    const AIPlanScreen(),
     const HomeScreen(),
     const JournalScreen(),
-    const AIPlanScreen(),
-    const GroupScreen(),
     const UserScreen(),
   ];
 

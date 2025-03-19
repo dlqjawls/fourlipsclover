@@ -4,8 +4,10 @@ import 'package:frontend/screens/home/home_screen.dart';
 import 'package:frontend/screens/auth/login_screen.dart';
 import 'package:frontend/screens/common/base_screen.dart';
 import 'package:frontend/screens/user/user_screen.dart';
-import 'package:frontend/screens/user/user_edit.dart'; // 추가
-import 'package:frontend/screens/user/user_profile.dart'; // 추가
+import 'package:frontend/screens/user/user_edit.dart';
+import 'package:frontend/screens/user/user_profile.dart';
+import 'package:frontend/screens/group/group_detail_screen.dart';
+import 'package:frontend/models/group_model.dart';
 
 class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
@@ -17,6 +19,12 @@ class AppRoutes {
     '/home': (context) => const BaseScreen(),
     '/user_edit': (context) => const UserEditScreen(),
     '/user_profile': (context) => const MyConsumptionPatternScreen(),
+
+    '/group_detail': (context) {
+      final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      final group = arguments['group'] as Group;
+      return GroupDetailScreen(group: group);
+    },
 
     // 앱의 경로를 여기에 등록
     // 예시: '/': (context) => HomeScreen(),

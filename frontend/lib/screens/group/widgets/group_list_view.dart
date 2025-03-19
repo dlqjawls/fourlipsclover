@@ -82,10 +82,15 @@ class GroupListView extends StatelessWidget {
                   group: group,
                   isSelected: isSelected,
                   onTap: () {
-                    // 그룹 선택 및 상세 화면으로 이동
+                    // 그룹 선택
                     groupProvider.selectGroup(group.groupId);
-                    // 여기에 그룹 상세 화면으로 이동하는 코드 추가
-                    // Navigator.push(...);
+                    
+                    // 그룹 상세 화면으로 이동
+                    Navigator.pushNamed(
+                      context,
+                      '/group_detail',
+                      arguments: {'group': group},
+                    );
                   },
                 );
               },

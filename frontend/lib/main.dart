@@ -11,6 +11,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'services/kakao_map_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/group_provider.dart';
+import 'providers/plan_provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 
 void main() async {
@@ -24,8 +26,6 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // main.dart의 MyApp 클래스 수정
-  // main.dart의 MyApp 클래스에서 home 속성 수정
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -34,6 +34,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SearchProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
         ChangeNotifierProvider(create: (_) => GroupProvider()),
+        ChangeNotifierProvider(create: (_) => PlanProvider()),
       ],
       child: MaterialApp(
         title: '네입클로버',
@@ -41,6 +42,16 @@ class MyApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
         home: const LoginScreen(),
         routes: AppRoutes.routes,
+        // 로컬라이제이션 설정 추가
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('ko', 'KR'), // 한국어
+          Locale('en', 'US'), // 영어
+        ],
       ),
     );
   }
