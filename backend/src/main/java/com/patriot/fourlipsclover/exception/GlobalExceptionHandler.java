@@ -38,4 +38,52 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
+    // 그룹 관련 예외 처리
+    @ExceptionHandler(GroupNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleGroupNotFoundException(GroupNotFoundException ex) {
+        Map<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    // 초대 토큰 만료 예외 처리
+    @ExceptionHandler(InvitationExpiredException.class)
+    public ResponseEntity<Map<String, String>> handleInvitationExpiredException(InvitationExpiredException ex) {
+        Map<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    // 초대 대상 불일치 예외 처리
+    @ExceptionHandler(InvitationMismatchException.class)
+    public ResponseEntity<Map<String, String>> handleInvitationMismatchException(InvitationMismatchException ex) {
+        Map<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+    }
+
+    // 초대 처리 상태 오류 (이미 처리됨) 예외 처리
+    @ExceptionHandler(InvitationAlreadyProcessedException.class)
+    public ResponseEntity<Map<String, String>> handleInvitationAlreadyProcessedException(InvitationAlreadyProcessedException ex) {
+        Map<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    // ApplicationException 처리: 메시지와 HttpStatus를 같이 반환
+    @ExceptionHandler(ApplicationException.class)
+    public ResponseEntity<Map<String, String>> handleApplicationException(ApplicationException ex) {
+        Map<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("error", ex.getMessage());
+        return ResponseEntity.status(ex.getStatus()).body(errorResponse);
+    }
+
+//    // 그 외 처리되지 않은 모든 예외 처리 (내부 서버 오류)
+//    @ExceptionHandler(Exception.class)
+//    public ResponseEntity<Map<String, String>> handleGenericException(Exception ex) {
+//        Map<String, String> errorResponse = new HashMap<>();
+//        errorResponse.put("error", "내부 서버 오류가 발생했습니다.");
+//        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+//    }
+
 }
