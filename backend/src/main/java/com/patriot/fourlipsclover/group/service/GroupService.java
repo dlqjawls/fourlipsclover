@@ -75,7 +75,7 @@ public class GroupService {
 
         groupInvitationRepository.save(invitation);
 
-        return "http://localhost:8080/api/group/join-request/" + token;
+        return "https://fourlipsclover.duckdns.org/api/group/join-request/" + token;
     }
 
 
