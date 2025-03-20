@@ -6,43 +6,135 @@ import 'widgets/empty_group_view.dart';
 import 'widgets/group_list_view.dart';
 import 'widgets/group_create_dialog.dart';
 
-class GroupScreen extends StatelessWidget {
+class GroupScreen extends StatefulWidget {
   const GroupScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final groupProvider = Provider.of<GroupProvider>(context);
-    final groups = groupProvider.groups;
+  _GroupScreenState createState() => _GroupScreenState();
+}
 
+class _GroupScreenState extends State<GroupScreen> {
+  bool _isLoading = true;
+  bool _isError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 화면이 처음 로드될 때 그룹 목록 가져오기
+    _fetchGroups();
+  }
+
+  // 그룹 목록 가져오기
+  Future<void> _fetchGroups() async {
+    setState(() {
+      _isLoading = true;
+      _isError = false;
+    });
+
+    try {
+      await Provider.of<GroupProvider>(context, listen: false).fetchMyGroups();
+    } catch (e) {
+      setState(() {
+        _isError = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '그룹 목록을 불러오는데 실패했습니다.',
+            style: TextStyle(fontFamily: 'Anemone_air'),
+          ),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // 우측 하단에 배경 이미지
-          Positioned(
-            bottom: -250,
-            right: -280,
-            child: Opacity(
-              opacity: 0.3,
-              child: Image.asset(
-                'assets/images/logo.png',
-                width: 800,
-                height: 800,
-                fit: BoxFit.cover,
+      body: RefreshIndicator(
+        onRefresh: _fetchGroups,
+        child: Stack(
+          children: [
+            // 우측 하단에 배경 이미지
+            Positioned(
+              bottom: -250,
+              right: -280,
+              child: Opacity(
+                opacity: 0.3,
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 800,
+                  height: 800,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          ),
 
-          // 콘텐츠
-          groups.isEmpty
-              ? EmptyGroupView(
-                onCreateGroup: () => _showGroupCreateDialog(context),
+            // 로딩 상태
+            if (_isLoading)
+              Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                ),
               )
-              : GroupListView(
-                groups: groups,
-                groupProvider: groupProvider,
-                onCreateGroup: () => _showGroupCreateDialog(context),
+            // 에러 상태
+            else if (_isError)
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: AppColors.red,
+                      size: 48,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      '그룹 목록을 불러오는데 실패했습니다.',
+                      style: TextStyle(
+                        fontFamily: 'Anemone_air',
+                        color: AppColors.darkGray,
+                        fontSize: 16,
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _fetchGroups,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                      ),
+                      child: Text(
+                        '다시 시도',
+                        style: TextStyle(fontFamily: 'Anemone_air'),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            // 정상 상태 - 그룹이 있는 경우와 없는 경우
+            else
+              Consumer<GroupProvider>(
+                builder: (context, groupProvider, child) {
+                  final groups = groupProvider.groups;
+                  
+                  return groups.isEmpty
+                      ? EmptyGroupView(
+                          onCreateGroup: () => _showGroupCreateDialog(context),
+                        )
+                      : GroupListView(
+                          groups: groups,
+                          groupProvider: groupProvider,
+                          onCreateGroup: () => _showGroupCreateDialog(context),
+                        );
+                },
               ),
-        ],
+          ],
+        ),
       ),
     );
   }

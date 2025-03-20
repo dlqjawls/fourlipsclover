@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/theme.dart';
-import '../../../models/group_model.dart';
+import '../../../models/group/group_model.dart';
 
 class GroupCard extends StatelessWidget {
   final Group group;
@@ -16,18 +16,6 @@ class GroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 그룹장 찾기
-    final manager = group.members.firstWhere(
-      (member) => member.role == 'MANAGER',
-      orElse: () => GroupMember(userId: 0, nickname: '없음', role: ''),
-    );
-
-    // 총무 찾기
-    final treasurer = group.members.firstWhere(
-      (member) => member.role == 'TREASURER',
-      orElse: () => GroupMember(userId: 0, nickname: '없음', role: ''),
-    );
-
     return Card(
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
@@ -83,77 +71,58 @@ class GroupCard extends StatelessWidget {
               ),
 
               // 하단 섹션
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 멤버 수
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.people,
-                          size: 14,
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 그룹 설명
+                      Text(
+                        group.description,
+                        style: TextStyle(
+                          fontFamily: 'Anemone_air',
+                          fontSize: 14,
                           color: AppColors.darkGray,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${group.members.length}명',
-                          style: TextStyle(
-                            fontFamily: 'Anemone_air',
-                            fontSize: 14,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const Spacer(),
+                      
+                      // 그룹 ID (개발 중에만 표시)
+                      Text(
+                        'ID: ${group.groupId}',
+                        style: TextStyle(
+                          fontFamily: 'Anemone_air',
+                          fontSize: 10,
+                          color: AppColors.lightGray,
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 4),
+                      
+                      // 그룹 생성일
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            size: 14,
                             color: AppColors.darkGray,
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 13),
-
-                    // 그룹장
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.person,
-                          size: 14,
-                          color: AppColors.darkGray,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '그룹장: ${manager.nickname}',
-                          style: TextStyle(
-                            fontFamily: 'Anemone_air',
-                            fontSize: 14,
-                            color: AppColors.darkGray,
+                          const SizedBox(width: 4),
+                          Text(
+                            '생성일: ${_formatDate(group.createdAt)}',
+                            style: TextStyle(
+                              fontFamily: 'Anemone_air',
+                              fontSize: 12,
+                              color: AppColors.darkGray,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 13),
-
-                    // 총무
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.account_balance_wallet,
-                          size: 14,
-                          color: AppColors.darkGray,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '총무: ${treasurer.nickname}',
-                          style: TextStyle(
-                            fontFamily: 'Anemone_air',
-                            fontSize: 14,
-                            color: AppColors.darkGray,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -161,5 +130,10 @@ class GroupCard extends StatelessWidget {
         ),
       ),
     );
+  }
+  
+  // 날짜 포맷팅
+  String _formatDate(DateTime date) {
+    return '${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
   }
 }
