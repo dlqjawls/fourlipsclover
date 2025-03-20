@@ -3,6 +3,11 @@ INSERT INTO member (member_id, email, nickname, profile_url, created_at, updated
 VALUES (1, 'test1@example.com', '사용자1', 'http://example.com/profile1.jpg', CURRENT_TIMESTAMP,
         CURRENT_TIMESTAMP, false, 0.0);
 
+INSERT INTO member (member_id, email, nickname, profile_url, created_at, updated_at, is_withdrawal,
+                    trust_score)
+VALUES (2, 'test2@example.com', '사용자2', 'http://example.com/profile1.jpg', CURRENT_TIMESTAMP,
+        CURRENT_TIMESTAMP, false, 0.0);
+
 
 INSERT INTO restaurant (restaurant_id, address_name, category, category_name, kakao_place_id, phone,
                         place_name, place_url, road_address_name, x, y)
