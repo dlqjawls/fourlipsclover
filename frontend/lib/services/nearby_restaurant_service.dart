@@ -20,7 +20,7 @@ class NearbyRestaurantService {
   static Future<List<RestaurantResponse>> findNearbyRestaurants({
     required double latitude,
     required double longitude,
-    int radius = 5000,
+    int radius = 1000,
   }) async {
     if (useDummyData) {
       // 더미 데이터 반환

@@ -47,7 +47,7 @@ Future<void> _initializeLocation() async {
 }
 
   // 주변 레스토랑 데이터 로딩
-  Future<void> _loadNearbyRestaurants({int radius = 5000}) async {
+  Future<void> _loadNearbyRestaurants() async {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -61,7 +61,6 @@ Future<void> _initializeLocation() async {
         final restaurants = await NearbyRestaurantService.findNearbyRestaurants(
           latitude: authProvider.currentPosition!.latitude,
           longitude: authProvider.currentPosition!.longitude,
-          radius: radius,
         );
         
         setState(() {
