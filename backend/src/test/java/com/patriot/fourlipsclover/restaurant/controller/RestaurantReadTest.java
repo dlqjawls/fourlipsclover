@@ -70,4 +70,17 @@ public class RestaurantReadTest {
 		assertThat(response.getBody().getPlaceName()).isEqualTo("초돈");
 	}
 
+	@Test
+	void 사용자는_GPS정보로_근처식당정보를_불러올수있다() {
+		//given
+		//when
+		ResponseEntity<List<RestaurantResponse>> response = restTemplate.exchange(
+				"/api/restaurant/nearby?latitude=126.830452421678&longitude=35.1912340501076&radius=1000",
+				HttpMethod.GET, HttpEntity.EMPTY,
+				new ParameterizedTypeReference<List<RestaurantResponse>>() {
+				});
+		//then
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(response.getBody().size()).isEqualTo(1);
+	}
 }
