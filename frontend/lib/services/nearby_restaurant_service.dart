@@ -8,10 +8,6 @@ import '../constants/api_constants.dart';
 class NearbyRestaurantService {
   // .env 파일에서 API 기본 URL을 가져옵니다.
   static String get baseUrl => dotenv.env['API_BASE_URL'] ?? '';
-  static const String apiPrefix = '/api/restaurant';
-
-  /// 더미 데이터 사용 여부 설정
-  static bool useDummyData = false; // true면 더미 데이터, false면 API 요청 실행
 
   /// 주변 레스토랑 검색
   /// [latitude] 위도
@@ -22,40 +18,6 @@ class NearbyRestaurantService {
     required double longitude,
     int radius = 1000,
   }) async {
-    if (useDummyData) {
-      // 더미 데이터 반환
-      await Future.delayed(const Duration(seconds: 1));
-
-      return [
-        RestaurantResponse(
-          restaurantId: 1,
-          kakaoPlaceId: 'dummy_place_id_1',
-          placeName: '김쿨라멘 강남점',
-          addressName: '서울특별시 강남구 테헤란로 10길 9',
-          roadAddressName: '서울특별시 강남구 테헤란로 10길 9',
-          category: 'FD6',
-          categoryName: '음식점 > 일식 > 라멘',
-          phone: '02-1234-5678',
-          placeUrl: 'https://place.map.kakao.com/12345',
-          x: 127.0415,
-          y: 37.5011,
-        ),
-        RestaurantResponse(
-          restaurantId: 2,
-          kakaoPlaceId: 'dummy_place_id_2',
-          placeName: '스시코우지',
-          addressName: '서울특별시 강남구 테헤란로 8길 22',
-          roadAddressName: '서울특별시 강남구 테헤란로 8길 22',
-          category: 'FD6',
-          categoryName: '음식점 > 일식 > 초밥,롤',
-          phone: '02-555-6789',
-          placeUrl: 'https://place.map.kakao.com/67890',
-          x: 127.0402,
-          y: 37.5018,
-        ),
-      ];
-    }
-
     try {
       final queryParams = {
         'latitude': latitude.toString(),
@@ -64,7 +26,7 @@ class NearbyRestaurantService {
       };
 
       final uri = Uri.parse(
-        '$baseUrl$apiPrefix/nearby',
+        '$baseUrl/api/restaurant/nearby',
       ).replace(queryParameters: queryParams);
       print('레스토랑 API 요청 URL: $uri');
 
@@ -73,7 +35,9 @@ class NearbyRestaurantService {
       print('API 응답 내용: ${response.body}');
 
       if (response.statusCode == 200) {
-        final List<dynamic> responseData = jsonDecode(response.body);
+        final List<dynamic> responseData = json.decode(
+          utf8.decode(response.bodyBytes),
+        );
         print('레스토랑 수: ${responseData.length}');
         return responseData
             .map<RestaurantResponse>(
