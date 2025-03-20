@@ -1,0 +1,13 @@
+package com.patriot.fourlipsclover.restaurant.repository;
+
+import com.patriot.fourlipsclover.restaurant.entity.Review;
+import com.patriot.fourlipsclover.restaurant.entity.ReviewLike;
+import com.patriot.fourlipsclover.restaurant.entity.ReviewLikePK;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface ReviewLikeJpaRepository extends JpaRepository<ReviewLike, ReviewLikePK> {
+
+	ReviewLike review(Review review);
+}

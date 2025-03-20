@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS review_like;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS member;
 DROP TABLE IF EXISTS restaurant;
@@ -41,5 +42,15 @@ CREATE TABLE reviews
     member_id     BIGINT,
     restaurant_id VARCHAR(255),
     visited_at    TIMESTAMP,
+    FOREIGN KEY (member_id) REFERENCES member (member_id)
+);
+
+CREATE TABLE review_like
+(
+    review_id   INT         NOT NULL,
+    member_id   INT         NOT NULL,
+    like_status VARCHAR(10) NOT NULL,
+    PRIMARY KEY (review_id, member_id),
+    FOREIGN KEY (review_id) REFERENCES reviews (review_id),
     FOREIGN KEY (member_id) REFERENCES member (member_id)
 );
