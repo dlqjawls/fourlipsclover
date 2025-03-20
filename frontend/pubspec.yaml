@@ -10,8 +10,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  intl: ^0.18.0
+  intl: ^0.19.0
   fl_chart: ^0.64.0
+  csv: ^5.0.1
   flutter_svg: ^2.0.9
   cupertino_icons: ^1.0.8
   kakao_flutter_sdk: ^1.9.7+3
@@ -34,6 +35,9 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/test/
+    - assets/test/spending_by_group_size.csv
+    - assets/test/spending_by_day_of_week.csv
     - .env
   fonts:
     - family : Anemone_air
