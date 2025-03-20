@@ -5,7 +5,6 @@ import 'config/theme.dart'; // AppTheme 클래스 임포트
 import 'providers/app_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'services/kakao_service.dart';
-import 'screens/common/base_screen.dart';
 import 'providers/search_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'services/kakao_map_service.dart';
