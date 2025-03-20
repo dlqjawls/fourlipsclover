@@ -7,8 +7,6 @@ import '../user/user_screen.dart';
 import '../group/group_screen.dart';
 import '../review/restaurant_detail.dart';
 
-
-
 class BaseScreen extends StatefulWidget {
   const BaseScreen({Key? key}) : super(key: key);
 
@@ -25,10 +23,10 @@ class _BaseScreenState extends State<BaseScreen> {
   void initState() {
     super.initState();
     _screens.addAll([
-      const HomeScreen(),
-      RestaurantDetailScreen(restaurantId: "1"),
-      const AIPlanScreen(),
       const GroupScreen(),
+      RestaurantDetailScreen(restaurantId: "1"),
+      const HomeScreen(),
+      const AIPlanScreen(),
       const UserScreen(),
     ]);
   }
@@ -44,7 +42,8 @@ class _BaseScreenState extends State<BaseScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RestaurantDetailScreen(restaurantId: restaurantId),
+        builder:
+            (context) => RestaurantDetailScreen(restaurantId: restaurantId),
       ),
     );
   }
@@ -52,10 +51,7 @@ class _BaseScreenState extends State<BaseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _screens),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
