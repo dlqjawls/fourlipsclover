@@ -4,9 +4,11 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:frontend/config/theme.dart';
 import 'package:frontend/screens/user/user_authorization.dart';
 import 'package:frontend/providers/auth_provider.dart';
+import 'package:frontend/models/user_model.dart';
 
 class CloverProfileSection extends StatefulWidget {
-  const CloverProfileSection({super.key});
+  final UserProfile profile;
+  const CloverProfileSection({super.key, required this.profile});
 
   @override
   State<CloverProfileSection> createState() => _CloverProfileSectionState();
@@ -35,7 +37,7 @@ class _CloverProfileSectionState extends State<CloverProfileSection> {
                   const Icon(Icons.thumb_up, color: AppColors.primary),
                   const SizedBox(width: 8),
                   Text(
-                    '현지 마스터',
+                    widget.profile.completedJourneys > 5 ? '새내기' : '현지마스터',
                     style: TextStyle(color: AppColors.darkGray, fontSize: 18),
                   ),
                 ],
@@ -49,59 +51,60 @@ class _CloverProfileSectionState extends State<CloverProfileSection> {
                   color: AppColors.lightGray,
                 ),
                 child: Center(
-                  child: Image.asset(
-                    'assets/images/logo.png',
-                    width: 600,
-                    height: 600,
-                    fit: BoxFit.contain,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/images/logo.png',
+                        width: 600,
+                        height: 600,
+                        fit: BoxFit.contain,
+                      ),
+                    ],
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                '누군가',
+              Text(
+                widget.profile.nickname,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 20,
                   color: AppColors.primary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              InkWell(
-                onTap:
-                    auth.isAuthorized
-                        ? null
-                        : () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => const UserAuthorizationScreen(),
-                            ),
-                          );
-                          // Provider가 자동으로 상태를 관리하므로 setState 불필요
-                        },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    color:
-                        auth.isAuthorized
-                            ? Colors.transparent
-                            : AppColors.verylightGray,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    auth.isAuthorized ? '현지인 인증 완료!' : '현지인 인증 하실래요?',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.darkGray,
+              if (!auth.isAuthorized)
+                InkWell(
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const UserAuthorizationScreen(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          auth.isAuthorized
+                              ? Colors.transparent
+                              : AppColors.verylightGray,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      auth.isAuthorized ? '현지인 인증 완료!' : '현지인 인증 하실래요?',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkGray,
+                      ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
     );
