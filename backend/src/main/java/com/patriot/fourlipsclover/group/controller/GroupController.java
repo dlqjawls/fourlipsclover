@@ -54,7 +54,7 @@ public class GroupController {
         GroupInvitation groupInvitation = groupService.checkInvitationValidity(token);
 
         // 리디렉션 URL 생성
-        String redirectUrl = "http://localhost:8080/api/group/join-request/" + token;
+        String redirectUrl = "https://fourlipsclover.duckdns.org/api/group/join-request/" + token;
 
         // 결과를 Map으로 생성
         Map<String, Object> response = new HashMap<>();
