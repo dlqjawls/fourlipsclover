@@ -21,6 +21,7 @@ import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -120,5 +121,16 @@ public class RestaurantService {
 				restaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
 						.orElseThrow(() -> new InvalidDataException(
 								"존재 하지 않는 식당입니다.")));
+	}
+
+	@Transactional(readOnly = true)
+	public List<RestaurantResponse> findNearbyRestaurants(Double latitude, Double longitude,
+			Integer radius) {
+
+		List<Restaurant> nearbyRestaurants = restaurantRepository.findNearbyRestaurants(
+				latitude, longitude, radius);
+		return nearbyRestaurants.stream()
+				.map(restaurantMapper::toDto)
+				.collect(Collectors.toList());
 	}
 }
