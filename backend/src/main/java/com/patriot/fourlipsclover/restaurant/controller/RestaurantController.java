@@ -8,6 +8,9 @@ import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.service.RestaurantService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Objects;
@@ -26,15 +29,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/restaurant")
 @RequiredArgsConstructor
+@Tag(name = "Restaurant", description = "식당 관련 API")
 public class RestaurantController {
 
 	private final RestaurantService restaurantService;
 
+	@Operation(summary = "주변 식당 검색", description = "위도/경도 기반으로 주변 식당을 검색합니다.")
 	@GetMapping("/nearby")
 	public ResponseEntity<List<RestaurantResponse>> findNearbyRestaurants(
-			@RequestParam(required = true) Double latitude,
-			@RequestParam(required = true) Double longitude,
-			@RequestParam(defaultValue = "1000") Integer radius) {
+			@Parameter(description = "위도 값") @RequestParam(required = true) Double latitude,
+			@Parameter(description = "경도 값") @RequestParam(required = true) Double longitude,
+			@Parameter(description = "검색 반경(미터)") @RequestParam(defaultValue = "1000") Integer radius) {
 
 		if (latitude == null || longitude == null) {
 			throw new IllegalArgumentException("위도와 경도는 필수 입력값입니다");
