@@ -46,10 +46,11 @@ class AuthService {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/kakao/login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'access_token': accessToken}),
+      body: jsonEncode({'accessToken': accessToken}),
     );
 
     if (response.statusCode == 200) {
+      debugPrint('로그인성공: ${response.body}');
       return jsonDecode(response.body);
     } else {
       debugPrint('API URL: $baseUrl');
