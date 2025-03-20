@@ -16,6 +16,7 @@ class BaseScreen extends StatefulWidget {
 
 class _BaseScreenState extends State<BaseScreen> {
   int _selectedIndex = 2;
+  String restaurantId = "1808376805";
 
   final List<Widget> _screens = [];
 
@@ -24,7 +25,7 @@ class _BaseScreenState extends State<BaseScreen> {
     super.initState();
     _screens.addAll([
       const GroupScreen(),
-      RestaurantDetailScreen(restaurantId: "1"),
+      RestaurantDetailScreen(restaurantId: restaurantId),
       const HomeScreen(),
       const AIPlanScreen(),
       const UserScreen(),

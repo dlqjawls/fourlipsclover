@@ -70,26 +70,15 @@ class ReviewService {
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
-        List<dynamic> data = jsonDecode(response.body);
+        final String decodedBody = utf8.decode(response.bodyBytes);
+        List<dynamic> data = jsonDecode(decodedBody);
 
-        return data.map<Review>((review) {
-          return Review(
-            id: review['id'],
-            restaurantId: review['restaurant_id'],
-            userId: review['user_id'],
-            username: review['username'],
-            title: review['title'] ?? '리뷰',
-            content: review['content'],
-            likes: review['likes'],
-            dislikes: review['dislikes'],
-            visitCount: review['visit_count'],
-            imageUrl: review['image_url'],
-            isLocal: review['is_local'],
-            localRank: review['local_rank'],
-            date: DateTime.parse(review['date']),
-            menu: (review['menu'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-          );
-        }).toList();
+        // ✅ `ReviewResponse` 리스트 변환
+        List<ReviewResponse> responseList =
+        data.map<ReviewResponse>((json) => ReviewResponse.fromJson(json)).toList();
+
+        // ✅ `ReviewResponse` → `Review` 변환
+        return responseList.map<Review>((reviewResponse) => Review.fromResponse(reviewResponse)).toList();
       } else {
         print("❌ 서버 오류: ${response.statusCode}");
         return [];
@@ -244,28 +233,27 @@ class ReviewService {
   }
   
   /// 리뷰 삭제
-  static Future<ReviewDeleteResponse> deleteReview(int reviewId) async {
+  static Future<bool> deleteReview(int reviewId) async {
     if (useDummyData) {
       // 더미 응답 데이터
       await Future.delayed(const Duration(seconds: 1));
-      
-      return ReviewDeleteResponse(
-        message: '리뷰를 삭제하였습니다.',
-        reviewId: reviewId,
-      );
+      return true;
     }
-    
+
     try {
       final url = Uri.parse('$baseUrl$apiPrefix/reviews/$reviewId');
       final response = await http.delete(url);
-      
+
       if (response.statusCode == 200) {
-        return ReviewDeleteResponse.fromJson(jsonDecode(response.body));
+        print("✅ 리뷰 삭제 완료: reviewId=$reviewId");
+        return true; // 성공하면 true 반환
       } else {
-        throw Exception('Failed to delete review: ${response.statusCode}');
+        print("❌ 삭제 실패: ${response.statusCode}, 응답: ${response.body}");
+        return false; // 실패하면 false 반환
       }
     } catch (e) {
-      throw Exception('Error deleting review: $e');
+      print("❌ 리뷰 삭제 중 오류 발생: $e");
+      return false;
     }
   }
   
@@ -293,7 +281,10 @@ class ReviewService {
       final response = await http.get(url);
       
       if (response.statusCode == 200) {
-        return ReviewResponse.fromJson(jsonDecode(response.body));
+        final String decodedBody = utf8.decode(response.bodyBytes);
+        final Map<String, dynamic> jsonData = jsonDecode(decodedBody);
+
+        return ReviewResponse.fromJson(jsonData);
       } else {
         throw Exception('Failed to get review detail: ${response.statusCode}');
       }

@@ -8,6 +8,9 @@ class RestaurantInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ 디버깅: 주소 값 확인
+    print("RestaurantInfo Data: ${data['addressName']}");
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -26,17 +29,14 @@ class RestaurantInfo extends StatelessWidget {
           ),
         ),
 
-        /// 사진과 태그 사이 여백 (추가됨)
-        const SizedBox(height: 12.0),
-
         /// 태그 목록 추가
-        if (data['tags'] != null && data['tags'].isNotEmpty)
+        if (data['tags'] != null && data['tags'] is List)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Wrap(
               spacing: 8.0,
               runSpacing: 4.0,
-              children: data['tags'].map<Widget>((tag) {
+              children: (data['tags'] as List<dynamic>).map<Widget>((tag) {
                 return Container(
                   padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
@@ -45,7 +45,7 @@ class RestaurantInfo extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    tag,
+                    tag.toString(),
                     style: TextStyle(color: AppColors.darkGray),
                   ),
                 );
@@ -53,18 +53,15 @@ class RestaurantInfo extends StatelessWidget {
             ),
           ),
 
-        /// 태그와 가게 정보 사이 여백
-        const SizedBox(height: 12.0),
-
         /// 가게 정보
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildInfoRow(Icons.location_on, data['address']),
-              _buildInfoRow(Icons.access_time, "영업시간: ${data['business_hours']}"),
-              _buildInfoRow(Icons.phone, data['phone']),
+              _buildInfoRow(Icons.location_on, data['addressName'] ?? "주소 정보 없음"),
+              _buildInfoRow(Icons.access_time, "영업시간: ${data['business_hours'] ?? "정보 없음"}"),
+              _buildInfoRow(Icons.phone, data['phone'] ?? "전화번호 없음"),
             ],
           ),
         ),
