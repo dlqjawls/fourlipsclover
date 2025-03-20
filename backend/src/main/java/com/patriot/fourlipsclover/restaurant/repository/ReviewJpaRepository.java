@@ -9,6 +9,9 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ReviewJpaRepository extends JpaRepository<Review, Integer> {
+
 	@Query("select r from Review r where r.restaurant.kakaoPlaceId = :kakaoPlaceId and r.isDelete=false")
 	List<Review> findByKakaoPlaceId(@Param("kakaoPlaceId") String kakaoPlaceId);
+
+
 }

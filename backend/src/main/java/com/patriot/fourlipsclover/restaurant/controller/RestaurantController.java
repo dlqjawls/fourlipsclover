@@ -2,6 +2,7 @@ package com.patriot.fourlipsclover.restaurant.controller;
 
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
+import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.service.RestaurantService;
@@ -25,6 +26,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class RestaurantController {
 
 	private final RestaurantService restaurantService;
+
+	@GetMapping("/{kakaoPlaceId}/search")
+	public ResponseEntity<RestaurantResponse> findById(
+			@PathVariable(name = "kakaoPlaceId") String kakaoPlaceId) {
+		if (kakaoPlaceId == null || kakaoPlaceId.isBlank()) {
+			throw new IllegalArgumentException("kakaoPlaceId는 비어있을 수 없습니다");
+		}
+
+		RestaurantResponse response = restaurantService.findRestaurantByKakaoPlaceId(kakaoPlaceId);
+		return ResponseEntity.ok(response);
+	}
 
 	@PostMapping("/reviews")
 	public ResponseEntity<ReviewResponse> create(@RequestBody ReviewCreate reviewCreate) {

@@ -1,6 +1,7 @@
 package com.patriot.fourlipsclover.restaurant.service;
 
 import com.patriot.fourlipsclover.exception.DeletedResourceAccessException;
+import com.patriot.fourlipsclover.exception.InvalidDataException;
 import com.patriot.fourlipsclover.exception.ReviewNotFoundException;
 import com.patriot.fourlipsclover.exception.UnauthorizedAccessException;
 import com.patriot.fourlipsclover.exception.UserNotFoundException;
@@ -8,10 +9,12 @@ import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberJpaRepository;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
+import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
 import com.patriot.fourlipsclover.restaurant.entity.Review;
+import com.patriot.fourlipsclover.restaurant.mapper.RestaurantMapper;
 import com.patriot.fourlipsclover.restaurant.mapper.ReviewMapper;
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
@@ -31,12 +34,13 @@ public class RestaurantService {
 	private final RestaurantJpaRepository restaurantRepository;
 	private final MemberJpaRepository memberRepository;
 	private final ReviewMapper reviewMapper;
+	private final RestaurantMapper restaurantMapper;
 	private final ReviewJpaRepository reviewRepository;
 
 	@Transactional
 	public ReviewResponse create(ReviewCreate reviewCreate) {
 		Restaurant restaurant = restaurantRepository.findByKakaoPlaceId(
-				reviewCreate.getKakaoPlaceId());
+				reviewCreate.getKakaoPlaceId()).orElseThrow();
 
 		Member reviewer = memberRepository.findById(reviewCreate.getMemberId())
 				.orElseThrow(UserNotFoundException::new);
@@ -105,5 +109,16 @@ public class RestaurantService {
 		review.setDeletedAt(LocalDateTime.now());
 		reviewRepository.save(review);
 		return new ReviewDeleteResponse("리뷰를 삭제하였습니다.", reviewId);
+	}
+
+	@Transactional(readOnly = true)
+	public RestaurantResponse findRestaurantByKakaoPlaceId(String kakaoPlaceId) {
+		if (Objects.isNull(kakaoPlaceId) || kakaoPlaceId.isBlank()) {
+			throw new IllegalArgumentException("올바른 kakaoPlaceId 값을 입력하세요.");
+		}
+		return restaurantMapper.toDto(
+				restaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
+						.orElseThrow(() -> new InvalidDataException(
+								"존재 하지 않는 식당입니다.")));
 	}
 }
