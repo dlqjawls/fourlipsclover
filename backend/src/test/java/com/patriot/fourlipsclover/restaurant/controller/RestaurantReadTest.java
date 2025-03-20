@@ -2,6 +2,7 @@ package com.patriot.fourlipsclover.restaurant.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import java.util.List;
 import java.util.Objects;
@@ -56,4 +57,30 @@ public class RestaurantReadTest {
 				"2114253032");
 	}
 
+	@Test
+	void 사용자는_kakaoPlaceId로_특정식당의상세정보를_불러올수있다() {
+		//given
+		String kakaoId = "2114253032";
+		//when
+		ResponseEntity<RestaurantResponse> response = restTemplate.exchange(
+				"/api/restaurant/2114253032/search",
+				HttpMethod.GET, HttpEntity.EMPTY, RestaurantResponse.class);
+		//then
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(response.getBody().getPlaceName()).isEqualTo("초돈");
+	}
+
+	@Test
+	void 사용자는_GPS정보로_근처식당정보를_불러올수있다() {
+		//given
+		//when
+		ResponseEntity<List<RestaurantResponse>> response = restTemplate.exchange(
+				"/api/restaurant/nearby?latitude=126.830452421678&longitude=35.1912340501076&radius=1000",
+				HttpMethod.GET, HttpEntity.EMPTY,
+				new ParameterizedTypeReference<List<RestaurantResponse>>() {
+				});
+		//then
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(response.getBody().size()).isEqualTo(1);
+	}
 }

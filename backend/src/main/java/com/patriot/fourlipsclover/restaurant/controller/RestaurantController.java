@@ -4,6 +4,7 @@ import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewLikeCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
 import com.patriot.fourlipsclover.restaurant.dto.response.ApiResponse;
+import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.service.RestaurantService;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -27,6 +29,33 @@ import org.springframework.web.bind.annotation.RestController;
 public class RestaurantController {
 
 	private final RestaurantService restaurantService;
+
+	@GetMapping("/nearby")
+	public ResponseEntity<List<RestaurantResponse>> findNearbyRestaurants(
+			@RequestParam(required = true) Double latitude,
+			@RequestParam(required = true) Double longitude,
+			@RequestParam(defaultValue = "1000") Integer radius) {
+
+		if (latitude == null || longitude == null) {
+			throw new IllegalArgumentException("위도와 경도는 필수 입력값입니다");
+		}
+
+		List<RestaurantResponse> nearbyRestaurants =
+				restaurantService.findNearbyRestaurants(latitude, longitude, radius);
+
+		return ResponseEntity.ok(nearbyRestaurants);
+	}
+
+	@GetMapping("/{kakaoPlaceId}/search")
+	public ResponseEntity<RestaurantResponse> findById(
+			@PathVariable(name = "kakaoPlaceId") String kakaoPlaceId) {
+		if (kakaoPlaceId == null || kakaoPlaceId.isBlank()) {
+			throw new IllegalArgumentException("kakaoPlaceId는 비어있을 수 없습니다");
+		}
+
+		RestaurantResponse response = restaurantService.findRestaurantByKakaoPlaceId(kakaoPlaceId);
+		return ResponseEntity.ok(response);
+	}
 
 	@PostMapping("/reviews")
 	public ResponseEntity<ReviewResponse> create(@RequestBody ReviewCreate reviewCreate) {

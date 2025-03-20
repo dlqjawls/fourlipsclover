@@ -7,6 +7,10 @@ class AppColors {
   static const Color primaryDark = Color(0xFF189E1E);
   static const Color primaryDarkest = Color(0xFF07621C);
 
+  // 레드드
+  static const Color red = Color(0xFFE63946);
+  static const Color orange = Color(0xFFF9813A );
+
   // 회색 계열
   static const Color background = Color(0xFFFFFFFF);
   static const Color verylightGray = Color(0xFFF3F3F3); // 제일 연한 회색

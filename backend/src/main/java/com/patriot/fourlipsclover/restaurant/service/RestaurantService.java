@@ -11,12 +11,14 @@ import com.patriot.fourlipsclover.restaurant.dto.request.LikeStatus;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewLikeCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
+import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
 import com.patriot.fourlipsclover.restaurant.entity.Review;
 import com.patriot.fourlipsclover.restaurant.entity.ReviewLike;
 import com.patriot.fourlipsclover.restaurant.entity.ReviewLikePK;
+import com.patriot.fourlipsclover.restaurant.mapper.RestaurantMapper;
 import com.patriot.fourlipsclover.restaurant.mapper.ReviewMapper;
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
@@ -24,6 +26,7 @@ import com.patriot.fourlipsclover.restaurant.repository.ReviewLikeJpaRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -38,12 +41,13 @@ public class RestaurantService {
 	private final ReviewLikeJpaRepository reviewLikeJpaRepository;
 	private final MemberJpaRepository memberRepository;
 	private final ReviewMapper reviewMapper;
+	private final RestaurantMapper restaurantMapper;
 	private final ReviewJpaRepository reviewRepository;
 
 	@Transactional
 	public ReviewResponse create(ReviewCreate reviewCreate) {
 		Restaurant restaurant = restaurantRepository.findByKakaoPlaceId(
-				reviewCreate.getKakaoPlaceId());
+				reviewCreate.getKakaoPlaceId()).orElseThrow();
 
 		Member reviewer = memberRepository.findById(reviewCreate.getMemberId())
 				.orElseThrow(UserNotFoundException::new);
@@ -113,6 +117,28 @@ public class RestaurantService {
 		review.setDeletedAt(LocalDateTime.now());
 		reviewRepository.save(review);
 		return new ReviewDeleteResponse("리뷰를 삭제하였습니다.", reviewId);
+	}
+
+	@Transactional(readOnly = true)
+	public RestaurantResponse findRestaurantByKakaoPlaceId(String kakaoPlaceId) {
+		if (Objects.isNull(kakaoPlaceId) || kakaoPlaceId.isBlank()) {
+			throw new IllegalArgumentException("올바른 kakaoPlaceId 값을 입력하세요.");
+		}
+		return restaurantMapper.toDto(
+				restaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
+						.orElseThrow(() -> new InvalidDataException(
+								"존재 하지 않는 식당입니다.")));
+	}
+
+	@Transactional(readOnly = true)
+	public List<RestaurantResponse> findNearbyRestaurants(Double latitude, Double longitude,
+			Integer radius) {
+
+		List<Restaurant> nearbyRestaurants = restaurantRepository.findNearbyRestaurants(
+				latitude, longitude, radius);
+		return nearbyRestaurants.stream()
+				.map(restaurantMapper::toDto)
+				.collect(Collectors.toList());
 	}
 
 	@Transactional
