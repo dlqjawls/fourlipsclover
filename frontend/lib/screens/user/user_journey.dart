@@ -15,6 +15,7 @@ class UserJourneyScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: AppColors.darkGray),
           onPressed: () => Navigator.pop(context),
         ),
+        centerTitle: true,
         title: const Text(
           '진행중인 여정',
           style: TextStyle(
