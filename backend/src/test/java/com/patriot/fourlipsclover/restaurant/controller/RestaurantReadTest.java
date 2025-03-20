@@ -2,6 +2,7 @@ package com.patriot.fourlipsclover.restaurant.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import java.util.List;
 import java.util.Objects;
@@ -54,6 +55,19 @@ public class RestaurantReadTest {
 		assertThat(response.getBody().get(0).getContent()).isEqualTo("테스트컨텐츠");
 		assertThat(response.getBody().get(0).getRestaurant().getKakaoPlaceId()).isEqualTo(
 				"2114253032");
+	}
+
+	@Test
+	void 사용자는_kakaoPlaceId로_특정식당의상세정보를_불러올수있다() {
+		//given
+		String kakaoId = "2114253032";
+		//when
+		ResponseEntity<RestaurantResponse> response = restTemplate.exchange(
+				"/api/restaurant/2114253032/search",
+				HttpMethod.GET, HttpEntity.EMPTY, RestaurantResponse.class);
+		//then
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(response.getBody().getPlaceName()).isEqualTo("초돈");
 	}
 
 }
