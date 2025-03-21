@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/theme.dart';
-import '../../../models/group_model.dart';
+import '../../../models/group/group_model.dart';
 import '../../../providers/group_provider.dart';
 import 'group_card.dart';
 
@@ -81,16 +81,33 @@ class GroupListView extends StatelessWidget {
                 return GroupCard(
                   group: group,
                   isSelected: isSelected,
-                  onTap: () {
+                  onTap: () async {
                     // 그룹 선택
                     groupProvider.selectGroup(group.groupId);
                     
-                    // 그룹 상세 화면으로 이동
-                    Navigator.pushNamed(
-                      context,
-                      '/group_detail',
-                      arguments: {'group': group},
-                    );
+                    // 그룹 상세 정보 조회
+                    final groupDetail = await groupProvider.fetchGroupDetail(group.groupId);
+                    
+                    if (groupDetail != null) {
+                      // 그룹 상세 화면으로 이동
+                      Navigator.pushNamed(
+                        context,
+                        '/group_detail',
+                        arguments: {'groupDetail': groupDetail, 'group': group},
+                      );
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '그룹 정보를 불러오는데 실패했습니다.',
+                              style: TextStyle(fontFamily: 'Anemone_air'),
+                            ),
+                            backgroundColor: AppColors.red,
+                          ),
+                        );
+                      }
+                    }
                   },
                 );
               },

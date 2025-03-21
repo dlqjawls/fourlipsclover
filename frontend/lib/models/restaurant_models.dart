@@ -13,6 +13,7 @@ class RestaurantResponse {
   final String? placeUrl;
   final double? x;
   final double? y;
+  double? distance;
 
   RestaurantResponse({
     this.restaurantId,
@@ -26,6 +27,7 @@ class RestaurantResponse {
     this.placeUrl,
     this.x,
     this.y,
+    this.distance,
   });
 
   factory RestaurantResponse.fromJson(Map<String, dynamic> json) {
