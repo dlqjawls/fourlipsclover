@@ -11,7 +11,8 @@ class CategoryRecommendations extends StatefulWidget {
   const CategoryRecommendations({Key? key}) : super(key: key);
 
   @override
-  State<CategoryRecommendations> createState() => _CategoryRecommendationsState();
+  State<CategoryRecommendations> createState() =>
+      _CategoryRecommendationsState();
 }
 
 class _CategoryRecommendationsState extends State<CategoryRecommendations> {
@@ -22,7 +23,11 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
   @override
   void initState() {
     super.initState();
-    _initializeLocation();
+
+    // 빌드 사이클 이후로 위치 초기화 연기
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeLocation();
+    });
   }
 
   Future<void> _initializeLocation() async {
@@ -30,16 +35,26 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
       if (authProvider.currentPosition == null) {
-        await authProvider.getCurrentLocation(context);
-        print(
-          '위치 확인: ${authProvider.currentPosition?.latitude}, ${authProvider.currentPosition?.longitude}',
-        );
+        // 빌드 과정 중에는 상태 업데이트 없이 위치만 가져오기
+        await authProvider.getCurrentLocation(context, notify: false);
+
+        // 위치 정보를 가져온 후에 별도로 상태 업데이트
+        if (mounted) {
+          authProvider.notifyListeners();
+          print(
+            '위치 확인: ${authProvider.currentPosition?.latitude}, ${authProvider.currentPosition?.longitude}',
+          );
+        }
       }
 
-      _loadCategoryRestaurants();
+      if (mounted) {
+        _loadCategoryRestaurants();
+      }
     } catch (e) {
       print('위치 초기화 오류: $e');
-      _loadCategoryRestaurants();
+      if (mounted) {
+        _loadCategoryRestaurants();
+      }
     }
   }
 
@@ -53,10 +68,11 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
       if (authProvider.currentPosition != null) {
-        final categoryRestaurants = await NearbyRestaurantService.findNearbyRestaurantsByCategory(
-          latitude: authProvider.currentPosition!.longitude,
-          longitude: authProvider.currentPosition!.latitude,
-        );
+        final categoryRestaurants =
+            await NearbyRestaurantService.findNearbyRestaurantsByCategory(
+              latitude: authProvider.currentPosition!.longitude,
+              longitude: authProvider.currentPosition!.latitude,
+            );
 
         setState(() {
           _categoryRestaurants = categoryRestaurants;
@@ -99,10 +115,7 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
     if (_errorMessage.isNotEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: 40.0,
-            horizontal: 20.0,
-          ),
+          padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 20.0),
           child: Column(
             children: [
               Text(
@@ -209,7 +222,9 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
                   return GestureDetector(
                     onTap: () {
                       // TODO: 식당 상세 페이지로 이동
-                      print('식당 클릭: ${restaurant.placeName} (ID: ${restaurant.kakaoPlaceId})');
+                      print(
+                        '식당 클릭: ${restaurant.placeName} (ID: ${restaurant.kakaoPlaceId})',
+                      );
                     },
                     child: Container(
                       width: 150,
@@ -325,7 +340,9 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
                                 // 위치
                                 const SizedBox(height: 4),
                                 Text(
-                                  restaurant.roadAddressName ?? restaurant.addressName ?? '위치 정보 없음',
+                                  restaurant.roadAddressName ??
+                                      restaurant.addressName ??
+                                      '위치 정보 없음',
                                   style: baseStyle?.copyWith(
                                     fontSize: 12,
                                     color: AppColors.mediumGray,

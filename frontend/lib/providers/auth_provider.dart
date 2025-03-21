@@ -40,15 +40,17 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 현재 위치 가져오기
-  Future<void> getCurrentLocation(BuildContext context) async {
-    updateState(loading: true);
+  Future<void> getCurrentLocation(
+    BuildContext context, {
+    bool notify = true,
+  }) async {
+    if (notify) updateState(loading: true);
 
     try {
       // 위치 서비스 활성화 확인
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        updateState(message: '위치 서비스를 활성화해주세요.', loading: false);
+        if (notify) updateState(message: '위치 서비스를 활성화해주세요.', loading: false);
         return;
       }
 
@@ -57,16 +59,17 @@ class AuthProvider extends ChangeNotifier {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          updateState(message: '위치 권한이 거부되었습니다.', loading: false);
+          if (notify) updateState(message: '위치 권한이 거부되었습니다.', loading: false);
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        updateState(
-          message: '위치 권한이 영구적으로 거부되었습니다. 설정에서 권한을 허용해주세요.',
-          loading: false,
-        );
+        if (notify)
+          updateState(
+            message: '위치 권한이 영구적으로 거부되었습니다. 설정에서 권한을 허용해주세요.',
+            loading: false,
+          );
         return;
       }
 
@@ -75,13 +78,15 @@ class AuthProvider extends ChangeNotifier {
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      updateState(
-        position: position,
-        message: '현재 위치를 가져왔습니다.',
-        loading: false,
-      );
+      // 직접 상태 변경 (알림 없이)
+      _currentPosition = position;
+      _locationMessage = '현재 위치를 가져왔습니다.';
+      _isLoading = false;
+
+      // notify 매개변수가 true일 때만 알림
+      if (notify) notifyListeners();
     } catch (e) {
-      updateState(message: '위치를 가져오는데 실패했습니다: $e', loading: false);
+      if (notify) updateState(message: '위치를 가져오는데 실패했습니다: $e', loading: false);
     }
   }
 
