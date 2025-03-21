@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/restaurant_models.dart';
 import '../models/review_model.dart';
 import '../constants/api_constants.dart';
+import 'dart:math';
 
 class ReviewService {
   // .env 파일에서 API 기본 URL을 가져옵니다.
@@ -25,7 +26,7 @@ class ReviewService {
         Review(
             id: '1',
             restaurantId: restaurantId,
-            userId: 'user123',
+            memberId: 123,
             username: '사용자1',
             title: '훌륭한 경험!',
             content: '이 식당 최고예요! 음식도 맛있고 분위기도 너무 좋아요. '
@@ -44,7 +45,7 @@ class ReviewService {
         Review(
             id: '2',
             restaurantId: restaurantId,
-            userId: 'user456',
+            memberId: 456,
             username: '사용자2',
             title: '별로였어요...',
             content: '조금 별로였어요... 기대했던 맛이 아니었어요. '
@@ -73,12 +74,26 @@ class ReviewService {
         final String decodedBody = utf8.decode(response.bodyBytes);
         List<dynamic> data = jsonDecode(decodedBody);
 
-        // ✅ `ReviewResponse` 리스트 변환
-        List<ReviewResponse> responseList =
-        data.map<ReviewResponse>((json) => ReviewResponse.fromJson(json)).toList();
 
-        // ✅ `ReviewResponse` → `Review` 변환
-        return responseList.map<Review>((reviewResponse) => Review.fromResponse(reviewResponse)).toList();
+        List<Review> reviews = data
+            .map<Review>((json) {
+          Review review = Review.fromJson(json);
+          if (review.memberId == 1) {
+            // ✅ 내가 작성한 리뷰는 원본 유지 & 오늘 날짜로 설정
+            return review.copyWith(date: DateTime.now());
+          } else {
+            // ✅ 다른 유저 리뷰는 랜덤 데이터 추가
+            return _addFakeData(review);
+          }
+        })
+            .toList()
+          ..sort((a, b) {
+            if (a.memberId == 1) return -1; // ✅ 내가 작성한 리뷰를 최상단
+            if (b.memberId == 1) return 1;
+            return b.date.compareTo(a.date); // ✅ 최신순 정렬
+          });
+
+        return reviews;
       } else {
         print("❌ 서버 오류: ${response.statusCode}");
         return [];
@@ -88,6 +103,75 @@ class ReviewService {
       return [];
     }
   }
+
+  /// ✅ API 응답 데이터를 UI적으로 가짜 데이터 추가하는 함수
+  static Review _addFakeData(Review review) {
+    List<String> dummyNames = [
+      "먹방요정", "맛집헌터", "배고픈여행자", "푸드파이터", "맛집정복자",
+      "냠냠이", "식도락러", "맛탐정", "한입만요정", "젓가락질마스터",
+      "별미탐험가", "국밥매니아", "치킨성애자", "라멘러버", "스테이크장인",
+      "탐식가", "초밥왕", "디저트헌터", "전국맛집러", "버거킹왕"
+    ];
+
+    List<String> dummyImages = [
+      "https://randomuser.me/api/portraits/men/1.jpg",
+      "https://randomuser.me/api/portraits/women/2.jpg",
+      "https://randomuser.me/api/portraits/men/3.jpg",
+      "https://randomuser.me/api/portraits/men/4.jpg",
+      "https://randomuser.me/api/portraits/women/5.jpg",
+      "https://randomuser.me/api/portraits/men/6.jpg",
+      "https://randomuser.me/api/portraits/women/7.jpg",
+      "https://randomuser.me/api/portraits/men/8.jpg",
+      "https://randomuser.me/api/portraits/women/9.jpg",
+      "https://randomuser.me/api/portraits/men/10.jpg",
+      "https://randomuser.me/api/portraits/women/11.jpg",
+      "https://randomuser.me/api/portraits/men/12.jpg",
+      "https://randomuser.me/api/portraits/women/13.jpg",
+      "https://randomuser.me/api/portraits/men/14.jpg",
+      "https://randomuser.me/api/portraits/women/15.jpg",
+      "https://randomuser.me/api/portraits/men/16.jpg",
+      "https://randomuser.me/api/portraits/women/17.jpg",
+      "https://randomuser.me/api/portraits/men/18.jpg",
+      "https://randomuser.me/api/portraits/women/19.jpg",
+      "https://randomuser.me/api/portraits/men/20.jpg"
+    ];
+    Random random = Random();
+
+    return Review(
+      id: review.id,
+      restaurantId: review.restaurantId,
+      memberId: review.memberId,
+      username: dummyNames[random.nextInt(dummyNames.length)], // 랜덤 닉네임
+      profileImageUrl: dummyImages[random.nextInt(dummyImages.length)], // 랜덤 프로필 이미지
+      title: review.title,
+      content: review.content,
+      likes: review.likes,
+      dislikes: review.dislikes,
+      visitCount: random.nextInt(5) + 1, // 방문 횟수 (1~5 랜덤)
+      imageUrl: review.imageUrl ?? "https://source.unsplash.com/400x300/?food", // 랜덤 음식 이미지
+      isLocal: review.isLocal,
+      localRank: review.localRank,
+      date: review.memberId == 1 ? DateTime.now() : DateTime.now().subtract(Duration(days: random.nextInt(5))), // ✅ 내가 등록한 리뷰는 오늘 날짜
+      menu: review.menu,
+    );
+  }
+
+
+  //       // ✅ `ReviewResponse` 리스트 변환
+  //       List<ReviewResponse> responseList =
+  //       data.map<ReviewResponse>((json) => ReviewResponse.fromJson(json)).toList();
+  //
+  //       // ✅ `ReviewResponse` → `Review` 변환
+  //       return responseList.map<Review>((reviewResponse) => Review.fromResponse(reviewResponse)).toList();
+  //     } else {
+  //       print("❌ 서버 오류: ${response.statusCode}");
+  //       return [];
+  //     }
+  //   } catch (e) {
+  //     print("❌ API 요청 중 오류 발생: $e");
+  //     return [];
+  //   }
+  // }
 
   /// 특정 장소의 모든 리뷰 목록 조회 (백엔드 API 방식)
   static Future<List<ReviewResponse>> getReviewList(String kakaoPlaceId) async {
@@ -144,7 +228,7 @@ class ReviewService {
     required DateTime visitedAt,
   }) async {
     final reviewCreate = ReviewCreate(
-      memberId: memberId,
+      memberId: 1,
       kakaoPlaceId: kakaoPlaceId,
       content: content,
       visitedAt: visitedAt,

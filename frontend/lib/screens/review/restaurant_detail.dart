@@ -113,6 +113,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                   /// ✅ 리뷰 목록 (리뷰 작성 후 화면 갱신 기능 추가)
                   ReviewList(
                     restaurantId: widget.restaurantId,
+                    reviews: reviews,
                     onReviewUpdated: fetchData,
                   ),
                 ],
