@@ -1,3 +1,5 @@
+import 'restaurant_models.dart';
+
 class Review {
   final String id;
   final String restaurantId;
@@ -36,6 +38,29 @@ class Review {
     this.isLiked = false,
     this.isDisliked = false,
   });
+
+  /// ✅ `ReviewResponse` → `Review` 변환 생성자 추가
+  factory Review.fromResponse(ReviewResponse response) {
+    return Review(
+      id: response.reviewId?.toString() ?? '',
+      restaurantId: response.restaurant?.restaurantId?.toString() ?? '',
+      userId: response.reviewer?.memberId.toString() ?? '',
+      username: response.reviewer?.nickname ?? '익명',
+      title: '리뷰', // 백엔드 응답에 없으므로 기본값 설정
+      content: response.content,
+      imageUrl: null, // 백엔드 응답에서 이미지 URL 제공되지 않음
+      profileImageUrl: null, // 프로필 이미지도 기본값 (필요하면 response에 추가)
+      visitCount: 1, // 백엔드에서 방문 횟수 제공되지 않음
+      isLocal: false,
+      localRank: 0,
+      likes: 0, // 백엔드에서 좋아요 정보 없음
+      dislikes: 0,
+      date: response.visitedAt ?? DateTime.now(),
+      menu: [],
+      isLiked: false, // 백엔드 응답에 해당 정보 없음
+      isDisliked: false,
+    );
+  }
 
   /// ✅ JSON 데이터를 Review 객체로 변환하는 생성자
   factory Review.fromJson(Map<String, dynamic> json) {

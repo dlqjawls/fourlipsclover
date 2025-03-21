@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/config/theme.dart';
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
-import '../../models/review_model.dart'; // Review 모델 import
+// import 'dart:io'; // 이미지 관련 코드 제거
+// import 'package:image_picker/image_picker.dart';
+import '../../models/review_model.dart';
+import '../../services/review_service.dart';
 
 class ReviewWriteScreen extends StatefulWidget {
   final Review? review; // 수정할 리뷰 (null이면 새 리뷰 작성)
+  final String kakaoPlaceId; // 식당 고유 ID
 
-  const ReviewWriteScreen({Key? key, this.review}) : super(key: key);
+  const ReviewWriteScreen({Key? key, this.review, required this.kakaoPlaceId}) : super(key: key);
 
   @override
   _ReviewWriteScreenState createState() => _ReviewWriteScreenState();
@@ -16,27 +18,70 @@ class ReviewWriteScreen extends StatefulWidget {
 class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
-  File? _image; // 업로드한 이미지 파일 저장
+  // File? _image; // 업로드한 이미지 파일 저장 (나중에 사용할 경우 주석 해제)
+  bool isSubmitting = false; // 요청 중 상태
 
   @override
   void initState() {
     super.initState();
     if (widget.review != null) {
-      // 수정 모드: 기존 데이터 불러오기
+      // ✅ 수정 모드: 기존 데이터 불러오기
       _titleController.text = widget.review!.title ?? "";
       _contentController.text = widget.review!.content;
-      if (widget.review!.imageUrl != null) {
-        _image = File(widget.review!.imageUrl!); // 기존 이미지 로드
-      }
     }
   }
 
-  /// 이미지 선택 함수
+  /// ✅ 이미지 선택 함수 (현재 사용하지 않으므로 주석 처리)
+  /*
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
+      });
+    }
+  }
+  */
+
+  /// ✅ 리뷰 저장 (작성 & 수정)
+  Future<void> _submitReview() async {
+    if (_contentController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("리뷰 내용을 입력해주세요.")),
+      );
+      return;
+    }
+
+    setState(() {
+      isSubmitting = true;
+    });
+
+    try {
+      if (widget.review == null) {
+        // ✅ 리뷰 작성 API 호출
+        await ReviewService.createReview(
+          memberId: 1, // 현재 로그인한 유저 ID (임시)
+          kakaoPlaceId: widget.kakaoPlaceId,
+          content: _contentController.text.trim(),
+          visitedAt: DateTime.now(),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("리뷰가 등록되었습니다.")));
+      } else {
+        // ✅ 리뷰 수정 API 호출
+        await ReviewService.updateReview(
+          reviewId: int.parse(widget.review!.id),
+          content: _contentController.text.trim(),
+          visitedAt: DateTime.now(),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("리뷰가 수정되었습니다.")));
+      }
+
+      Navigator.pop(context, true); // ✅ 성공 시 이전 화면으로 이동 & 갱신 트리거
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("오류 발생: $e")));
+    } finally {
+      setState(() {
+        isSubmitting = false;
       });
     }
   }
@@ -47,7 +92,7 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditMode ? "리뷰 수정" : "리뷰 작성"), // 수정 모드일 경우 "리뷰 수정"
+        title: Text(isEditMode ? "리뷰 수정" : "리뷰 작성"),
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: IconThemeData(color: Colors.black),
@@ -69,13 +114,14 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
               ),
             ),
             Container(
-              height: 1, // ✅ 선 두께 설정
-              color: Colors.grey.shade300, // ✅ 연한 회색 선
-              margin: EdgeInsets.only(bottom: 16), // ✅ 다음 요소와 간격 조정
+              height: 1,
+              color: Colors.grey.shade300,
+              margin: EdgeInsets.only(bottom: 16),
             ),
             const SizedBox(height: 16),
 
-            /// 사진 추가 공간
+            /// 사진 추가 공간 (추후 사용할 경우 주석 해제)
+            /*
             GestureDetector(
               onTap: _pickImage,
               child: Container(
@@ -88,15 +134,14 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
                 ),
                 child: _image != null
                     ? ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(_image!, fit: BoxFit.cover),
-                )
-                    : Center(
-                  child: Text("이미지 선택", style: TextStyle(color: AppColors.darkGray)),
-                ),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(_image!, fit: BoxFit.cover),
+                      )
+                    : Center(child: Text("이미지 선택", style: TextStyle(color: AppColors.darkGray))),
               ),
             ),
             const SizedBox(height: 16),
+            */
 
             /// 내용 입력
             Expanded(
@@ -115,20 +160,21 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
             ),
             const SizedBox(height: 16),
 
-            /// 리뷰 저장 버튼 (신규 작성 vs 수정)
+            /// 리뷰 저장 버튼
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  if (isEditMode) {
-                    print("리뷰 수정 완료: 제목=${_titleController.text}, 내용=${_contentController.text}, 이미지=${_image?.path}");
-                  } else {
-                    print("리뷰 저장: 제목=${_titleController.text}, 내용=${_contentController.text}, 이미지=${_image?.path}");
-                  }
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                child: Text(isEditMode ? "수정 완료" : "리뷰 저장", style: TextStyle(color: AppColors.verylightGray)),
+                onPressed: isSubmitting ? null : _submitReview,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  disabledBackgroundColor: AppColors.mediumGray,
+                ),
+                child: isSubmitting
+                    ? CircularProgressIndicator(color: Colors.white)
+                    : Text(
+                  isEditMode ? "수정 완료" : "리뷰 저장",
+                  style: TextStyle(color: AppColors.verylightGray),
+                ),
               ),
             ),
           ],

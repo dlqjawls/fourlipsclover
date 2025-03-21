@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../services/review_service.dart';
 
 /// "삭제 확인" 모달 창
-void showDeleteConfirmationModal(BuildContext context, String reviewId) {
-  showDialog(
+Future<bool?> showDeleteConfirmationModal(BuildContext context, String reviewId) async {
+  return await showDialog<bool>(
     context: context,
     builder: (BuildContext context) {
       return AlertDialog(
@@ -12,16 +13,26 @@ void showDeleteConfirmationModal(BuildContext context, String reviewId) {
           TextButton(
             child: Text("아니오"),
             onPressed: () {
-              Navigator.pop(context); // 모달 닫기
+              Navigator.pop(context, false);
             },
           ),
           TextButton(
             child: Text("예", style: TextStyle(color: Colors.redAccent)),
-            onPressed: () {
-              // 삭제 로직 (API 연동)
-              print("리뷰 삭제 완료: $reviewId");
-              Navigator.pop(context); // 삭제 확인 모달 닫기
-              Navigator.pop(context); // 리뷰 상세 페이지 닫기
+            onPressed: () async {
+              try {
+                int parsedReviewId = int.tryParse(reviewId) ?? -1;
+                if (parsedReviewId == -1) {
+                  throw Exception("유효하지 않은 reviewId: $reviewId");
+                }
+
+                // ✅ 삭제 요청
+                bool isDeleted = await ReviewService.deleteReview(parsedReviewId);
+
+                Navigator.pop(context, isDeleted); // ✅ 삭제 성공 여부 반환
+              } catch (e) {
+                print("❌ 삭제 오류: $e");
+                Navigator.pop(context, false); // ❌ 삭제 실패
+              }
             },
           ),
         ],

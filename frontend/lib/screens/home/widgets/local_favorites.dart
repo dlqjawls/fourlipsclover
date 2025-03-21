@@ -19,34 +19,30 @@ class _LocalFavoritesState extends State<LocalFavorites> {
   bool _isLoading = false;
   String _errorMessage = '';
 
-@override
-void initState() {
-  super.initState();
-  // 앱 시작 시 위치를 먼저 확인한 후 레스토랑 로딩
-  _initializeLocation();
-}
-
-// 위치 초기화 후 레스토랑 로드
-Future<void> _initializeLocation() async {
-  try {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
-    // 현재 위치가 없는 경우에만 위치 정보 요청
-    if (authProvider.currentPosition == null) {
-      await authProvider.getCurrentLocation(context);
-      print('initState에서 위치 확인: ${authProvider.currentPosition?.latitude}, ${authProvider.currentPosition?.longitude}');
-    }
-    
-    // 위치 정보 획득 후 레스토랑 로드
-    _loadNearbyRestaurants();
-  } catch (e) {
-    print('위치 초기화 오류: $e');
-    // 오류가 있어도 레스토랑 로딩 시도
-    _loadNearbyRestaurants();
+  @override
+  void initState() {
+    super.initState();
+    _initializeLocation();
   }
-}
 
-  // 주변 레스토랑 데이터 로딩
+  Future<void> _initializeLocation() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      if (authProvider.currentPosition == null) {
+        await authProvider.getCurrentLocation(context);
+        print(
+          'initState에서 위치 확인: ${authProvider.currentPosition?.latitude}, ${authProvider.currentPosition?.longitude}',
+        );
+      }
+
+      _loadNearbyRestaurants();
+    } catch (e) {
+      print('위치 초기화 오류: $e');
+      _loadNearbyRestaurants();
+    }
+  }
+
   Future<void> _loadNearbyRestaurants() async {
     setState(() {
       _isLoading = true;
@@ -55,20 +51,18 @@ Future<void> _initializeLocation() async {
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
-      // 위치 정보가 있는 경우
+
       if (authProvider.currentPosition != null) {
         final restaurants = await NearbyRestaurantService.findNearbyRestaurants(
-          latitude: authProvider.currentPosition!.latitude,
-          longitude: authProvider.currentPosition!.longitude,
+          latitude: authProvider.currentPosition!.longitude,
+          longitude: authProvider.currentPosition!.latitude,
         );
-        
+
         setState(() {
           _restaurants = restaurants;
           _isLoading = false;
         });
       } else {
-        // 위치 정보가 없는 경우
         setState(() {
           _errorMessage = '위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.';
           _isLoading = false;
@@ -83,38 +77,30 @@ Future<void> _initializeLocation() async {
     }
   }
 
-  // 위치 정보 갱신 및 레스토랑 다시 로딩
   Future<void> _refreshLocation() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
-    // 위치 정보 갱신 요청
     await authProvider.getCurrentLocation(context);
-    
-    // 갱신된 위치로 레스토랑 다시 로딩
     _loadNearbyRestaurants();
   }
 
   @override
   Widget build(BuildContext context) {
     final baseStyle = Theme.of(context).textTheme.bodyMedium;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 구분선
         const Divider(
           thickness: 10.0,
           height: 1,
           color: AppColors.verylightGray,
         ),
 
-        // 제목 영역 - 디자인 개선
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // 좌측 - 내 주변 + 아이콘
               Row(
                 children: [
                   Container(
@@ -149,7 +135,6 @@ Future<void> _initializeLocation() async {
                 ],
               ),
 
-              // 우측 - 지역 변경 버튼 (위치 갱신 기능 추가)
               TextButton(
                 onPressed: _refreshLocation,
                 style: TextButton.styleFrom(
@@ -175,7 +160,6 @@ Future<void> _initializeLocation() async {
           ),
         ),
 
-        // 로딩 상태 또는 에러 메시지 표시
         if (_isLoading)
           const Center(
             child: Padding(
@@ -186,7 +170,10 @@ Future<void> _initializeLocation() async {
         else if (_errorMessage.isNotEmpty)
           Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 20.0),
+              padding: const EdgeInsets.symmetric(
+                vertical: 40.0,
+                horizontal: 20.0,
+              ),
               child: Column(
                 children: [
                   Text(
@@ -211,11 +198,10 @@ Future<void> _initializeLocation() async {
             ),
           )
         else
-          // 2x2 그리드 형태로 식당 표시 (페이징 가능)
           SizedBox(
             height: 500,
             child: PageView.builder(
-              itemCount: (_restaurants.length / 4).ceil(), // 4개씩 페이지 계산
+              itemCount: (_restaurants.length / 4).ceil(),
               itemBuilder: (context, pageIndex) {
                 final startIndex = pageIndex * 4;
                 return Padding(
@@ -223,7 +209,7 @@ Future<void> _initializeLocation() async {
                   child: GridView.count(
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisCount: 2,
-                    childAspectRatio: 0.78, // 비율 조정
+                    childAspectRatio: 0.78,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
                     children: List.generate(
@@ -234,26 +220,44 @@ Future<void> _initializeLocation() async {
                           return const SizedBox();
 
                         final restaurant = _restaurants[itemIndex];
-                        
+
                         // 카테고리 분리 (해시태그로 변환)
-                        final categories = restaurant.categoryName?.split(' > ') ?? [];
-                        final hashtags = categories.map((cat) => '#$cat').toList();
-                        
+                        final categories =
+                            restaurant.categoryName?.split(' > ') ?? [];
+                        final hashtags =
+                            categories.map((cat) => '#$cat').toList();
+
                         // 거리 계산 - 현재 위치와 식당 위치가 모두 있을 때만
                         double distance = 0.0;
-                        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                        
-                        if (authProvider.currentPosition != null && 
-                            restaurant.x != null && restaurant.y != null) {
-                          // 간단한 거리 계산 (km 단위)
-                          final dx = 111.3 * cos(authProvider.currentPosition!.latitude * pi / 180) * 
-                                    (authProvider.currentPosition!.longitude - restaurant.x!);
-                          final dy = 111.3 * (authProvider.currentPosition!.latitude - restaurant.y!);
+                        final authProvider = Provider.of<AuthProvider>(
+                          context,
+                          listen: false,
+                        );
+
+                        if (authProvider.currentPosition != null &&
+                            restaurant.x != null &&
+                            restaurant.y != null) {
+                          final dx =
+                              111.3 *
+                              cos(
+                                authProvider.currentPosition!.latitude *
+                                    pi /
+                                    180,
+                              ) *
+                              (authProvider.currentPosition!.longitude -
+                                  restaurant.x!);
+                          final dy =
+                              111.3 *
+                              (authProvider.currentPosition!.latitude -
+                                  restaurant.y!);
                           distance = sqrt(dx * dx + dy * dy);
                         }
 
                         return RestaurantCard(
                           name: restaurant.placeName ?? '이름 없음',
+                          address: restaurant.roadAddressName ?? '주소 없음',
+                          category: restaurant.category ?? '',
+                          phone: restaurant.phone ?? '전화번호 없음',
                           likes: 0, // 서버에서 제공하지 않는 정보
                           hashtags: hashtags,
                           distance: distance,
@@ -267,7 +271,6 @@ Future<void> _initializeLocation() async {
             ),
           ),
 
-        // 자세히 보기 버튼 - 회색으로 변경
         Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -305,6 +308,9 @@ Future<void> _initializeLocation() async {
 // 수정된 식당 카드 위젯
 class RestaurantCard extends StatelessWidget {
   final String name;
+  final String address;
+  final String category;
+  final String phone;
   final int likes;
   final List<String> hashtags;
   final double distance;
@@ -313,8 +319,11 @@ class RestaurantCard extends StatelessWidget {
   const RestaurantCard({
     Key? key,
     required this.name,
-    this.likes = 0,  // 기본값 설정
-    this.hashtags = const [],  // 기본값 설정
+    required this.address,
+    required this.category,
+    required this.phone,
+    this.likes = 0,
+    this.hashtags = const [],
     this.distance = 0.0,
     required this.kakaoPlaceId,
   }) : super(key: key);
@@ -339,9 +348,9 @@ class RestaurantCard extends StatelessWidget {
             ),
           ],
         ),
-        clipBehavior: Clip.hardEdge,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min, // 내용에 맞게 최소 높이로 조정
           children: [
             // 식당 이미지 (임시로 회색 박스)
             Stack(
@@ -352,7 +361,7 @@ class RestaurantCard extends StatelessWidget {
                   color: AppColors.lightGray,
                 ),
 
-                // 거리 정보 (상단 왼쪽) - 지도 아이콘으로 변경, 반투명 회색 배경
+                // 거리 정보 (상단 왼쪽)
                 Positioned(
                   top: 8,
                   left: 8,
@@ -362,7 +371,7 @@ class RestaurantCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.2), // 반투명 회색
+                      color: Colors.black.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -387,59 +396,93 @@ class RestaurantCard extends StatelessWidget {
               ],
             ),
 
-            // 식당 정보 - 컴팩트하고 세련되게
+            // 식당 정보
             Padding(
               padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 식당 이름과 좋아요 수 한 줄에
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          name,
-                          style: baseStyle?.copyWith(fontSize: 15).emphasized,
-                          overflow: TextOverflow.ellipsis,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 식당 이름과 좋아요 수 한 줄에
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: baseStyle?.copyWith(fontSize: 15).emphasized,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        // 좋아요 수
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.favorite,
+                              color: Colors.red.shade300,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              '$likes',
+                              style: baseStyle?.copyWith(
+                                fontSize: 12,
+                                color: AppColors.mediumGray,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    // 추가 정보
+                    const SizedBox(height: 6),
+                    Text(
+                      address,
+                      style: baseStyle?.copyWith(
+                        fontSize: 11,
+                        color: AppColors.darkGray,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      category,
+                      style: baseStyle?.copyWith(
+                        fontSize: 10,
+                        color: AppColors.darkGray,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      phone,
+                      style: baseStyle?.copyWith(
+                        fontSize: 10,
+                        color: AppColors.darkGray,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+
+                    // 해시태그
+                    if (hashtags.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(top: 6),
+                        height: 22,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children:
+                              hashtags
+                                  .take(3)
+                                  .map((tag) => _buildHashtagChip(context, tag))
+                                  .toList(),
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      // 좋아요 수 (아이콘과 숫자만)
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.favorite,
-                            color: Colors.red.shade300,
-                            size: 14,
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            '$likes',
-                            style: baseStyle?.copyWith(
-                              fontSize: 12,
-                              color: AppColors.mediumGray,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-
-                  // 해시태그 (회색 스타일로 변경)
-                  if (hashtags.isNotEmpty)
-                    Container(
-                      margin: const EdgeInsets.only(top: 6),
-                      height: 22, // 고정 높이로 공간 최소화
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children:
-                            hashtags
-                                .take(3)
-                                .map((tag) => _buildHashtagChip(context, tag))
-                                .toList(),
-                      ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
