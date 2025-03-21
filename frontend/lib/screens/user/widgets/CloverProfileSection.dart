@@ -73,44 +73,53 @@ class _CloverProfileSectionState extends State<CloverProfileSection> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              if (!auth.isAuthorized)
-  InkWell(
-    onTap: () async {
-      final bool? result = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => UserAuthorizationScreen(
-            memberId: widget.profile.memberId,
-          ),
-        ),
-      );
-      
-      if (result == true) {
-        // 인증 성공 시 상태 업데이트
-        auth.updateState(authorized: true);
-      }
-    },
-    child: Container(
-      padding: const EdgeInsets.symmetric(
-        vertical: 8,
-        horizontal: 16,
-      ),
-      decoration: BoxDecoration(
-        color: auth.isAuthorized 
-            ? Colors.transparent 
-            : AppColors.verylightGray,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        auth.isAuthorized ? '현지인 인증 완료!' : '현지인 인증 하실래요?',
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: AppColors.darkGray,
-        ),
-      ),
-    ),
-  ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap:
+                    auth.isAuthorized
+                        ? null
+                        : () async {
+                          final bool? result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => UserAuthorizationScreen(
+                                    memberId: widget.profile.memberId,
+                                  ),
+                            ),
+                          );
+
+                          if (result == true && mounted) {
+                            auth.updateState(authorized: true);
+                          }
+                        },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color:
+                        auth.isAuthorized
+                            ? AppColors.verylightGray.withOpacity(0.1)
+                            : AppColors.verylightGray,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    auth.isAuthorized
+                        ? '${auth.regionName} 현지인!'
+                        : '현지인 인증 하실래요?',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color:
+                          auth.isAuthorized
+                              ? AppColors.darkGray
+                              : AppColors.darkGray,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
     );

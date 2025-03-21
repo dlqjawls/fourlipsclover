@@ -8,7 +8,10 @@ class AuthProvider extends ChangeNotifier {
   String _locationMessage = '';
   bool _isLoading = false;
   bool _isAuthorized = false;
-  final LocalCertificationService _localCertificationService = LocalCertificationService();
+  String _regionName = '';
+  String get regionName => _regionName;
+  final LocalCertificationService _localCertificationService =
+      LocalCertificationService();
   LocalCertification? _localCertification;
 
   // Getters
@@ -24,11 +27,16 @@ class AuthProvider extends ChangeNotifier {
     String? message,
     bool? loading,
     bool? authorized,
+    LocalCertification? certification,
   }) {
     if (position != null) _currentPosition = position;
     if (message != null) _locationMessage = message;
     if (loading != null) _isLoading = loading;
     if (authorized != null) _isAuthorized = authorized;
+    if (certification != null) {
+      _localCertification = certification;
+      _regionName = certification.localRegion.regionName; // 지역 이름 저장
+    }
     notifyListeners();
   }
 
@@ -40,10 +48,7 @@ class AuthProvider extends ChangeNotifier {
       // 위치 서비스 활성화 확인
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        updateState(
-          message: '위치 서비스를 활성화해주세요.',
-          loading: false,
-        );
+        updateState(message: '위치 서비스를 활성화해주세요.', loading: false);
         return;
       }
 
@@ -52,10 +57,7 @@ class AuthProvider extends ChangeNotifier {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          updateState(
-            message: '위치 권한이 거부되었습니다.',
-            loading: false,
-          );
+          updateState(message: '위치 권한이 거부되었습니다.', loading: false);
           return;
         }
       }
@@ -79,10 +81,7 @@ class AuthProvider extends ChangeNotifier {
         loading: false,
       );
     } catch (e) {
-      updateState(
-        message: '위치를 가져오는데 실패했습니다: $e',
-        loading: false,
-      );
+      updateState(message: '위치를 가져오는데 실패했습니다: $e', loading: false);
     }
   }
 
@@ -96,11 +95,11 @@ class AuthProvider extends ChangeNotifier {
     try {
       updateState(loading: true);
 
-      final certification = await _localCertificationService.createLocalCertification(
-        memberId: memberId,
-        latitude: _currentPosition!.latitude,
-        longitude: _currentPosition!.longitude,
-      );
+      final certification = await _localCertificationService
+          .createLocalCertification(
+            latitude: _currentPosition!.latitude,
+            longitude: _currentPosition!.longitude,
+          );
 
       _localCertification = certification;
       updateState(
@@ -109,10 +108,7 @@ class AuthProvider extends ChangeNotifier {
         loading: false,
       );
     } catch (e) {
-      updateState(
-        message: '현지인 인증에 실패했습니다: $e',
-        loading: false,
-      );
+      updateState(message: '현지인 인증에 실패했습니다: $e', loading: false);
     }
   }
 

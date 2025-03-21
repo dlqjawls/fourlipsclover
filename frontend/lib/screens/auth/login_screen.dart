@@ -44,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 10),
               const Text(
-                '니입에 행운을 더하다',
+                '입안에 행운을 담다',
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
 
