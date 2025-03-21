@@ -22,10 +22,13 @@ class RestaurantInfo extends StatelessWidget {
             color: AppColors.mediumGray,
             image: (data['image'] != null && data['image'].isNotEmpty)
                 ? DecorationImage(
-              image: NetworkImage(data['image']),
+              image: NetworkImage(data['image']), // ✅ 서버에서 이미지 가져오기
               fit: BoxFit.cover,
             )
-                : null,
+                : const DecorationImage(
+              image: AssetImage("assets/images/restaurant_image.jpg"), // ✅ 기본 이미지 적용
+              fit: BoxFit.cover,
+            ),
           ),
         ),
 
@@ -61,7 +64,7 @@ class RestaurantInfo extends StatelessWidget {
             children: [
               _buildInfoRow(Icons.location_on, data['addressName'] ?? "주소 정보 없음"),
               _buildInfoRow(Icons.access_time, "영업시간: ${data['business_hours'] ?? "정보 없음"}"),
-              _buildInfoRow(Icons.phone, data['phone'] ?? "전화번호 없음"),
+              _buildInfoRow(Icons.phone, (data['phone'] != null && data['phone'].toString().trim().isNotEmpty) ? data['phone'] : "전화 번호: 정보 없음"),
             ],
           ),
         ),

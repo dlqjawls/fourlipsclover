@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/config/theme.dart';
 import '../../models/review_model.dart';
 import '../review/review_write.dart';
 import 'widgets/review_options_modal.dart';
@@ -16,13 +15,13 @@ class ReviewDetail extends StatefulWidget {
 }
 
 class _ReviewDetailState extends State<ReviewDetail> {
-  late Review _review; // ✅ 수정된 리뷰를 저장할 변수
+  late Review _review;
   Offset? tapPosition;
 
   @override
   void initState() {
     super.initState();
-    _review = widget.review; // ✅ 초기 리뷰 데이터 설정
+    _review = widget.review;
   }
 
   /// ✅ 리뷰 수정 후 UI 갱신
@@ -31,7 +30,7 @@ class _ReviewDetailState extends State<ReviewDetail> {
       context,
       MaterialPageRoute(
         builder: (context) => ReviewWriteScreen(
-          review: _review, // ✅ 현재 리뷰 정보 전달
+          review: _review,
           kakaoPlaceId: widget.restaurantId,
         ),
       ),
@@ -39,7 +38,7 @@ class _ReviewDetailState extends State<ReviewDetail> {
 
     if (updatedReview != null && updatedReview is Review) {
       setState(() {
-        _review = updatedReview; // ✅ 수정된 리뷰를 반영
+        _review = updatedReview;
       });
     }
   }
@@ -48,7 +47,7 @@ class _ReviewDetailState extends State<ReviewDetail> {
   void _deleteReview() {
     showDeleteConfirmationModal(context, _review.id).then((result) {
       if (result == true) {
-        Navigator.pop(context, true); // ✅ 삭제 성공 시 이전 화면으로 돌아가면서 리스트 갱신
+        Navigator.pop(context, true);
       }
     });
   }
@@ -81,10 +80,10 @@ class _ReviewDetailState extends State<ReviewDetail> {
                       ),
                     ),
 
-                  /// ✅ 점 3개 아이콘 (오른쪽 정렬)
+                  /// ✅ 점 3개 아이콘 (수정 & 삭제 옵션)
                   GestureDetector(
                     onTapDown: (TapDownDetails details) {
-                      tapPosition = details.globalPosition; // ✅ 클릭 위치 저장
+                      tapPosition = details.globalPosition;
                     },
                     child: IconButton(
                       icon: Icon(Icons.more_vert, color: Colors.black),
@@ -97,7 +96,7 @@ class _ReviewDetailState extends State<ReviewDetail> {
                             tapPosition!,
                           ).then((result) {
                             if (result == true) {
-                              _deleteReview(); // ✅ 삭제된 경우 삭제 모달 실행
+                              _deleteReview();
                             }
                           });
                         }
@@ -109,11 +108,13 @@ class _ReviewDetailState extends State<ReviewDetail> {
 
               const SizedBox(height: 12),
 
-              /// 프로필 + 닉네임 + 방문 횟수 & 방문 날짜
+              /// ✅ 프로필 + 닉네임 + 방문 횟수 & 방문 날짜
               Row(
                 children: [
                   CircleAvatar(
-                    backgroundImage: NetworkImage(_review.profileImageUrl ?? 'assets/default_profile.png'),
+                    backgroundImage: NetworkImage(
+                      _review.profileImageUrl ?? 'assets/default_profile.png',
+                    ),
                     radius: 20,
                   ),
                   const SizedBox(width: 12),
@@ -136,10 +137,12 @@ class _ReviewDetailState extends State<ReviewDetail> {
 
               const SizedBox(height: 12),
 
-              _buildReviewImage(_review.imageUrl),
+              /// ✅ 리뷰 이미지 표시 (사용자 이미지 없으면 기본 이미지 중 하나 선택)
+              _buildReviewImage(_review.imageUrl, int.parse(_review.id)),
 
               const SizedBox(height: 12),
 
+              /// ✅ 리뷰 내용
               Text(
                 _review.content,
                 style: TextStyle(fontSize: 14, color: Colors.black87),
@@ -151,23 +154,40 @@ class _ReviewDetailState extends State<ReviewDetail> {
     );
   }
 
-  Widget _buildReviewImage(String? imageUrl) {
+  /// ✅ 리뷰 이미지 하나만 표시 (사용자가 업로드한 이미지 없을 경우 기본 이미지 중 하나 선택)
+  Widget _buildReviewImage(String? imageUrl, int reviewId) {
+    List<String> defaultImages = [
+      "assets/images/review_image.jpg",
+      "assets/images/review_image2.jpg",
+      "assets/images/review_image3.jpg"
+    ];
+
+    String selectedImage;
+
+    // ✅ 사용자가 업로드한 이미지가 있을 경우 그대로 사용
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      selectedImage = imageUrl;
+    } else {
+      // ✅ 업로드된 이미지가 없으면 기본 이미지 중 하나를 순서대로 선택
+      int imageIndex = reviewId % defaultImages.length; // 0, 1, 2 순환
+      selectedImage = defaultImages[imageIndex];
+    }
+
     return Container(
       width: double.infinity,
       height: 180,
       decoration: BoxDecoration(
-        color: AppColors.lightGray,
+        color: Colors.grey[300],
         borderRadius: BorderRadius.circular(8),
-        image: (imageUrl != null && imageUrl.isNotEmpty)
-            ? DecorationImage(
-          image: NetworkImage(imageUrl),
+        image: DecorationImage(
+          image: selectedImage.startsWith("http") ? NetworkImage(selectedImage) : AssetImage(selectedImage) as ImageProvider,
           fit: BoxFit.cover,
-        )
-            : null,
+        ),
       ),
     );
   }
 
+  /// ✅ 날짜 포맷팅 함수
   String _formatDate(DateTime date) {
     return "${date.month}.${date.day}";
   }

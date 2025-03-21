@@ -1,20 +1,54 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/config/theme.dart';
+import '../../config/theme.dart';
 import '../../models/review_model.dart';
-import 'review_detail.dart';  // 파일명 변경됨
-import 'review_write.dart';
+import '../review/review_detail.dart';
+import '../review/review_write.dart';
+import '../../services/review_service.dart';
 
-class ReviewList extends StatelessWidget {
+class ReviewList extends StatefulWidget {
   final String restaurantId;
-  final Future<List<Review>> reviews;
   final VoidCallback onReviewUpdated;
 
-  const ReviewList({
-    Key? key,
-    required this.restaurantId, // ✅ 추가
-    required this.reviews,
-    required this.onReviewUpdated,
-  }) : super(key: key);
+  const ReviewList({Key? key, required this.restaurantId, required this.onReviewUpdated}) : super(key: key);
+
+  @override
+  _ReviewListState createState() => _ReviewListState();
+}
+
+class _ReviewListState extends State<ReviewList> {
+  late Future<List<Review>> reviewData;
+  final List<String> defaultImages = [
+    "assets/images/review_image.jpg",
+    "assets/images/review_image2.jpg",
+    "assets/images/review_image3.jpg"
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchReviews();
+  }
+
+  /// ✅ 리뷰 리스트 불러오기
+  void _fetchReviews() {
+    setState(() {
+      reviewData = ReviewService.fetchReviews(widget.restaurantId);
+    });
+  }
+
+  /// ✅ 리뷰 작성 후 리스트 자동 새로고침
+  Future<void> _onReviewWritten() async {
+    bool? updated = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReviewWriteScreen(kakaoPlaceId: widget.restaurantId),
+      ),
+    );
+    if (updated == true) {
+      await Future.delayed(const Duration(milliseconds: 500)); // 네트워크 응답 딜레이 보정
+      _fetchReviews();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,124 +62,97 @@ class ReviewList extends StatelessWidget {
             children: [
               Text("리뷰", style: Theme.of(context).textTheme.titleMedium),
               Spacer(),
-              /// ✅ 오른쪽에 + 버튼 추가 (리뷰 작성 페이지 이동)
+
+              /// ✅ 리뷰 작성 버튼
               IconButton(
                 icon: Icon(Icons.add, size: 24, color: AppColors.darkGray),
-                onPressed: () async {
-                  bool? updated = await Navigator.push(
-                    context,
-                      MaterialPageRoute(
-                    builder: (context) => ReviewWriteScreen(kakaoPlaceId: restaurantId),
-                      ),
-                  );
-                  if (updated == true) {
-                    onReviewUpdated(); // ✅ 리뷰 작성 후 자동 업데이트
-                  }
-                },
+                onPressed: _onReviewWritten,
               ),
             ],
           ),
         ),
+
+        /// ✅ 리뷰 리스트 FutureBuilder
         FutureBuilder<List<Review>>(
-          future: reviews,
+          future: reviewData,
           builder: (context, snapshot) {
-            if (!snapshot.hasData) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.data!.isEmpty) {
+            } else if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    "에러 발생: ${snapshot.error}",
+                    style: TextStyle(color: Colors.red, fontSize: 16),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
               return const Center(child: Text("아직 리뷰가 없습니다."));
             }
 
             return Column(
-              children: snapshot.data!.map((review) {
+              children: snapshot.data!.asMap().entries.map((entry) {
+                final index = entry.key;
+                final review = entry.value;
+
                 return InkWell(
-                  onTap: () {
-                    // 리뷰 클릭 시 상세 페이지로 이동
-                    Navigator.push(
+                  onTap: () async {
+                    bool? updated = await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => ReviewDetail(
-                      review: review,
-                      restaurantId: restaurantId,
+                          review: review,
+                          restaurantId: widget.restaurantId,
                         ),
                       ),
                     );
+                    if (updated == true) {
+                      _fetchReviews();
+                    }
                   },
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        /// 프로필 + 닉네임 + 현지인 정보 + 방문 횟수 & 날짜 (한 줄 표시)
+                        /// ✅ 프로필 + 닉네임 + 방문 정보
                         Row(
                           children: [
-                            /// 프로필 이미지
                             CircleAvatar(
                               backgroundImage: NetworkImage(review.profileImageUrl ?? 'assets/default_profile.png'),
                               radius: 20,
                             ),
                             const SizedBox(width: 12),
-
-                            /// 닉네임 + 현지인 여부
                             Expanded(
-                              child: Row(
-                                children: [
-                                  Text(review.username, style: Theme.of(context).textTheme.bodyLarge),
-                                  const SizedBox(width: 6),
-
-                                  /// 현지인 여부 및 랭크
-                                  if (review.isLocal) ...[
-                                    Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        "현지인 ${review.localRank}",
-                                        style: TextStyle(color: AppColors.verylightGray, fontSize: 12, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                  ],
-                                ],
+                              child: Text(
+                                review.username,
+                                style: Theme.of(context).textTheme.bodyLarge,
                               ),
                             ),
-
-                            /// ✅ 방문 횟수 & 날짜 (한 줄 | 구분자 포함, 우측 정렬)
                             Text(
                               "${review.visitCount}번째 방문 | ${_formatDate(review.date)}",
-                              style: TextStyle(fontSize: 12, color: AppColors.darkGray),
-                              textAlign: TextAlign.right,
+                              style: TextStyle(fontSize: 12, color: Colors.grey),
                             ),
                           ],
                         ),
 
                         const SizedBox(height: 8),
 
-                        /// ✅ 리뷰 제목
-                        if (review.title != null && review.title!.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
-                            child: Text(
-                              review.title!,
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                          ),
+                        /// ✅ 리뷰 내용 (최대 2줄)
+                        Text(
+                          review.content,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 14),
+                        ),
 
                         const SizedBox(height: 8),
 
-                        /// 리뷰 사진 (없을 경우 기본 회색 박스)
-                        _buildReviewImage(review.imageUrl),
-
-                        const SizedBox(height: 8),
-
-                        /// 리뷰 내용 (최대 2줄)
-                        Text(review.content, maxLines: 2, overflow: TextOverflow.ellipsis),
-
-                        const SizedBox(height: 8),
-
-                        /// 리뷰어가 먹은 메뉴 표시
-                        if (review.menu.isNotEmpty)
-                          _buildReviewMenu(review.menu),
+                        /// ✅ 리뷰 이미지 표시 (백엔드에서 안 주면 기본 이미지 사용)
+                        _buildReviewImage(review.imageUrl, index),
                       ],
                     ),
                   ),
@@ -158,72 +165,28 @@ class ReviewList extends StatelessWidget {
     );
   }
 
-  /// 리뷰 이미지 (없으면 회색 박스)
-  Widget _buildReviewImage(String? imageUrl) {
+  /// ✅ 리뷰 이미지 표시 (리뷰에 이미지가 없으면 기본 이미지 할당)
+  Widget _buildReviewImage(String? imageUrl, int index) {
+    String assignedImage = defaultImages[index % defaultImages.length]; // 3개 이미지 순환
+
+    if (imageUrl == null || imageUrl.isEmpty) {
+      imageUrl = assignedImage; // 기본 이미지 할당
+    }
+
     return Container(
       width: double.infinity,
       height: 150,
       decoration: BoxDecoration(
-        color: AppColors.lightGray,
         borderRadius: BorderRadius.circular(8),
-        image: (imageUrl != null && imageUrl.isNotEmpty)
-            ? DecorationImage(
-          image: NetworkImage(imageUrl),
+        image: DecorationImage(
+          image: imageUrl.startsWith("http") ? NetworkImage(imageUrl) : AssetImage(imageUrl) as ImageProvider,
           fit: BoxFit.cover,
-        )
-            : null,  // 이미지가 없을 경우 기본 박스 유지
+        ),
       ),
     );
   }
 
-  /// 리뷰에 포함된 메뉴 목록 표시
-  Widget _buildReviewMenu(List<String> menu) {
-    if (menu.isEmpty) return SizedBox.shrink();
-
-    List<String> visibleMenu = menu.take(2).toList();
-    int remaining = menu.length - 2;
-
-    return Wrap(
-      spacing: 6,
-      runSpacing: 4,
-      children: [
-        ...visibleMenu.map((item) =>
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.lightGray,
-                borderRadius: BorderRadius.circular(7),
-              ),
-              child: Text(
-                item,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.darkGray,
-                ),
-              ),
-            )),
-
-        /// "+N" 표시 (3개 이상 메뉴가 있을 경우)
-        if (remaining > 0)
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.lightGray,
-              borderRadius: BorderRadius.circular(7),
-            ),
-            child: Text(
-              "+$remaining",
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.darkGray,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  /// 날짜 포맷 변경 (YYYY-MM-DD → MM.DD)
+  /// ✅ 날짜 포맷팅 함수
   String _formatDate(DateTime date) {
     return "${date.month}.${date.day}";
   }

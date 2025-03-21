@@ -28,7 +28,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   }
 
   void fetchData() {
-    final safeRestaurantId = widget.restaurantId.isNotEmpty ? widget.restaurantId : "1605310387";
+    // final safeRestaurantId = widget.restaurantId.isNotEmpty ? widget.restaurantId : "1605310387";
+    final safeRestaurantId = "1605310387";
     setState(() {
       restaurantData = RestaurantService.fetchRestaurantDetails(safeRestaurantId);
       reviews = ReviewService.fetchReviews(safeRestaurantId);
@@ -113,7 +114,6 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                   /// ✅ 리뷰 목록 (리뷰 작성 후 화면 갱신 기능 추가)
                   ReviewList(
                     restaurantId: widget.restaurantId,
-                    reviews: reviews,
                     onReviewUpdated: fetchData,
                   ),
                 ],
