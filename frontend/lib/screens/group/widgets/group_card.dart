@@ -18,9 +18,7 @@ class GroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 4,
       color: Colors.white, // 카드 기본 배경색은 흰색으로
       child: InkWell(
@@ -28,9 +26,10 @@ class GroupCard extends StatelessWidget {
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            border: isSelected
-                ? Border.all(color: AppColors.primary, width: 2)
-                : null,
+            border:
+                isSelected
+                    ? Border.all(color: AppColors.primary, width: 2)
+                    : null,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -89,38 +88,8 @@ class GroupCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const Spacer(),
-                      
-                      // 그룹 ID (개발 중에만 표시)
-                      Text(
-                        'ID: ${group.groupId}',
-                        style: TextStyle(
-                          fontFamily: 'Anemone_air',
-                          fontSize: 10,
-                          color: AppColors.lightGray,
-                        ),
-                      ),
-                      
+
                       const SizedBox(height: 4),
-                      
-                      // 그룹 생성일
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 14,
-                            color: AppColors.darkGray,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '생성일: ${_formatDate(group.createdAt)}',
-                            style: TextStyle(
-                              fontFamily: 'Anemone_air',
-                              fontSize: 12,
-                              color: AppColors.darkGray,
-                            ),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
@@ -131,7 +100,7 @@ class GroupCard extends StatelessWidget {
       ),
     );
   }
-  
+
   // 날짜 포맷팅
   String _formatDate(DateTime date) {
     return '${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';

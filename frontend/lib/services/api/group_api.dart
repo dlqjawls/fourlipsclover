@@ -301,25 +301,34 @@ class GroupApi {
   }
 
   /// 그룹 삭제하기
-  /// [groupId] 그룹 ID
-  Future<void> deleteGroup(int groupId) async {
-    final token = await _getAuthToken();
+Future<void> deleteGroup(int groupId) async {
+  final token = await _getAuthToken();
 
-    // 토큰 유효성 검사
-    if (!_validateToken(token)) {
-      throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
-    }
+  // 토큰 유효성 검사
+  if (!_validateToken(token)) {
+    throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+  }
 
-    final url = Uri.parse('$baseUrl$apiPrefix/$groupId');
+  debugPrint('그룹 삭제 API 호출: groupId=$groupId');
+  final url = Uri.parse('$baseUrl$apiPrefix/$groupId');
+  
+  try {
     final response = await http.delete(
       url,
       headers: {'Authorization': 'Bearer $token'},
     );
 
-    if (response.statusCode != 204) {
+    debugPrint('그룹 삭제 API 응답: ${response.statusCode}, 본문: ${response.body}');
+
+    // 응답 코드 범위를 넓혀서 성공 조건 완화
+    if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
         '그룹 삭제에 실패했습니다: ${response.statusCode}, ${response.body}',
       );
     }
+  } catch (e) {
+    debugPrint('그룹 삭제 API 예외 발생: $e');
+    rethrow;
   }
+}
 }

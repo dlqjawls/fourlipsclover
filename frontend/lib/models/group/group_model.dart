@@ -25,9 +25,10 @@ class Group {
       description: json['description'],
       isPublic: json['isPublic'],
       createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: json['updatedAt'] != null 
-          ? DateTime.parse(json['updatedAt']) 
-          : DateTime.now(),
+      updatedAt:
+          json['updatedAt'] != null
+              ? DateTime.parse(json['updatedAt'])
+              : DateTime.now(),
     );
   }
 
@@ -42,7 +43,7 @@ class Group {
       'updatedAt': updatedAt.toIso8601String(),
     };
   }
-  
+
   // 수정된 그룹 정보 반환
   Group copyWith({
     int? groupId,
