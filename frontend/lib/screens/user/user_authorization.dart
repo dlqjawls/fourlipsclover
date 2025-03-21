@@ -4,17 +4,22 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:frontend/config/theme.dart';
 import 'package:frontend/providers/auth_provider.dart';
 import 'package:frontend/screens/user/auth_widgets/location_status_card.dart';
+import 'package:frontend/services/local_certification_service.dart';
 
 class UserAuthorizationScreen extends StatefulWidget {
-  const UserAuthorizationScreen({super.key});
+  final int memberId;
+  const UserAuthorizationScreen({
+    super.key,
+    required this.memberId,
+  });
 
   @override
-  State<UserAuthorizationScreen> createState() =>
-      _UserAuthorizationScreenState();
+  State<UserAuthorizationScreen> createState() => _UserAuthorizationScreenState();
 }
 
 class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
   late AuthProvider _authProvider;
+  final LocalCertificationService _certificationService = LocalCertificationService();
 
   @override
   void initState() {
@@ -27,6 +32,27 @@ class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
     final status = await Permission.location.request();
     if (!status.isGranted) {
       _authProvider.updateState(message: '위치 권한이 필요합니다');
+    }
+  }
+
+  Future<void> _handleLocationCheck() async {
+    await _authProvider.getCurrentLocation(context);
+    
+    if (_authProvider.currentPosition != null) {
+      try {
+        await _authProvider.createLocalCertification(widget.memberId);
+        if (!mounted) return;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('현지인 인증이 완료되었습니다!')),
+        );
+        Navigator.pop(context, true);
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('인증 실패: $e')),
+        );
+      }
     }
   }
 
@@ -49,11 +75,7 @@ class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
         iconTheme: const IconThemeData(color: AppColors.darkGray),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed:
-              () => Navigator.pop(
-                context,
-                context.read<AuthProvider>().currentPosition != null,
-              ),
+          onPressed: () => Navigator.pop(context, false),
         ),
       ),
       body: SafeArea(
@@ -62,13 +84,12 @@ class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
           child: Center(
             child: SingleChildScrollView(
               child: Consumer<AuthProvider>(
-                builder:
-                    (context, auth, _) => LocationStatusCard(
-                      currentPosition: auth.currentPosition,
-                      message: auth.locationMessage,
-                      isLoading: auth.isLoading,
-                      onPressed: () => auth.getCurrentLocation(context),
-                    ),
+                builder: (context, auth, _) => LocationStatusCard(
+                  currentPosition: auth.currentPosition,
+                  message: auth.locationMessage,
+                  isLoading: auth.isLoading,
+                  onPressed: _handleLocationCheck,
+                ),
               ),
             ),
           ),
