@@ -44,38 +44,57 @@ class _LocalFavoritesState extends State<LocalFavorites> {
   }
 
   Future<void> _loadNearbyRestaurants() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
+  setState(() {
+    _isLoading = true;
+    _errorMessage = '';
+  });
 
-    try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  try {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-      if (authProvider.currentPosition != null) {
-        final restaurants = await NearbyRestaurantService.findNearbyRestaurants(
-          latitude: authProvider.currentPosition!.longitude,
-          longitude: authProvider.currentPosition!.latitude,
-        );
+    if (authProvider.currentPosition != null) {
+      final restaurants = await NearbyRestaurantService.findNearbyRestaurants(
+        latitude: authProvider.currentPosition!.longitude,
+        longitude: authProvider.currentPosition!.latitude,
+      );
 
-        setState(() {
-          _restaurants = restaurants;
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _errorMessage = '위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.';
-          _isLoading = false;
-        });
+      // 각 식당마다 거리 계산
+      for (var restaurant in restaurants) {
+        if (restaurant.x != null && restaurant.y != null) {
+          final dx = 111.3 * 
+            cos(authProvider.currentPosition!.latitude * pi / 180) * 
+            (authProvider.currentPosition!.longitude - restaurant.x!);
+          final dy = 111.3 * 
+            (authProvider.currentPosition!.latitude - restaurant.y!);
+          restaurant.distance = sqrt(dx * dx + dy * dy);
+        } else {
+          restaurant.distance = double.infinity; // 위치 정보가 없는 경우
+        }
       }
-    } catch (e) {
-      print('주변 레스토랑 로딩 오류: $e');
+
+      // 거리순으로 정렬
+      restaurants.sort((a, b) => 
+        (a.distance ?? double.infinity).compareTo(b.distance ?? double.infinity)
+      );
+
       setState(() {
-        _errorMessage = '주변 레스토랑을 불러오는데 실패했습니다.';
+        _restaurants = restaurants;
+        _isLoading = false;
+      });
+    } else {
+      setState(() {
+        _errorMessage = '위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.';
         _isLoading = false;
       });
     }
+  } catch (e) {
+    print('주변 레스토랑 로딩 오류: $e');
+    setState(() {
+      _errorMessage = '주변 레스토랑을 불러오는데 실패했습니다.';
+      _isLoading = false;
+    });
   }
+}
 
   Future<void> _refreshLocation() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);

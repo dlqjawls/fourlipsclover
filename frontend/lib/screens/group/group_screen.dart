@@ -20,12 +20,16 @@ class _GroupScreenState extends State<GroupScreen> {
   @override
   void initState() {
     super.initState();
-    // 화면이 처음 로드될 때 그룹 목록 가져오기
-    _fetchGroups();
+    // initState에서는 직접 비동기 작업을 하지 않고, 다음 프레임에서 수행하도록 함
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchGroups();
+    });
   }
 
   // 그룹 목록 가져오기
   Future<void> _fetchGroups() async {
+    if (!mounted) return;
+    
     setState(() {
       _isLoading = true;
       _isError = false;
@@ -34,6 +38,8 @@ class _GroupScreenState extends State<GroupScreen> {
     try {
       await Provider.of<GroupProvider>(context, listen: false).fetchMyGroups();
     } catch (e) {
+      if (!mounted) return;
+      
       setState(() {
         _isError = true;
       });
@@ -47,9 +53,11 @@ class _GroupScreenState extends State<GroupScreen> {
         ),
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

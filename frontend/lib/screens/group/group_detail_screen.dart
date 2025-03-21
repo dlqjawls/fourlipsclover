@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
-import '../../models/group_model.dart';
+import '../../models/group/group_model.dart';
 import '../../models/plan_model.dart';
 import '../../providers/plan_provider.dart';
 import '../../config/theme.dart';

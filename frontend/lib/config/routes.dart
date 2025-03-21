@@ -7,7 +7,7 @@ import 'package:frontend/screens/user/user_screen.dart';
 import 'package:frontend/screens/user/user_edit.dart';
 import 'package:frontend/screens/user/user_profile.dart';
 import 'package:frontend/screens/group/group_detail_screen.dart';
-import 'package:frontend/models/group_model.dart';
+import 'package:frontend/models/group/group_model.dart';
 
 class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
