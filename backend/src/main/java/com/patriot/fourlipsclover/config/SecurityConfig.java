@@ -1,5 +1,6 @@
 package com.patriot.fourlipsclover.config;
 
+import com.patriot.fourlipsclover.auth.jwt.JwtAuthenticationFilter;
 import com.patriot.fourlipsclover.auth.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -9,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -27,7 +29,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         // 테스트 기간 동안 모든 요청 허용
                         .anyRequest().permitAll()
-                );
+                )
+                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

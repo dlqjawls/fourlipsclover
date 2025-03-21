@@ -1,17 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/config/theme.dart';
 import '../../models/review_model.dart';
+import '../review/review_write.dart';
 import 'widgets/review_options_modal.dart';
+import 'widgets/delete_confirmation_modal.dart';
 
-class ReviewDetail extends StatelessWidget {
+class ReviewDetail extends StatefulWidget {
   final Review review;
+  final String restaurantId;
 
-  const ReviewDetail({Key? key, required this.review}) : super(key: key);
+  const ReviewDetail({Key? key, required this.review, required this.restaurantId}) : super(key: key);
+
+  @override
+  _ReviewDetailState createState() => _ReviewDetailState();
+}
+
+class _ReviewDetailState extends State<ReviewDetail> {
+  late Review _review; // ✅ 수정된 리뷰를 저장할 변수
+  Offset? tapPosition;
+
+  @override
+  void initState() {
+    super.initState();
+    _review = widget.review; // ✅ 초기 리뷰 데이터 설정
+  }
+
+  /// ✅ 리뷰 수정 후 UI 갱신
+  Future<void> _editReview() async {
+    final updatedReview = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReviewWriteScreen(
+          review: _review, // ✅ 현재 리뷰 정보 전달
+          kakaoPlaceId: widget.restaurantId,
+        ),
+      ),
+    );
+
+    if (updatedReview != null && updatedReview is Review) {
+      setState(() {
+        _review = updatedReview; // ✅ 수정된 리뷰를 반영
+      });
+    }
+  }
+
+  /// ✅ 리뷰 삭제 처리
+  void _deleteReview() {
+    showDeleteConfirmationModal(context, _review.id).then((result) {
+      if (result == true) {
+        Navigator.pop(context, true); // ✅ 삭제 성공 시 이전 화면으로 돌아가면서 리스트 갱신
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    Offset? tapPosition;
-
     return Scaffold(
       appBar: AppBar(
         title: Text("리뷰 상세"),
@@ -25,14 +68,14 @@ class ReviewDetail extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              /// ✅ 리뷰 제목 + 점 3개 아이콘 추가 (if문 유지)
+              /// ✅ 리뷰 제목 + 점 3개 아이콘 추가
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  if (review.title != null && review.title!.isNotEmpty)
+                  if (_review.title != null && _review.title!.isNotEmpty)
                     Expanded(
                       child: Text(
-                        review.title!,
+                        _review.title!,
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -47,7 +90,16 @@ class ReviewDetail extends StatelessWidget {
                       icon: Icon(Icons.more_vert, color: Colors.black),
                       onPressed: () {
                         if (tapPosition != null) {
-                          showReviewOptionsModal(context, review, tapPosition!); // ✅ 작은 모달 실행
+                          showReviewOptionsModal(
+                            context,
+                            _review,
+                            widget.restaurantId,
+                            tapPosition!,
+                          ).then((result) {
+                            if (result == true) {
+                              _deleteReview(); // ✅ 삭제된 경우 삭제 모달 실행
+                            }
+                          });
                         }
                       },
                     ),
@@ -57,27 +109,22 @@ class ReviewDetail extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              /// 프로필 + 닉네임 + 방문 횟수 & 방문 날짜 (오른쪽 정렬)
+              /// 프로필 + 닉네임 + 방문 횟수 & 방문 날짜
               Row(
                 children: [
-                  /// 프로필 이미지
                   CircleAvatar(
-                    backgroundImage: NetworkImage(review.profileImageUrl ?? 'assets/default_profile.png'),
+                    backgroundImage: NetworkImage(_review.profileImageUrl ?? 'assets/default_profile.png'),
                     radius: 20,
                   ),
                   const SizedBox(width: 12),
-
-                  /// 닉네임
                   Expanded(
                     child: Text(
-                      review.username,
+                      _review.username,
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                   ),
-
-                  /// 방문 횟수 & 날짜 (한 줄 | 구분자로 정렬)
                   Text(
-                    "${review.visitCount}번째 방문 | ${_formatDate(review.date)}",
+                    "${_review.visitCount}번째 방문 | ${_formatDate(_review.date)}",
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
@@ -85,19 +132,16 @@ class ReviewDetail extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              /// 구분선 (border)
               Divider(color: Colors.grey[300], thickness: 1),
 
               const SizedBox(height: 12),
 
-              /// 리뷰 사진 (없을 경우 기본 회색 박스)
-              _buildReviewImage(review.imageUrl),
+              _buildReviewImage(_review.imageUrl),
 
               const SizedBox(height: 12),
 
-              /// 리뷰 내용
               Text(
-                review.content,
+                _review.content,
                 style: TextStyle(fontSize: 14, color: Colors.black87),
               ),
             ],
@@ -107,25 +151,23 @@ class ReviewDetail extends StatelessWidget {
     );
   }
 
-  /// 리뷰 이미지 (없으면 회색 박스)
   Widget _buildReviewImage(String? imageUrl) {
     return Container(
       width: double.infinity,
       height: 180,
       decoration: BoxDecoration(
-        color:AppColors.lightGray,
+        color: AppColors.lightGray,
         borderRadius: BorderRadius.circular(8),
         image: (imageUrl != null && imageUrl.isNotEmpty)
             ? DecorationImage(
           image: NetworkImage(imageUrl),
           fit: BoxFit.cover,
         )
-            : null,  // 이미지가 없을 경우 기본 박스 유지
+            : null,
       ),
     );
   }
 
-  /// 날짜 포맷 변경 (YYYY-MM-DD → MM.DD)
   String _formatDate(DateTime date) {
     return "${date.month}.${date.day}";
   }

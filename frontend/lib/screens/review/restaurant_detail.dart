@@ -24,8 +24,15 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   @override
   void initState() {
     super.initState();
-    restaurantData = RestaurantService.fetchRestaurantDetails(widget.restaurantId);
-    reviews = ReviewService.fetchReviews(widget.restaurantId);
+    fetchData();
+  }
+
+  void fetchData() {
+    final safeRestaurantId = widget.restaurantId.isNotEmpty ? widget.restaurantId : "1808376805";
+    setState(() {
+      restaurantData = RestaurantService.fetchRestaurantDetails(safeRestaurantId);
+      reviews = ReviewService.fetchReviews(safeRestaurantId);
+    });
   }
 
   void toggleFavorite() {
@@ -41,17 +48,30 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       body: FutureBuilder<Map<String, dynamic>>(
         future: restaurantData,
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError || snapshot.data == null) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20.0),
+                child: Text("가게 정보를 불러오는 중 오류가 발생했습니다.", style: TextStyle(fontSize: 16, color: Colors.red)),
+              ),
+            );
           }
 
           final data = snapshot.data!;
+          final menu = data['menu'] ?? [];
+          print("✅ 가게 데이터: $data");
 
           return Scaffold(
             appBar: AppBar(
-              title: Text(data['name'] ?? "가게 정보"),
               backgroundColor: AppColors.background,
               elevation: 0,
+              centerTitle: true, // ✅ 제목 완전 중앙 정렬
+              title: Text(
+                data['placeName'] ?? "가게 정보",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.black),
                 onPressed: () {
@@ -70,21 +90,31 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                   ),
                   onPressed: toggleFavorite,
                 ),
-                SizedBox(width: 20),
+                const SizedBox(width: 20),
               ],
             ),
             body: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  /// 가게 정보
                   RestaurantInfo(data: data),
 
-                  /// 메뉴 목록
-                  MenuList(menu: data['menu']),
+                  /// ✅ 메뉴 리스트 (menu가 없으면 빈 리스트로 대체)
+                  if (menu.isNotEmpty)
+                    MenuList(menu: menu)
+                  else
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Text("메뉴 정보가 없습니다.", style: TextStyle(fontSize: 14, color: Colors.grey)),
+                      ),
+                    ),
 
-                  /// 리뷰 목록
-                  ReviewList(reviews: reviews),
+                  /// ✅ 리뷰 목록 (리뷰 작성 후 화면 갱신 기능 추가)
+                  ReviewList(
+                    restaurantId: widget.restaurantId,
+                    onReviewUpdated: fetchData,
+                  ),
                 ],
               ),
             ),

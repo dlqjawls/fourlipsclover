@@ -35,11 +35,14 @@ class RestaurantService {
     // 실제 API 연동 버전
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl$apiPrefix/$restaurantId/search')
+          Uri.parse('$baseUrl$apiPrefix/$restaurantId/search')
       );
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final utf8Decoded = utf8.decode(response.bodyBytes);
+        final jsonData = jsonDecode(utf8Decoded);
+        print("JSON 데이터 확인: $jsonData");
+        return jsonData;
       } else {
         print("Error: 서버 응답 코드 ${response.statusCode}");
         throw Exception('Failed to get restaurant: ${response.statusCode}');
@@ -55,7 +58,7 @@ class RestaurantService {
     if (useDummyData) {
       // 더미 데이터 반환
       await Future.delayed(const Duration(seconds: 1));
-      
+
       return RestaurantResponse(
         restaurantId: 1,
         kakaoPlaceId: kakaoPlaceId,
@@ -70,11 +73,11 @@ class RestaurantService {
         y: 37.5011,
       );
     }
-    
+
     try {
       final url = Uri.parse('$baseUrl$apiPrefix/$kakaoPlaceId/search');
       final response = await http.get(url);
-      
+
       if (response.statusCode == 200) {
         return RestaurantResponse.fromJson(jsonDecode(response.body));
       } else {
