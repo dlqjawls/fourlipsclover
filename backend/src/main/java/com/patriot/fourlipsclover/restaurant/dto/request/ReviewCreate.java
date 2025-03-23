@@ -1,10 +1,11 @@
 package com.patriot.fourlipsclover.restaurant.dto.request;
 
 
-import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 // 이미지 저장 추가하기.
 @Data
@@ -12,8 +13,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ReviewCreate {
 
-	private int memberId;
-	private String kakaoPlaceId;
-	private String content;
-	private LocalDateTime visitedAt;
+    private Long memberId;
+    private String kakaoPlaceId;
+    private String content;
+    private LocalDateTime visitedAt;
 }

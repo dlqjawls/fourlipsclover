@@ -10,11 +10,11 @@ import java.time.LocalDateTime;
 public class GroupResponse {
 
     private Integer groupId;
-    private Integer memberId;
+    private Long memberId;
     private String name;
     private String description;
     private Boolean isPublic;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    
+
 }

@@ -9,6 +9,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ReviewLikeCreate {
 
-	private Integer memberId;
-	private LikeStatus likeStatus;
+    private Long memberId;
+    private LikeStatus likeStatus;
 }
