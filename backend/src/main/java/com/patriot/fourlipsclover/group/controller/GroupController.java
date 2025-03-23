@@ -7,6 +7,7 @@ import com.patriot.fourlipsclover.group.dto.response.GroupDetailResponse;
 import com.patriot.fourlipsclover.group.dto.response.GroupInvitationResponse;
 import com.patriot.fourlipsclover.group.dto.response.GroupResponse;
 import com.patriot.fourlipsclover.group.entity.GroupInvitation;
+import com.patriot.fourlipsclover.group.entity.GroupJoinRequest;
 import com.patriot.fourlipsclover.group.service.GroupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -76,6 +77,16 @@ public class GroupController {
     }
 
     // 그룹생성자 - 가입요청 목록 확인
+    @GetMapping("/join-requests-list/{groupId}")
+    public ResponseEntity<?> joinRequestList(@PathVariable Integer groupId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Long memberId = userDetails.getMember().getMemberId();
+
+        List<GroupJoinRequest> joinRequestList = groupService.joinRequestList(groupId, memberId);
+
+        return ResponseEntity.ok(joinRequestList);
+    }
 
     // 그룹생성자 - 가입요청 승인/거절
     @PostMapping("/{groupId}/invitations/response/{token}")

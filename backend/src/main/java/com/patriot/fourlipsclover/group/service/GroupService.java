@@ -75,8 +75,7 @@ public class GroupService {
 
         groupInvitationRepository.save(invitation);
 
-        return "http://localhost:8090/api/group/join-request/" + token;
-//        return "https://fourlipsclover.duckdns.org/api/group/join-request/" + token;
+        return "https://fourlipsclover.duckdns.org/api/group/join-request/" + token;
     }
 
 
@@ -219,6 +218,18 @@ public class GroupService {
 
         groupMemberRepository.deleteByGroup_groupId(groupId);
         groupRepository.deleteByGroupId(groupId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<GroupJoinRequest> joinRequestList(Integer groupId, Long memberId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new GroupNotFoundException("그룹을 찾을 수 없습니다. id=" + groupId));
+
+        if (!group.getMember().getMemberId().equals(memberId)) {
+            throw new UnauthorizedAccessException("그룹 생성자만 가입 요청 목록을 확인할 수 있습니다.");
+        }
+
+        return groupJoinRequestRepository.findByGroup_GroupId(groupId);
     }
 
 }
