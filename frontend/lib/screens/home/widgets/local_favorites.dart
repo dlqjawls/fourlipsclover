@@ -20,41 +20,47 @@ class _LocalFavoritesState extends State<LocalFavorites> {
   String _errorMessage = '';
 
   @override
-void initState() {
-  super.initState();
-  
-  // 빌드 사이클 완료 후에 실행하도록 스케줄링
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    _initializeLocation();
-  });
-}
+  void initState() {
+    super.initState();
+    
+    // 빌드 사이클 완료 후에 실행하도록 스케줄링
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) { // mounted 체크 추가
+        _initializeLocation();
+      }
+    });
+  }
 
-Future<void> _initializeLocation() async {
-  try {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  Future<void> _initializeLocation() async {
+    if (!mounted) return; // mounted 체크 추가
+    
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    if (authProvider.currentPosition == null) {
-      // 빌드 과정에서는 상태 변경 알림 없이 위치 정보만 가져오기
-      await authProvider.getCurrentLocation(context, notify: false);
-      
-      // 위치 정보를 가져온 후 별도로 상태 업데이트
+      if (authProvider.currentPosition == null) {
+        // 빌드 과정에서는 상태 변경 알림 없이 위치 정보만 가져오기
+        await authProvider.getCurrentLocation(context, notify: false);
+        
+        // 위치 정보를 가져온 후 별도로 상태 업데이트
+        if (mounted) {
+          authProvider.notifyListeners();
+        }
+      }
+
       if (mounted) {
-        authProvider.notifyListeners();
+        _loadNearbyRestaurants(); // 또는 해당 위젯의 데이터 로드 메서드
+      }
+    } catch (e) {
+      print('위치 초기화 오류: $e');
+      if (mounted) {
+        _loadNearbyRestaurants(); // 또는 해당 위젯의 데이터 로드 메서드
       }
     }
-
-    if (mounted) {
-      _loadNearbyRestaurants(); // 또는 해당 위젯의 데이터 로드 메서드
-    }
-  } catch (e) {
-    print('위치 초기화 오류: $e');
-    if (mounted) {
-      _loadNearbyRestaurants(); // 또는 해당 위젯의 데이터 로드 메서드
-    }
   }
-}
 
   Future<void> _loadNearbyRestaurants() async {
+    if (!mounted) return; // mounted 체크 추가
+    
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -92,29 +98,40 @@ Future<void> _initializeLocation() async {
           ),
         );
 
-        setState(() {
-          _restaurants = restaurants;
-          _isLoading = false;
-        });
+        if (mounted) { // mounted 체크 추가
+          setState(() {
+            _restaurants = restaurants;
+            _isLoading = false;
+          });
+        }
       } else {
-        setState(() {
-          _errorMessage = '위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.';
-          _isLoading = false;
-        });
+        if (mounted) { // mounted 체크 추가
+          setState(() {
+            _errorMessage = '위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.';
+            _isLoading = false;
+          });
+        }
       }
     } catch (e) {
       print('주변 레스토랑 로딩 오류: $e');
-      setState(() {
-        _errorMessage = '주변 레스토랑을 불러오는데 실패했습니다.';
-        _isLoading = false;
-      });
+      if (mounted) { // mounted 체크 추가
+        setState(() {
+          _errorMessage = '주변 레스토랑을 불러오는데 실패했습니다.';
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _refreshLocation() async {
+    if (!mounted) return; // mounted 체크 추가
+    
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.getCurrentLocation(context);
-    _loadNearbyRestaurants();
+    
+    if (mounted) { // mounted 체크 추가
+      _loadNearbyRestaurants();
+    }
   }
 
   @override
@@ -339,7 +356,7 @@ Future<void> _initializeLocation() async {
   }
 }
 
-// 수정된 식당 카드 위젯
+// RestaurantCard 위젯은 변경 없음
 class RestaurantCard extends StatelessWidget {
   final String name;
   final String address;
