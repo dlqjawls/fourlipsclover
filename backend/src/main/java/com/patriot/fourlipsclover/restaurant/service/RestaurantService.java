@@ -70,7 +70,9 @@ public class RestaurantService {
 	public ReviewResponse findById(Integer reviewId) {
 		Review review = reviewRepository.findById(reviewId)
 				.orElseThrow(() -> new ReviewNotFoundException(reviewId));
-		return reviewMapper.toDto(review);
+		List<String> imageUrls = reviewImageService.getImageUrlsByReviewId(reviewId);
+
+		return reviewMapper.toReviewImageDto(review, imageUrls);
 	}
 
 	@Transactional(readOnly = true)
@@ -79,7 +81,13 @@ public class RestaurantService {
 			throw new IllegalArgumentException("올바른 kakaoPlaceId 값을 입력하세요.");
 		}
 		List<Review> reviews = reviewRepository.findByKakaoPlaceId(kakaoPlaceId);
-		return reviews.stream().map(reviewMapper::toDto).toList();
+		return reviews.stream()
+				.map(review -> {
+					List<String> imageUrls = reviewImageService.getImageUrlsByReviewId(
+							review.getReviewId());
+					return reviewMapper.toReviewImageDto(review, imageUrls);
+				})
+				.toList();
 	}
 
 	@Transactional

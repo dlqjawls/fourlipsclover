@@ -65,9 +65,11 @@ public class RestaurantController {
 		return ResponseEntity.ok(response);
 	}
 
+	@Operation(summary = "리뷰 생성", description = "식당에 대한 리뷰를 생성합니다. 이미지를 선택적으로 첨부할 수 있습니다.")
 	@PostMapping(value = "/reviews", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<ReviewResponse> create(@RequestPart("data") ReviewCreate reviewCreate,
-			@RequestPart(value = "images", required = false) List<MultipartFile> images) {
+	public ResponseEntity<ReviewResponse> create(
+			@Parameter(description = "리뷰 생성 정보", required = true) @RequestPart("data") ReviewCreate reviewCreate,
+			@Parameter(description = "리뷰 이미지 파일 (선택사항)") @RequestPart(value = "images", required = false) List<MultipartFile> images) {
 		ReviewResponse response = restaurantService.create(reviewCreate, images);
 		return ResponseEntity.ok(response);
 	}
