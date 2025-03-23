@@ -1,5 +1,6 @@
 package com.patriot.fourlipsclover.restaurant.service;
 
+import com.patriot.fourlipsclover.config.CustomUserDetails;
 import com.patriot.fourlipsclover.exception.DeletedResourceAccessException;
 import com.patriot.fourlipsclover.exception.InvalidDataException;
 import com.patriot.fourlipsclover.exception.ReviewNotFoundException;
@@ -96,7 +97,7 @@ public class RestaurantService {
 		Review review = reviewRepository.findById(reviewId)
 				.orElseThrow(() -> new ReviewNotFoundException(reviewId));
 		//TODO : 유저 로그인 후 autnentication 등록 구현 후에 주석 해제하기.
-//		checkReviewerIsCurrentUser(review.getMember().getMemberId());
+		checkReviewerIsCurrentUser(review.getMember().getMemberId());
 		if (review.getIsDelete()) {
 			throw new DeletedResourceAccessException("삭제된 리뷰 데이터는 접근할 수 없습니다.");
 		}
@@ -108,12 +109,15 @@ public class RestaurantService {
 		return reviewMapper.toReviewImageDto(review, reviewUrls);
 	}
 
-	private void checkReviewerIsCurrentUser(Integer reviewMemberId) {
-		// AOP로 분리해서 controller에서
+	private void checkReviewerIsCurrentUser(Long reviewMemberId) {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		String currentUsername = authentication.getName();
-		Member currentMember = memberRepository.findByEmail(currentUsername)
-				.orElseThrow(UserNotFoundException::new);
+		if (authentication == null || !authentication.isAuthenticated()) {
+			throw new UnauthorizedAccessException("인증되지 않은 사용자입니다.");
+		}
+
+		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+		Member currentMember = userDetails.getMember();
+
 		if (!Objects.equals(currentMember.getMemberId(), reviewMemberId)) {
 			throw new UnauthorizedAccessException("현재 User ID가 작성자 ID와 다릅니다.");
 		}
@@ -127,7 +131,7 @@ public class RestaurantService {
 			throw new DeletedResourceAccessException("이미 삭제된 리뷰입니다.");
 		}
 		//TODO : 유저 로그인 후 autnentication 등록 구현 후에 주석 해제하기.
-//		checkReviewerIsCurrentUser(review.getMember().getMemberId());
+		checkReviewerIsCurrentUser(review.getMember().getMemberId());
 		review.setIsDelete(true);
 		review.setDeletedAt(LocalDateTime.now());
 		reviewRepository.save(review);
