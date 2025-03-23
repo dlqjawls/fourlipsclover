@@ -29,11 +29,16 @@ public class MemberService {
         }
 
         ObjectMapper objectMapper = new ObjectMapper();
+        long kakaoId;
         String email;
         String nickname;
         String profileUrl;
         try {
             JsonNode rootNode = objectMapper.readTree(userInfo);
+
+            JsonNode kakaoIdJsonNode = rootNode.path("id");
+            kakaoId = kakaoIdJsonNode.asLong();
+
             JsonNode kakaoAccount = rootNode.path("kakao_account");
             email = kakaoAccount.path("email").asText();
 
@@ -50,6 +55,7 @@ public class MemberService {
             member = existingMember.get();
         } else {
             member = new Member();
+            member.setMemberId(kakaoId);
             member.setEmail(email);
             member.setNickname(nickname);
             member.setProfileUrl(profileUrl);

@@ -14,6 +14,6 @@ import java.io.Serializable;
 public class GroupMemberId implements Serializable {
 
     private Integer groupId;
-    private Integer memberId;
+    private Long memberId;
 
 }

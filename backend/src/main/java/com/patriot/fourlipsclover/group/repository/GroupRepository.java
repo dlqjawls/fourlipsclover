@@ -9,8 +9,7 @@ import java.util.List;
 @Repository
 public interface GroupRepository extends JpaRepository<Group, Integer> {
 
-    List<Group> findByMemberMemberId(Integer loggedInMemberId);
+    List<Group> findByMemberMemberId(Long loggedInMemberId);
 
-    void deleteById(Integer loggedInMemberId);
-
+    void deleteByGroupId(int groupId);
 }

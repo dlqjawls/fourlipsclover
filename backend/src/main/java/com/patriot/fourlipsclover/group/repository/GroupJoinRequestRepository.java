@@ -7,8 +7,8 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface GroupJoinRequestRepository extends JpaRepository<GroupJoinRequest, Long> {
+public interface GroupJoinRequestRepository extends JpaRepository<GroupJoinRequest, Integer> {
 
-    Optional<GroupJoinRequest> findByGroup_GroupIdAndMember_MemberIdAndToken(Integer groupId, Integer memberId, String token);
+    Optional<GroupJoinRequest> findByGroup_GroupIdAndMember_MemberIdAndToken(Integer groupId, Long memberId, String token);
 
 }

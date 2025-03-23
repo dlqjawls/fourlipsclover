@@ -4,9 +4,10 @@ import com.patriot.fourlipsclover.auth.dto.response.JwtResponse;
 import com.patriot.fourlipsclover.member.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
@@ -16,8 +17,8 @@ public class KakaoAuthController {
     private final MemberService memberService;
 
     @PostMapping("/login")
-    public ResponseEntity<?> kakaoLogin(@RequestBody Map<String, String> body) {
-        String accessToken = body.get("accessToken");
+    public ResponseEntity<?> kakaoLogin(@RequestHeader("Authorization") String authorizationHeader) {
+        String accessToken = authorizationHeader.replace("Bearer ", "");
         JwtResponse jwtResponse = memberService.processKakaoLoginAndGetToken(accessToken);
         return ResponseEntity.ok(jwtResponse);
     }

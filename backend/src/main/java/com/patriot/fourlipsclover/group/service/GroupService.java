@@ -57,7 +57,7 @@ public class GroupService {
         return GroupMapper.toResponse(savedGroup);
     }
 
-    public String inviteToGroup(Integer groupId, Integer currentMemberId) {
+    public String inviteToGroup(Integer groupId, long currentMemberId) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GroupNotFoundException("그룹을 찾을 수 없습니다. id=" + groupId));
 
@@ -75,7 +75,8 @@ public class GroupService {
 
         groupInvitationRepository.save(invitation);
 
-        return "https://fourlipsclover.duckdns.org/api/group/join-request/" + token;
+        return "http://localhost:8090/api/group/join-request/" + token;
+//        return "https://fourlipsclover.duckdns.org/api/group/join-request/" + token;
     }
 
 
@@ -90,7 +91,7 @@ public class GroupService {
         return invitation;
     }
 
-    public void joinGroupViaInvitation(String token, Integer memberId) {
+    public void joinGroupViaInvitation(String token, Long memberId) {
         GroupInvitation invitation = checkInvitationValidity(token);
 
         Group group = groupRepository.findById(invitation.getGroupId())
@@ -115,7 +116,7 @@ public class GroupService {
         groupJoinRequestRepository.save(joinRequest);
     }
 
-    public void approveOrRejectInvitation(String token, Integer groupId, Integer applicantId, boolean accept, String adminComment) {
+    public void approveOrRejectInvitation(String token, Integer groupId, Long applicantId, boolean accept, String adminComment) {
         GroupJoinRequest joinRequest = groupJoinRequestRepository.findByGroup_GroupIdAndMember_MemberIdAndToken(groupId, applicantId, token)
                 .orElseThrow(() -> new GroupNotFoundException("가입 요청을 찾을 수 없습니다."));
 
@@ -161,7 +162,7 @@ public class GroupService {
         groupJoinRequestRepository.save(joinRequest);
 
         // 그룹 생성자(그룹 리더)에게 알림 전송
-        Integer groupCreatorId = joinRequest.getGroup().getMember().getMemberId();
+        Long groupCreatorId = joinRequest.getGroup().getMember().getMemberId();
         notificationService.sendGroupJoinRequestNotification(groupId, groupCreatorId);
     }
 
@@ -170,9 +171,9 @@ public class GroupService {
                 .orElseThrow(() -> new GroupNotFoundException("그룹을 찾을 수 없습니다. id=" + groupId));
 
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Integer loggedInMemberId = userDetails.getMember().getMemberId();
+        Long loggedInMemberId = userDetails.getMember().getMemberId();
 
-        if (!Integer.valueOf(group.getMember().getMemberId()).equals(loggedInMemberId)) {
+        if (!(group.getMember().getMemberId()).equals(loggedInMemberId)) {
             throw new UnauthorizedAccessException("그룹 생성자만 수정할 수 있습니다.");
         }
 
@@ -183,7 +184,7 @@ public class GroupService {
     }
 
     @Transactional(readOnly = true)
-    public List<GroupResponse> getMyGroups(Integer loggedInMemberId) {
+    public List<GroupResponse> getMyGroups(Long loggedInMemberId) {
         List<Group> groups = groupRepository.findByMemberMemberId(loggedInMemberId);
         return groups.stream()
                 .map(GroupMapper::toResponse)
@@ -191,12 +192,16 @@ public class GroupService {
     }
 
     @Transactional(readOnly = true)
-    public GroupDetailResponse getGroupDetails(Integer groupId, Integer loggedInMemberId) {
+    public GroupDetailResponse getGroupDetails(Integer groupId, Long loggedInMemberId) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GroupNotFoundException("그룹을 찾을 수 없습니다. id=" + groupId));
 
-        List<GroupMember> groupMembers = groupMemberRepository.findByGroup_GroupId(groupId);
+        boolean isMember = groupMemberRepository.existsByGroup_GroupIdAndMember_MemberId(groupId, loggedInMemberId);
+        if (!isMember) {
+            throw new UnauthorizedAccessException("그룹에 속한 사용자만 접근할 수 있습니다.");
+        }
 
+        List<GroupMember> groupMembers = groupMemberRepository.findByGroup_GroupId(groupId);
         List<Member> members = groupMembers.stream()
                 .map(GroupMember::getMember)
                 .collect(Collectors.toList());
@@ -204,16 +209,16 @@ public class GroupService {
         return new GroupDetailResponse(group, members);
     }
 
-    public void deleteGroup(int groupId, Integer loggedInMemberId) {
+    public void deleteGroup(int groupId, Long loggedInMemberId) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GroupNotFoundException("그룹을 찾을 수 없습니다. id=" + groupId));
 
-        if (!Integer.valueOf(group.getMember().getMemberId()).equals(loggedInMemberId)) {
+        if (!(group.getMember().getMemberId()).equals(loggedInMemberId)) {
             throw new UnauthorizedAccessException("그룹 생성자만 수정할 수 있습니다");
         }
 
         groupMemberRepository.deleteByGroup_groupId(groupId);
-        groupRepository.deleteById(loggedInMemberId);
+        groupRepository.deleteByGroupId(groupId);
     }
 
 }

@@ -39,7 +39,7 @@ public class GroupController {
     public ResponseEntity<Map<String, String>> inviteToGroup(@PathVariable Integer groupId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Integer currentMemberId = userDetails.getMember().getMemberId();
+        long currentMemberId = userDetails.getMember().getMemberId();
 
         String invitationUrl = groupService.inviteToGroup(groupId, currentMemberId);
         Map<String, String> response = new HashMap<>();
@@ -69,7 +69,7 @@ public class GroupController {
     public ResponseEntity<Void> joinRequest(@PathVariable String token) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Integer memberId = userDetails.getMember().getMemberId();
+        Long memberId = userDetails.getMember().getMemberId();
 
         groupService.joinGroupViaInvitation(token, memberId);
         return ResponseEntity.ok().build();
@@ -82,10 +82,9 @@ public class GroupController {
     public ResponseEntity<Void> approveOrRejectInvitation(@PathVariable Integer groupId,
                                                           @PathVariable String token,
                                                           @RequestParam boolean accept,
-                                                          @RequestParam Integer applicantId,
+                                                          @RequestParam Long applicantId,
                                                           @RequestBody GroupInvitationResponse invitationResponse) {
         String adminComment = invitationResponse.getAdminComment();
-        System.out.println(adminComment);
         groupService.approveOrRejectInvitation(token, groupId, applicantId, accept, adminComment);
         return ResponseEntity.ok().build();
     }
@@ -104,19 +103,18 @@ public class GroupController {
     public ResponseEntity<List<GroupResponse>> getMyGroups() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Integer loggedInMemberId = userDetails.getMember().getMemberId();
-        System.out.println(loggedInMemberId);
+        Long loggedInMemberId = userDetails.getMember().getMemberId();
 
         List<GroupResponse> groups = groupService.getMyGroups(loggedInMemberId);
         return ResponseEntity.ok(groups);
     }
 
-    // 내가 속한 그룹정보 및 그룹원 조회
+    // 내가 속한 특정 그룹의 정보 및 그룹원 조회
     @GetMapping("/group-detail/{groupId}")
     public ResponseEntity<GroupDetailResponse> getGroupDetails(@PathVariable Integer groupId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Integer loggedInMemberId = userDetails.getMember().getMemberId();
+        Long loggedInMemberId = userDetails.getMember().getMemberId();
 
         GroupDetailResponse groupDetails = groupService.getGroupDetails(groupId, loggedInMemberId);
         return ResponseEntity.ok(groupDetails);
@@ -127,7 +125,7 @@ public class GroupController {
     public ResponseEntity<Void> deleteGroup(@PathVariable int groupId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Integer loggedInMemberId = userDetails.getMember().getMemberId();
+        Long loggedInMemberId = userDetails.getMember().getMemberId();
 
         groupService.deleteGroup(groupId, loggedInMemberId);
         return ResponseEntity.noContent().build();
