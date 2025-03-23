@@ -1,16 +1,26 @@
 import 'package:flutter/foundation.dart';
-import '../models/group_model.dart';
+import '../models/group/group_model.dart';
+import '../models/group/group_detail_model.dart';
+import '../services/api/group_api.dart';
 
 class GroupProvider with ChangeNotifier {
+  final GroupApi _groupApi = GroupApi();
+  
   // 사용자의 그룹 목록
   List<Group> _groups = [];
   
   // 현재 선택된 그룹
   Group? _selectedGroup;
   
+  // 로딩 및 에러 상태
+  bool _isLoading = false;
+  String? _error;
+  
   // Getters
   List<Group> get groups => _groups;
   Group? get selectedGroup => _selectedGroup;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
   
   // 그룹 목록 설정 (API 호출 후)
   void setGroups(List<Group> groups) {
@@ -18,161 +28,220 @@ class GroupProvider with ChangeNotifier {
     notifyListeners();
   }
   
-  // 그룹 선택
-  void selectGroup(int groupId) {
-    _selectedGroup = _groups.firstWhere(
-      (group) => group.groupId == groupId,
-      orElse: () => throw Exception('그룹을 찾을 수 없습니다'),
-    );
-    notifyListeners();
+  // 내 그룹 목록 조회 (API)
+  Future<void> fetchMyGroups() async {
+    _setLoading(true);
+    try {
+      final fetchedGroups = await _groupApi.getMyGroups();
+      _groups = fetchedGroups;
+      _error = null;
+    } catch (e) {
+      _error = '그룹 목록을 불러오는데 실패했습니다: $e';
+      debugPrint(_error);
+    } finally {
+      _setLoading(false);
+    }
   }
   
-  // 새 그룹 추가
-  void addGroup({
+  // 그룹 선택
+  void selectGroup(int groupId) {
+    try {
+      _selectedGroup = _groups.firstWhere(
+        (group) => group.groupId == groupId,
+        orElse: () => throw Exception('그룹을 찾을 수 없습니다'),
+      );
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      debugPrint(_error);
+    }
+  }
+  
+  // 그룹 상세 정보 조회 (API)
+  Future<GroupDetail?> fetchGroupDetail(int groupId) async {
+    _setLoading(true);
+    try {
+      final groupDetail = await _groupApi.getGroupDetails(groupId);
+      _error = null;
+      return groupDetail;
+    } catch (e) {
+      _error = '그룹 상세 정보를 불러오는데 실패했습니다: $e';
+      debugPrint(_error);
+      return null;
+    } finally {
+      _setLoading(false);
+    }
+  }
+  
+  // 새 그룹 추가 (API)
+  Future<bool> addGroup({
     required String name,
     required String description,
     required bool isPublic,
-    required int memberId,
-  }) {
-    // 임시 ID 할당 (실제로는 API에서 받은 ID 사용)
-    final newGroupId = _groups.isEmpty ? 1 : _groups.map((g) => g.groupId).reduce((a, b) => a > b ? a : b) + 1;
-    
-    final newGroup = Group(
-      groupId: newGroupId,
-      memberId: memberId,
-      name: name,
-      description: description,
-      isPublic: isPublic,
-      createdAt: DateTime.now().toIso8601String(),
-      members: [
-        GroupMember(
-          userId: memberId,
-          nickname: '나', // 실제 사용자 닉네임으로 수정 필요
-          role: 'MANAGER', // 생성자는 기본적으로 관리자 역할
-        ),
-      ],
-    );
-    
-    _groups.add(newGroup);
-    _selectedGroup = newGroup; // 새 그룹 자동 선택
-    notifyListeners();
-    
-    // TODO: API 호출하여 서버에 그룹 생성 요청
-    // 이후 응답 받은 실제 그룹 정보로 업데이트
-  }
-  
-  // 그룹 정보 업데이트
-  void updateGroup({
-    required int groupId,
-    String? name,
-    String? description,
-    bool? isPublic,
-  }) {
-    final index = _groups.indexWhere((group) => group.groupId == groupId);
-    if (index != -1) {
-      _groups[index] = _groups[index].copyWith(
+    int? memberId, // 백엔드에서 현재 인증된 사용자 정보를 사용하므로 무시됨
+  }) async {
+    _setLoading(true);
+    try {
+      final newGroup = await _groupApi.createGroup(
         name: name,
         description: description,
         isPublic: isPublic,
-        updatedAt: DateTime.now().toIso8601String(),
       );
       
-      if (_selectedGroup?.groupId == groupId) {
-        _selectedGroup = _groups[index];
-      }
-      
+      _groups.add(newGroup);
+      _selectedGroup = newGroup; // 새 그룹 자동 선택
+      _error = null;
       notifyListeners();
-      
-      // TODO: API 호출하여 서버에 그룹 업데이트 요청
+      return true;
+    } catch (e) {
+      _error = '그룹 생성에 실패했습니다: $e';
+      debugPrint(_error);
+      return false;
+    } finally {
+      _setLoading(false);
     }
   }
   
-  // 그룹 삭제
-  void deleteGroup(int groupId) {
-    _groups.removeWhere((group) => group.groupId == groupId);
-    
-    if (_selectedGroup?.groupId == groupId) {
-      _selectedGroup = _groups.isNotEmpty ? _groups.first : null;
+  // 그룹 정보 업데이트 (API)
+  Future<bool> updateGroup({
+    required int groupId,
+    required String name,
+    required String description,
+    required bool isPublic,
+  }) async {
+    _setLoading(true);
+    try {
+      final updatedGroup = await _groupApi.updateGroup(
+        groupId: groupId,
+        name: name,
+        description: description,
+        isPublic: isPublic,
+      );
+      
+      // 기존 그룹 리스트에서 업데이트된 그룹 찾아 교체
+      final index = _groups.indexWhere((group) => group.groupId == groupId);
+      if (index != -1) {
+        _groups[index] = updatedGroup;
+      }
+      
+      // 선택된 그룹이 업데이트된 그룹이라면 선택된 그룹도 업데이트
+      if (_selectedGroup?.groupId == groupId) {
+        _selectedGroup = updatedGroup;
+      }
+      
+      _error = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = '그룹 수정에 실패했습니다: $e';
+      debugPrint(_error);
+      return false;
+    } finally {
+      _setLoading(false);
     }
-    
+  }
+  
+  // 그룹 삭제 (API)
+  Future<bool> deleteGroup(int groupId) async {
+    _setLoading(true);
+    try {
+      await _groupApi.deleteGroup(groupId);
+      
+      // 그룹 리스트에서 삭제된 그룹 제거
+      _groups.removeWhere((group) => group.groupId == groupId);
+      
+      // 선택된 그룹이 삭제된 그룹이라면 선택 해제 또는 첫 번째 그룹 선택
+      if (_selectedGroup?.groupId == groupId) {
+        _selectedGroup = _groups.isNotEmpty ? _groups.first : null;
+      }
+      
+      _error = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = '그룹 삭제에 실패했습니다: $e';
+      debugPrint(_error);
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+  
+  // 그룹 초대 링크 생성 (API)
+  Future<String?> generateInviteLink(int groupId) async {
+    _setLoading(true);
+    try {
+      final url = await _groupApi.createInvitationUrl(groupId);
+      _error = null;
+      return url;
+    } catch (e) {
+      _error = '초대 링크 생성에 실패했습니다: $e';
+      debugPrint(_error);
+      return null;
+    } finally {
+      _setLoading(false);
+    }
+  }
+  
+  // 그룹 가입 요청 (API)
+  Future<bool> joinGroup(String token) async {
+    _setLoading(true);
+    try {
+      await _groupApi.joinGroupRequest(token);
+      _error = null;
+      return true;
+    } catch (e) {
+      _error = '그룹 가입 신청에 실패했습니다: $e';
+      debugPrint(_error);
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+  
+  // 가입 요청 승인/거절 (API)
+  Future<bool> respondToJoinRequest({
+    required int groupId,
+    required String token,
+    required int applicantId,
+    required bool accept,
+    String? adminComment,
+  }) async {
+    _setLoading(true);
+    try {
+      await _groupApi.approveOrRejectInvitation(
+        groupId: groupId,
+        token: token,
+        accept: accept,
+        applicantId: applicantId,
+        adminComment: adminComment,
+      );
+      
+      // 승인된 경우 그룹 상세 정보 새로고침
+      if (accept) {
+        await fetchGroupDetail(groupId);
+      }
+      
+      _error = null;
+      return true;
+    } catch (e) {
+      _error = '가입 요청 처리에 실패했습니다: $e';
+      debugPrint(_error);
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+  
+  // 로딩 상태 설정
+  void _setLoading(bool loading) {
+    _isLoading = loading;
     notifyListeners();
-    
-    // TODO: API 호출하여 서버에 그룹 삭제 요청
   }
   
-  // 그룹 초대 링크 생성 (임시 구현)
-  String generateInviteLink(int groupId) {
-    // 실제 구현에서는 API를 통해 초대 링크 생성
-    return 'https://yourapp.com/invite/$groupId/${DateTime.now().millisecondsSinceEpoch}';
-  }
-  
-  // 멤버 추가
-  void addMember(int groupId, GroupMember member) {
-    final index = _groups.indexWhere((group) => group.groupId == groupId);
-    if (index != -1) {
-      final updatedMembers = [..._groups[index].members, member];
-      _groups[index] = _groups[index].copyWith(
-        members: updatedMembers,
-        updatedAt: DateTime.now().toIso8601String(),
-      );
-      
-      if (_selectedGroup?.groupId == groupId) {
-        _selectedGroup = _groups[index];
-      }
-      
-      notifyListeners();
-      
-      // TODO: API 호출하여 서버에 멤버 추가 요청
-    }
-  }
-  
-  // 멤버 역할 변경
-  void updateMemberRole(int groupId, int userId, String newRole) {
-    final groupIndex = _groups.indexWhere((group) => group.groupId == groupId);
-    if (groupIndex != -1) {
-      final memberIndex = _groups[groupIndex].members.indexWhere((m) => m.userId == userId);
-      if (memberIndex != -1) {
-        final updatedMembers = [..._groups[groupIndex].members];
-        updatedMembers[memberIndex] = GroupMember(
-          userId: userId,
-          nickname: updatedMembers[memberIndex].nickname,
-          role: newRole,
-        );
-        
-        _groups[groupIndex] = _groups[groupIndex].copyWith(
-          members: updatedMembers,
-          updatedAt: DateTime.now().toIso8601String(),
-        );
-        
-        if (_selectedGroup?.groupId == groupId) {
-          _selectedGroup = _groups[groupIndex];
-        }
-        
-        notifyListeners();
-        
-        // TODO: API 호출하여 서버에 멤버 역할 변경 요청
-      }
-    }
-  }
-  
-  // 멤버 제거
-  void removeMember(int groupId, int userId) {
-    final groupIndex = _groups.indexWhere((group) => group.groupId == groupId);
-    if (groupIndex != -1) {
-      final updatedMembers = _groups[groupIndex].members.where((m) => m.userId != userId).toList();
-      
-      _groups[groupIndex] = _groups[groupIndex].copyWith(
-        members: updatedMembers,
-        updatedAt: DateTime.now().toIso8601String(),
-      );
-      
-      if (_selectedGroup?.groupId == groupId) {
-        _selectedGroup = _groups[groupIndex];
-      }
-      
-      notifyListeners();
-      
-      // TODO: API 호출하여 서버에 멤버 제거 요청
-    }
+  // 에러 초기화
+  void clearError() {
+    _error = null;
+    notifyListeners();
   }
 }

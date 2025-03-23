@@ -12,6 +12,7 @@ class UserService {
       // 더미 데이터 반환
       await Future.delayed(const Duration(milliseconds: 500));
       return UserProfile(
+        memberId: 1,
         id: 'user123',
         nickname: '여행자',
         cloverCount: 42,

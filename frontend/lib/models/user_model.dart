@@ -1,6 +1,7 @@
 import 'user_journey.dart';
 
 class UserProfile {
+  final int memberId;//임시시
   final String id;
   final String nickname;
   final int cloverCount;
@@ -13,6 +14,7 @@ class UserProfile {
   final Journey? currentJourney;
 
   UserProfile({
+    required this.memberId, //임시
     required this.id,
     required this.nickname,
     required this.cloverCount,
@@ -27,8 +29,9 @@ class UserProfile {
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
+      memberId: json['memberId'] as int, //임시
       id: json['id'],
-      nickname: json['nickname'],
+      nickname: json['nickname']as String, //임시 STRING
       cloverCount: json['cloverCount'],
       writtenPosts: json['writtenPosts'],
       receivedLikes: json['receivedLikes'],

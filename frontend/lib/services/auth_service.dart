@@ -17,7 +17,16 @@ class AuthService {
       final loginResult = await _processServerLogin(token.accessToken);
       final user = await UserApi.instance.me();
 
-      return {'jwtToken': loginResult['jwttoken'], 'user': user};
+      // 로그인 성공 시 토큰 저장
+      final jwtToken = loginResult['jwtToken'];
+      await saveLoginState(true, jwtToken);
+
+      // 토큰 저장 확인 로그
+      final prefs = await SharedPreferences.getInstance();
+      final savedToken = prefs.getString('jwtToken');
+      debugPrint('JWT 토큰 저장 확인: ${savedToken != null ? '성공' : '실패'}');
+
+      return {'jwtToken': jwtToken, 'user': user};
     } catch (error) {
       debugPrint('로그인 오류 발생: $error');
       throw error;
@@ -50,6 +59,7 @@ class AuthService {
     );
 
     if (response.statusCode == 200) {
+      debugPrint(accessToken);
       debugPrint('로그인성공: ${response.body}');
       return jsonDecode(response.body);
     } else {
@@ -62,6 +72,7 @@ class AuthService {
   Future<void> logout() async {
     try {
       await UserApi.instance.logout();
+      await clearLoginState(); // 로그아웃 시 SharedPreferences에서 모든 로그인 데이터 제거
     } catch (error) {
       debugPrint('카카오 로그아웃 실패: $error');
       throw error;
@@ -70,19 +81,49 @@ class AuthService {
 
   // 로그인 상태 저장
   Future<void> saveLoginState(bool isLoggedIn, String? jwtToken) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', isLoggedIn);
-    if (jwtToken != null) {
-      await prefs.setString('jwtToken', jwtToken);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', isLoggedIn);
+
+      if (jwtToken != null && jwtToken.isNotEmpty) {
+        await prefs.setString('jwtToken', jwtToken);
+        debugPrint('JWT 토큰 저장 완료. 토큰 길이: ${jwtToken.length}');
+      } else {
+        debugPrint('경고: 저장하려는 JWT 토큰이 null이거나 비어 있습니다.');
+      }
+    } catch (e) {
+      debugPrint('로그인 상태 저장 중 오류 발생: $e');
+      throw e;
     }
   }
 
   // 로그인 상태 불러오기
   Future<Map<String, dynamic>> loadLoginState() async {
-    final prefs = await SharedPreferences.getInstance();
-    return {
-      'isLoggedIn': prefs.getBool('isLoggedIn') ?? false,
-      'jwtToken': prefs.getString('jwtToken'),
-    };
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+      final jwtToken = prefs.getString('jwtToken');
+
+      debugPrint(
+        '로그인 상태 로드: 로그인=${isLoggedIn}, 토큰=${jwtToken != null ? '존재함' : '없음'}',
+      );
+
+      return {'isLoggedIn': isLoggedIn, 'jwtToken': jwtToken};
+    } catch (e) {
+      debugPrint('로그인 상태 로드 중 오류 발생: $e');
+      return {'isLoggedIn': false, 'jwtToken': null};
+    }
+  }
+
+  // 로그인 상태 초기화 (로그아웃 시 호출)
+  Future<void> clearLoginState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('isLoggedIn');
+      await prefs.remove('jwtToken');
+      debugPrint('로그인 상태 초기화 완료');
+    } catch (e) {
+      debugPrint('로그인 상태 초기화 중 오류 발생: $e');
+    }
   }
 }

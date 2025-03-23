@@ -10,8 +10,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class ReviewMemberResponse {
-	private int memberId;
-	private String name;
-	private String nickname;
-	private String email;
+    private Long memberId;
+    private String name;
+    private String nickname;
+    private String email;
 }

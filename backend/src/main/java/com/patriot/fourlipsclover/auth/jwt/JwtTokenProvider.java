@@ -34,6 +34,7 @@ public class JwtTokenProvider {
     // 토큰 생성
     public String generateToken(Member member) {
         Claims claims = Jwts.claims().setSubject(String.valueOf(member.getMemberId()));
+        claims.put("memberId", member.getMemberId());
         claims.put("email", member.getEmail());
         claims.put("nickname", member.getNickname());
 
@@ -58,10 +59,10 @@ public class JwtTokenProvider {
                 .parseClaimsJws(token)
                 .getBody();
 
-        String userId = claims.getSubject();
+        Long userId = Long.valueOf(claims.getSubject());
 
         // userId로 Member를 조회
-        Member member = memberRepository.findByMemberId(Long.parseLong(userId));  // 예시로 memberId가 long형이라고 가정
+        Member member = memberRepository.findByMemberId(userId);
 
         // CustomUserDetails를 사용하여 인증 객체 생성
         CustomUserDetails userDetails = new CustomUserDetails(member);  // Member 객체를 전달

@@ -6,125 +6,100 @@ import '../models/review_model.dart';
 import '../constants/api_constants.dart';
 
 class ReviewService {
-  // .env 파일에서 API 기본 URL을 가져옵니다.
+  // ✅ .env 파일에서 API 기본 URL을 가져옴
   static String get baseUrl => dotenv.env['API_BASE_URL'] ?? '';
   static const String apiPrefix = '/api/restaurant';
 
-  /// 더미 데이터 사용 여부 설정
-  static bool useDummyData = false; // true면 더미 데이터, false면 API 요청 실행
+  /// ✅ 더미 데이터 포함 여부 (`fetchReviews`만 true, 나머지는 false)
+  static bool useDummyDataForReviews = true; // `fetchReviews()`만 더미 데이터 포함
+  static bool useDummyDataForOtherApis = false; // 나머지 API는 실제 데이터만 사용
 
-  /// ✅ 리뷰 목록 조회 API (기존 방식)
+  /// ✅ 리뷰 목록 조회 (API + 더미 데이터 포함)
   static Future<List<Review>> fetchReviews(String restaurantId) async {
-    print("리뷰 데이터 요청: restaurantId = $restaurantId");
+    print("📌 리뷰 데이터 요청: restaurantId = $restaurantId");
 
-    if (useDummyData) {
-      // 더미 데이터 버전 시작
-      await Future.delayed(const Duration(seconds: 1)); // 가짜 네트워크 지연
+    List<Review> allReviews = [];
 
-      return [
-        Review(
-            id: '1',
-            restaurantId: restaurantId,
-            userId: 'user123',
-            username: '사용자1',
-            title: '훌륭한 경험!',
-            content: '이 식당 최고예요! 음식도 맛있고 분위기도 너무 좋아요. '
-                '특히 라멘과 돈카츠가 정말 훌륭했어요. 면발이 쫄깃하고 육수가 깊은 맛을 내더라고요. '
-                '직원들도 친절하고 서비스가 빨라서 기분 좋게 식사를 했어요. '
-                '다음에 또 방문할 생각입니다. 적극 추천해요!',
-            likes: 45,
-            dislikes: 2,
-            visitCount: 5,
-            imageUrl: null,
-            isLocal: true,
-            localRank: 1,
-            date: DateTime.now(),
-            menu: ['라멘', '돈카츠']
-        ),
-        Review(
-            id: '2',
-            restaurantId: restaurantId,
-            userId: 'user456',
-            username: '사용자2',
-            title: '별로였어요...',
-            content: '조금 별로였어요... 기대했던 맛이 아니었어요. '
-                '음식이 생각보다 차갑고, 조리가 덜 된 느낌이었어요. '
-                '직원들의 응대도 다소 불친절했고, 주문이 늦게 나왔어요. '
-                '가격 대비 만족도가 낮아서 다시 방문하지 않을 것 같아요.',
-            likes: 4,
-            dislikes: 10,
-            visitCount: 1,
-            imageUrl: null,
-            isLocal: false,
-            localRank: 3,
-            date: DateTime.now().subtract(Duration(days: 3)),
-            menu: ['덮밥']
-        ),
-        // ... 다른 더미 리뷰들
-      ];
-    }
-
-    // API 요청 실행
+    // ✅ API 요청 실행
     try {
       final url = Uri.parse('$baseUrl$apiPrefix/$restaurantId/reviews');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
         final String decodedBody = utf8.decode(response.bodyBytes);
-        List<dynamic> data = jsonDecode(decodedBody);
+        List<dynamic> apiData = jsonDecode(decodedBody);
 
-        // ✅ `ReviewResponse` 리스트 변환
-        List<ReviewResponse> responseList =
-        data.map<ReviewResponse>((json) => ReviewResponse.fromJson(json)).toList();
+        List<Review> apiReviews = apiData.map<Review>((json) {
+          return Review.fromResponse(ReviewResponse.fromJson(json));
+        }).toList();
 
-        // ✅ `ReviewResponse` → `Review` 변환
-        return responseList.map<Review>((reviewResponse) => Review.fromResponse(reviewResponse)).toList();
+        allReviews.addAll(apiReviews);
       } else {
         print("❌ 서버 오류: ${response.statusCode}");
-        return [];
       }
     } catch (e) {
-      print("❌ API 요청 중 오류 발생: $e");
-      return [];
+      print("❌ API 요청 실패: $e");
     }
+
+    // ✅ 더미 데이터 추가 (`fetchReviews`만 사용)
+    if (useDummyDataForReviews) {
+      allReviews.addAll(_generateDummyReviews(restaurantId));
+    }
+
+    return allReviews;
   }
 
-  /// 특정 장소의 모든 리뷰 목록 조회 (백엔드 API 방식)
+  /// ✅ 더미 리뷰 데이터 생성 (광주 하남촌 리뷰 포함)
+  static List<Review> _generateDummyReviews(String restaurantId) {
+    return [
+      Review(
+        id: '1001',
+        restaurantId: restaurantId,
+        userId: 'assets/images/review_image.jpg',
+        username: '맛집탐험가',
+        title: '순대국밥 정말 맛있어요!',
+        content: '국물이 진하고 면발이 쫄깃해요. 강력 추천합니다!',
+        imageUrl: 'assets/images/review_image3.jpg',
+        profileImageUrl: 'https://randomuser.me/api/portraits/men/1.jpg',
+        visitCount: 4,
+        isLocal: true,
+        localRank: 5,
+        likes: 10,
+        dislikes: 1,
+        date: DateTime.now().subtract(Duration(days: 2)),
+        menu: ['라멘', '돈카츠'],
+      ),
+      // ✅ 광주 하남촌 리뷰 추가
+      Review(
+        id: '1003',
+        restaurantId: '1605310387', // 광주 하남촌 kakaoPlaceId
+        userId: 'dummy_user_3',
+        username: '한식러버',
+        title: '하남촌 순대국밥 최고!',
+        content: '국물이 얼큰하고 깊은 맛이 납니다. 한식 좋아하시면 강추!',
+        imageUrl: 'assets/images/review_image2.jpg',
+        profileImageUrl: 'https://randomuser.me/api/portraits/men/5.jpg',
+        visitCount: 3,
+        isLocal: true,
+        localRank: 4,
+        likes: 12,
+        dislikes: 2,
+        date: DateTime.now().subtract(Duration(days: 5)),
+        menu: ['김치찌개'],
+      ),
+    ];
+  }
+
+  /// ✅ 특정 장소의 리뷰 목록 조회 (API 데이터만 사용)
   static Future<List<ReviewResponse>> getReviewList(String kakaoPlaceId) async {
-    if (useDummyData) {
-      // 더미 리뷰 데이터 반환
-      await Future.delayed(const Duration(seconds: 1));
-      
-      return [
-        ReviewResponse(
-          reviewId: 1,
-          content: '맛있어요! 라멘이 정말 깔끔하고 육수가 진한 편이에요.',
-          reviewer: ReviewMemberResponse(
-            memberId: 101,
-            nickname: '라멘러버',
-            email: 'ramen@example.com',
-          ),
-          visitedAt: DateTime.now().subtract(const Duration(days: 3)),
-          createdAt: DateTime.now().subtract(const Duration(days: 2)),
-        ),
-        ReviewResponse(
-          reviewId: 2,
-          content: '직원분들이 친절하고 가격도 괜찮아요. 돈카츠도 맛있어요!',
-          reviewer: ReviewMemberResponse(
-            memberId: 102,
-            nickname: '맛집탐험가',
-            email: 'foodie@example.com',
-          ),
-          visitedAt: DateTime.now().subtract(const Duration(days: 7)),
-          createdAt: DateTime.now().subtract(const Duration(days: 6)),
-        ),
-      ];
+    if (useDummyDataForOtherApis) {
+      return [];
     }
-    
+
     try {
       final url = Uri.parse('$baseUrl$apiPrefix/$kakaoPlaceId/reviews');
       final response = await http.get(url);
-      
+
       if (response.statusCode == 200) {
         final List<dynamic> responseData = jsonDecode(response.body);
         return responseData.map<ReviewResponse>((json) => ReviewResponse.fromJson(json)).toList();
@@ -135,27 +110,17 @@ class ReviewService {
       throw Exception('Error getting review list: $e');
     }
   }
-  
-  /// 리뷰 작성
+
+  /// ✅ 리뷰 작성 (API 데이터만 사용)
   static Future<ReviewResponse> createReview({
     required int memberId,
     required String kakaoPlaceId,
     required String content,
     required DateTime visitedAt,
   }) async {
-    final reviewCreate = ReviewCreate(
-      memberId: memberId,
-      kakaoPlaceId: kakaoPlaceId,
-      content: content,
-      visitedAt: visitedAt,
-    );
-    
-    if (useDummyData) {
-      // 더미 응답 데이터
-      await Future.delayed(const Duration(seconds: 1));
-      
+    if (useDummyDataForOtherApis) {
       return ReviewResponse(
-        reviewId: DateTime.now().millisecondsSinceEpoch % 10000, // 임의의 ID
+        reviewId: DateTime.now().millisecondsSinceEpoch % 10000,
         content: content,
         reviewer: ReviewMemberResponse(
           memberId: memberId,
@@ -166,15 +131,20 @@ class ReviewService {
         createdAt: DateTime.now(),
       );
     }
-    
+
     try {
       final url = Uri.parse('$baseUrl$apiPrefix/reviews');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(reviewCreate.toJson()),
+        body: jsonEncode({
+          "memberId": memberId,
+          "kakaoPlaceId": kakaoPlaceId,
+          "content": content,
+          "visitedAt": visitedAt.toIso8601String(),
+        }),
       );
-      
+
       if (response.statusCode == 200) {
         return ReviewResponse.fromJson(jsonDecode(response.body));
       } else {
@@ -184,22 +154,14 @@ class ReviewService {
       throw Exception('Error creating review: $e');
     }
   }
-  
-  /// 리뷰 수정
+
+  /// ✅ 리뷰 수정 (API 데이터만 사용)
   static Future<ReviewResponse> updateReview({
     required int reviewId,
     required String content,
     required DateTime visitedAt,
   }) async {
-    final reviewUpdate = ReviewUpdate(
-      content: content,
-      visitedAt: visitedAt,
-    );
-    
-    if (useDummyData) {
-      // 더미 응답 데이터
-      await Future.delayed(const Duration(seconds: 1));
-      
+    if (useDummyDataForOtherApis) {
       return ReviewResponse(
         reviewId: reviewId,
         content: content,
@@ -213,15 +175,18 @@ class ReviewService {
         updatedAt: DateTime.now(),
       );
     }
-    
+
     try {
       final url = Uri.parse('$baseUrl$apiPrefix/reviews/$reviewId');
       final response = await http.put(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(reviewUpdate.toJson()),
+        body: jsonEncode({
+          "content": content,
+          "visitedAt": visitedAt.toIso8601String(),
+        }),
       );
-      
+
       if (response.statusCode == 200) {
         return ReviewResponse.fromJson(jsonDecode(response.body));
       } else {
@@ -231,12 +196,10 @@ class ReviewService {
       throw Exception('Error updating review: $e');
     }
   }
-  
-  /// 리뷰 삭제
+
+  /// ✅ 리뷰 삭제 (API 데이터만 사용)
   static Future<bool> deleteReview(int reviewId) async {
-    if (useDummyData) {
-      // 더미 응답 데이터
-      await Future.delayed(const Duration(seconds: 1));
+    if (useDummyDataForOtherApis) {
       return true;
     }
 
@@ -245,51 +208,12 @@ class ReviewService {
       final response = await http.delete(url);
 
       if (response.statusCode == 200) {
-        print("✅ 리뷰 삭제 완료: reviewId=$reviewId");
-        return true; // 성공하면 true 반환
+        return true;
       } else {
-        print("❌ 삭제 실패: ${response.statusCode}, 응답: ${response.body}");
-        return false; // 실패하면 false 반환
+        return false;
       }
     } catch (e) {
-      print("❌ 리뷰 삭제 중 오류 발생: $e");
       return false;
-    }
-  }
-  
-  /// 특정 리뷰 상세 조회
-  static Future<ReviewResponse> getReviewDetail(String kakaoPlaceId, int reviewId) async {
-    if (useDummyData) {
-      // 더미 응답 데이터
-      await Future.delayed(const Duration(seconds: 1));
-      
-      return ReviewResponse(
-        reviewId: reviewId,
-        content: '맛있어요! 라멘이 정말 깔끔하고 육수가 진한 편이에요.',
-        reviewer: ReviewMemberResponse(
-          memberId: 101,
-          nickname: '라멘러버',
-          email: 'ramen@example.com',
-        ),
-        visitedAt: DateTime.now().subtract(const Duration(days: 3)),
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      );
-    }
-    
-    try {
-      final url = Uri.parse('$baseUrl$apiPrefix/$kakaoPlaceId/reviews/$reviewId');
-      final response = await http.get(url);
-      
-      if (response.statusCode == 200) {
-        final String decodedBody = utf8.decode(response.bodyBytes);
-        final Map<String, dynamic> jsonData = jsonDecode(decodedBody);
-
-        return ReviewResponse.fromJson(jsonData);
-      } else {
-        throw Exception('Failed to get review detail: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Error getting review detail: $e');
     }
   }
 }
