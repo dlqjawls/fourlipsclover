@@ -104,7 +104,8 @@ public class RestaurantService {
 		review.setContent(reviewUpdate.getContent());
 		review.setUpdatedAt(LocalDateTime.now());
 		review.setVisitedAt(reviewUpdate.getVisitedAt());
-		return reviewMapper.toDto(review);
+		List<String> reviewUrls = reviewImageService.getImageUrlsByReviewId(reviewId);
+		return reviewMapper.toReviewImageDto(review, reviewUrls);
 	}
 
 	private void checkReviewerIsCurrentUser(Integer reviewMemberId) {
