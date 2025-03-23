@@ -55,6 +55,9 @@ dependencies {
 
     // AssertJ
     testImplementation 'org.assertj:assertj-core'
+
+    // Minio 클라이언트 의존성
+    implementation 'io.minio:minio:8.5.7'
 }
 
 tasks.named('test') {
