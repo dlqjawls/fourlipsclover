@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +25,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/restaurant")
@@ -62,9 +65,10 @@ public class RestaurantController {
 		return ResponseEntity.ok(response);
 	}
 
-	@PostMapping("/reviews")
-	public ResponseEntity<ReviewResponse> create(@RequestBody ReviewCreate reviewCreate) {
-		ReviewResponse response = restaurantService.create(reviewCreate);
+	@PostMapping(value = "/reviews", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public ResponseEntity<ReviewResponse> create(@RequestPart("data") ReviewCreate reviewCreate,
+			@RequestPart(value = "images", required = false) List<MultipartFile> images) {
+		ReviewResponse response = restaurantService.create(reviewCreate, images);
 		return ResponseEntity.ok(response);
 	}
 

@@ -33,7 +33,7 @@ public class ReviewLikeCreateTest {
 	void 사용자는_다른사람의_리뷰에_좋아요를_달수있다() {
 		//given
 		ReviewLikeCreate request = new ReviewLikeCreate();
-		request.setMemberId(2);
+		request.setMemberId(2L);
 		request.setLikeStatus(LikeStatus.LIKE);
 		//when
 
