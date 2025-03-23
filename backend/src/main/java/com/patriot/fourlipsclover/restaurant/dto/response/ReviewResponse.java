@@ -28,4 +28,8 @@ public class ReviewResponse {
 	private LocalDateTime updatedAt;
 
 	private List<String> reviewImageUrls;
+
+	private Integer likedCount;
+
+	private Integer dislikedCount;
 }

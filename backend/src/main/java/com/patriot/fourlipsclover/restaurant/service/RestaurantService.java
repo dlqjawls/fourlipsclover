@@ -63,8 +63,10 @@ public class RestaurantService {
 
 		reviewRepository.save(review);
 		List<String> imageUrls = reviewImageService.uploadFiles(review, images);
-
-		return reviewMapper.toReviewImageDto(review, imageUrls);
+		ReviewResponse response = reviewMapper.toReviewImageDto(review, imageUrls);
+		response.setLikedCount(0);
+		response.setDislikedCount(0);
+		return response;
 	}
 
 	@Transactional(readOnly = true)
@@ -72,8 +74,14 @@ public class RestaurantService {
 		Review review = reviewRepository.findById(reviewId)
 				.orElseThrow(() -> new ReviewNotFoundException(reviewId));
 		List<String> imageUrls = reviewImageService.getImageUrlsByReviewId(reviewId);
-
-		return reviewMapper.toReviewImageDto(review, imageUrls);
+		ReviewResponse response = reviewMapper.toReviewImageDto(review, imageUrls);
+		Long likedCount = reviewLikeJpaRepository.countByIdReviewIdAndLikeStatus(reviewId,
+				LikeStatus.LIKE);
+		Long dislikedCount = reviewLikeJpaRepository.countByIdReviewIdAndLikeStatus(reviewId,
+				LikeStatus.DISLIKE);
+		response.setLikedCount(likedCount.intValue());
+		response.setDislikedCount(dislikedCount.intValue());
+		return response;
 	}
 
 	@Transactional(readOnly = true)
@@ -84,9 +92,18 @@ public class RestaurantService {
 		List<Review> reviews = reviewRepository.findByKakaoPlaceId(kakaoPlaceId);
 		return reviews.stream()
 				.map(review -> {
-					List<String> imageUrls = reviewImageService.getImageUrlsByReviewId(
-							review.getReviewId());
-					return reviewMapper.toReviewImageDto(review, imageUrls);
+					Integer reviewId = review.getReviewId();
+					List<String> imageUrls = reviewImageService.getImageUrlsByReviewId(reviewId);
+					ReviewResponse response = reviewMapper.toReviewImageDto(review, imageUrls);
+
+					Long likedCount = reviewLikeJpaRepository.countByIdReviewIdAndLikeStatus(
+							reviewId, LikeStatus.LIKE);
+					Long dislikedCount = reviewLikeJpaRepository.countByIdReviewIdAndLikeStatus(
+							reviewId, LikeStatus.DISLIKE);
+					response.setLikedCount(likedCount.intValue());
+					response.setDislikedCount(dislikedCount.intValue());
+
+					return response;
 				})
 				.toList();
 	}
@@ -96,7 +113,6 @@ public class RestaurantService {
 			ReviewUpdate reviewUpdate) {
 		Review review = reviewRepository.findById(reviewId)
 				.orElseThrow(() -> new ReviewNotFoundException(reviewId));
-		//TODO : 유저 로그인 후 autnentication 등록 구현 후에 주석 해제하기.
 		checkReviewerIsCurrentUser(review.getMember().getMemberId());
 		if (review.getIsDelete()) {
 			throw new DeletedResourceAccessException("삭제된 리뷰 데이터는 접근할 수 없습니다.");
@@ -130,7 +146,6 @@ public class RestaurantService {
 		if (review.getIsDelete()) {
 			throw new DeletedResourceAccessException("이미 삭제된 리뷰입니다.");
 		}
-		//TODO : 유저 로그인 후 autnentication 등록 구현 후에 주석 해제하기.
 		checkReviewerIsCurrentUser(review.getMember().getMemberId());
 		review.setIsDelete(true);
 		review.setDeletedAt(LocalDateTime.now());
