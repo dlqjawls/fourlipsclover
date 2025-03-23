@@ -5,6 +5,7 @@ import com.patriot.fourlipsclover.exception.InvalidDataException;
 import com.patriot.fourlipsclover.exception.ReviewNotFoundException;
 import com.patriot.fourlipsclover.exception.UnauthorizedAccessException;
 import com.patriot.fourlipsclover.exception.UserNotFoundException;
+import com.patriot.fourlipsclover.image.service.ReviewImageService;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberJpaRepository;
 import com.patriot.fourlipsclover.restaurant.dto.request.LikeStatus;
@@ -32,6 +33,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -43,9 +45,10 @@ public class RestaurantService {
 	private final ReviewMapper reviewMapper;
 	private final RestaurantMapper restaurantMapper;
 	private final ReviewJpaRepository reviewRepository;
+	private final ReviewImageService reviewImageService;
 
 	@Transactional
-	public ReviewResponse create(ReviewCreate reviewCreate) {
+	public ReviewResponse create(ReviewCreate reviewCreate, List<MultipartFile> images) {
 		Restaurant restaurant = restaurantRepository.findByKakaoPlaceId(
 				reviewCreate.getKakaoPlaceId()).orElseThrow();
 
@@ -57,7 +60,10 @@ public class RestaurantService {
 						LocalDateTime.now()).isDelete(false).visitedAt(reviewCreate.getVisitedAt())
 				.build();
 
-		return reviewMapper.toDto(reviewRepository.save(review));
+		reviewRepository.save(review);
+		List<String> imageUrls = reviewImageService.uploadFiles(review, images);
+
+		return reviewMapper.toReviewImageDto(review, imageUrls);
 	}
 
 	@Transactional(readOnly = true)

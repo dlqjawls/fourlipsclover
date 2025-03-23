@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS review_image;
 DROP TABLE IF EXISTS review_like;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS member;
@@ -53,4 +54,13 @@ CREATE TABLE review_like
     PRIMARY KEY (review_id, member_id),
     FOREIGN KEY (review_id) REFERENCES reviews (review_id),
     FOREIGN KEY (member_id) REFERENCES member (member_id)
+);
+
+CREATE TABLE review_image
+(
+    review_image_id INT AUTO_INCREMENT PRIMARY KEY,
+    review_id       INT NOT NULL,
+    image_url       VARCHAR(255),
+    created_at      TIMESTAMP,
+    FOREIGN KEY (review_id) REFERENCES reviews (review_id)
 );
