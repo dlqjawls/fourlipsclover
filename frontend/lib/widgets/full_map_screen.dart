@@ -5,6 +5,7 @@ import '../providers/map_provider.dart';
 import 'kakao_map_native_view.dart';
 import '../config/theme.dart';
 import 'custom_switch.dart'; // CustomSwitch import 추가
+import '../screens/label_example_screen.dart'; // 라벨 예제 화면 import
 
 class FullMapScreen extends StatefulWidget {
   final String locationName;
@@ -42,6 +43,20 @@ class _FullMapScreenState extends State<FullMapScreen> {
             icon: Icon(Icons.layers, color: AppColors.darkGray),
             onPressed: () {
               _showMapTypeOptions(context, mapProvider);
+            },
+          ),
+          // 라벨 예제 버튼 추가
+          IconButton(
+            icon: Icon(Icons.location_on, color: AppColors.primary),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) =>
+                          LabelExampleScreen(locationName: widget.locationName),
+                ),
+              );
             },
           ),
           // 추가 옵션 버튼
