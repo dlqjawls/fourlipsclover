@@ -31,7 +31,7 @@ public class ReviewImageService {
 	private final MinioClient minioClient;
 	private final String bucketName;
 	private final ReviewImageRepository reviewImageRepository;
-	
+
 	@Transactional
 	public List<String> uploadFiles(Review review, List<MultipartFile> images) {
 		List<String> imageUrls = new ArrayList<>();
@@ -76,5 +76,14 @@ public class ReviewImageService {
 			throw new RuntimeException(e);
 		}
 		return objectName;
+	}
+
+	public List<String> getImageUrlsByReviewId(Integer reviewId) {
+		List<String> imageUrls = new ArrayList<>();
+		List<ReviewImage> reviewImages = reviewImageRepository.findByReviewReviewId(reviewId);
+		for (ReviewImage image : reviewImages) {
+			imageUrls.add(image.getImageUrl());
+		}
+		return imageUrls;
 	}
 }
