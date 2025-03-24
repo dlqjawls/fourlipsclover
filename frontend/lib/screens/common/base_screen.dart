@@ -5,7 +5,8 @@ import '../journal/journal.dart';
 import '../ai/ai_plan.dart';
 import '../user/user_screen.dart';
 import '../group/group_screen.dart';
-import '../review/restaurant_detail.dart';
+// import '../review/restaurant_detail.dart';
+import '../matching/matching.dart';
 
 class BaseScreen extends StatefulWidget {
   const BaseScreen({Key? key}) : super(key: key);
@@ -25,7 +26,7 @@ class _BaseScreenState extends State<BaseScreen> {
     super.initState();
     _screens.addAll([
       const GroupScreen(),
-      RestaurantDetailScreen(restaurantId: restaurantId),
+      const MatchingScreen(),
       const HomeScreen(),
       const AIPlanScreen(),
       const UserScreen(),
@@ -36,17 +37,6 @@ class _BaseScreenState extends State<BaseScreen> {
     setState(() {
       _selectedIndex = index;
     });
-  }
-
-  /// ✅ 가게 상세 페이지로 이동하는 함수
-  void navigateToRestaurant(BuildContext context, String restaurantId) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder:
-            (context) => RestaurantDetailScreen(restaurantId: restaurantId),
-      ),
-    );
   }
 
   @override
