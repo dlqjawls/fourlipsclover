@@ -34,16 +34,14 @@ class MapMarker {
   }
 }
 
-// 카카오맵 라벨(마커) 클래스 추가
+// 카카오맵 라벨(마커) 클래스 - 색상 속성 제거
 class MapLabel {
   final String id;
   final double latitude;
   final double longitude;
   final String? text;
   final String? imageAsset; // 라벨에 사용할 이미지 에셋 경로
-  final Color? textColor;
   final double? textSize;
-  final Color? backgroundColor;
   final double? alpha; // 투명도 (0.0~1.0)
   final double? rotation; // 회전 각도 (도 단위)
   final int zIndex; // 라벨 표시 순서 (값이 클수록 위에 표시)
@@ -57,9 +55,7 @@ class MapLabel {
     required this.longitude,
     this.text,
     this.imageAsset,
-    this.textColor,
     this.textSize,
-    this.backgroundColor,
     this.alpha = 1.0,
     this.rotation = 0.0,
     this.zIndex = 0,
@@ -74,9 +70,7 @@ class MapLabel {
     double? longitude,
     String? text,
     String? imageAsset,
-    Color? textColor,
     double? textSize,
-    Color? backgroundColor,
     double? alpha,
     double? rotation,
     int? zIndex,
@@ -90,9 +84,7 @@ class MapLabel {
       longitude: longitude ?? this.longitude,
       text: text ?? this.text,
       imageAsset: imageAsset ?? this.imageAsset,
-      textColor: textColor ?? this.textColor,
       textSize: textSize ?? this.textSize,
-      backgroundColor: backgroundColor ?? this.backgroundColor,
       alpha: alpha ?? this.alpha,
       rotation: rotation ?? this.rotation,
       zIndex: zIndex ?? this.zIndex,
@@ -252,15 +244,13 @@ class MapProvider extends ChangeNotifier {
     notifyListeners();
   }
   
-  // 라벨 추가 메서드
+  // 라벨 추가 메서드 - 색상 매개변수 제거
   void addLabel({
     required double latitude,
     required double longitude,
     String? text,
     String? imageAsset,
-    Color? textColor,
     double? textSize,
-    Color? backgroundColor,
     double alpha = 1.0,
     double rotation = 0.0,
     int zIndex = 0,
@@ -277,9 +267,7 @@ class MapProvider extends ChangeNotifier {
       longitude: longitude,
       text: text,
       imageAsset: imageAsset,
-      textColor: textColor,
       textSize: textSize,
-      backgroundColor: backgroundColor,
       alpha: alpha,
       rotation: rotation,
       zIndex: zIndex,
