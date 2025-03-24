@@ -78,6 +78,7 @@ public class JwtTokenProvider {
         return null;
     }
 
+
     // 토큰 유효성 검증
     public boolean validateToken(String token) {
         try {
