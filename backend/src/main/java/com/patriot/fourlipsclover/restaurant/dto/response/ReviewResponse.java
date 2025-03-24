@@ -1,6 +1,7 @@
 package com.patriot.fourlipsclover.restaurant.dto.response;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,4 +26,10 @@ public class ReviewResponse {
 	private LocalDateTime createdAt;
 
 	private LocalDateTime updatedAt;
+
+	private List<String> reviewImageUrls;
+
+	private Integer likedCount;
+
+	private Integer dislikedCount;
 }

@@ -26,11 +26,15 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
 
     // 빌드 사이클 이후로 위치 초기화 연기
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeLocation();
+      if (mounted) {  // mounted 체크 추가
+        _initializeLocation();
+      }
     });
   }
 
   Future<void> _initializeLocation() async {
+    if (!mounted) return;  // 먼저 mounted 체크
+    
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
@@ -39,7 +43,7 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
         await authProvider.getCurrentLocation(context, notify: false);
 
         // 위치 정보를 가져온 후에 별도로 상태 업데이트
-        if (mounted) {
+        if (mounted) {  // mounted 체크
           authProvider.notifyListeners();
           print(
             '위치 확인: ${authProvider.currentPosition?.latitude}, ${authProvider.currentPosition?.longitude}',
@@ -47,18 +51,20 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
         }
       }
 
-      if (mounted) {
+      if (mounted) {  // mounted 체크
         _loadCategoryRestaurants();
       }
     } catch (e) {
       print('위치 초기화 오류: $e');
-      if (mounted) {
+      if (mounted) {  // mounted 체크
         _loadCategoryRestaurants();
       }
     }
   }
 
   Future<void> _loadCategoryRestaurants() async {
+    if (!mounted) return;  // 먼저 mounted 체크
+    
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -74,29 +80,40 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
               longitude: authProvider.currentPosition!.latitude,
             );
 
-        setState(() {
-          _categoryRestaurants = categoryRestaurants;
-          _isLoading = false;
-        });
+        if (mounted) {  // mounted 체크 추가
+          setState(() {
+            _categoryRestaurants = categoryRestaurants;
+            _isLoading = false;
+          });
+        }
       } else {
-        setState(() {
-          _errorMessage = '위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.';
-          _isLoading = false;
-        });
+        if (mounted) {  // mounted 체크 추가
+          setState(() {
+            _errorMessage = '위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.';
+            _isLoading = false;
+          });
+        }
       }
     } catch (e) {
       print('카테고리별 레스토랑 로딩 오류: $e');
-      setState(() {
-        _errorMessage = '레스토랑 정보를 불러오는데 실패했습니다.';
-        _isLoading = false;
-      });
+      if (mounted) {  // mounted 체크 추가
+        setState(() {
+          _errorMessage = '레스토랑 정보를 불러오는데 실패했습니다.';
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _refreshLocation() async {
+    if (!mounted) return;  // mounted 체크 추가
+    
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.getCurrentLocation(context);
-    _loadCategoryRestaurants();
+    
+    if (mounted) {  // mounted 체크 추가
+      _loadCategoryRestaurants();
+    }
   }
 
   @override

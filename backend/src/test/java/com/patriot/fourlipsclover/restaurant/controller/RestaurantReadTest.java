@@ -2,8 +2,12 @@ package com.patriot.fourlipsclover.restaurant.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.patriot.fourlipsclover.restaurant.dto.request.LikeStatus;
+import com.patriot.fourlipsclover.restaurant.dto.request.ReviewLikeCreate;
+import com.patriot.fourlipsclover.restaurant.dto.response.ApiResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
@@ -12,8 +16,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
@@ -32,6 +38,18 @@ public class RestaurantReadTest {
 	@Test
 	void findById() {
 		//given
+		ReviewLikeCreate request = new ReviewLikeCreate();
+		request.setMemberId(2L);
+		request.setLikeStatus(LikeStatus.LIKE);
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+
+		restTemplate.exchange(
+				"/api/restaurant/reviews/1/like",
+				HttpMethod.POST, new HttpEntity<>(request, headers),
+				new org.springframework.core.ParameterizedTypeReference<ApiResponse<Void>>() {
+				});
 		//when
 		ResponseEntity<ReviewResponse> response = restTemplate.exchange(
 				"/api/restaurant/" + "2114253032" + "/reviews/1", HttpMethod.GET, HttpEntity.EMPTY,
@@ -39,6 +57,8 @@ public class RestaurantReadTest {
 		//then
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 		assertThat(Objects.requireNonNull(response.getBody()).getContent()).isEqualTo("테스트컨텐츠");
+		assertThat(Objects.requireNonNull(response.getBody()).getLikedCount()).isEqualTo(1);
+		assertThat(Objects.requireNonNull(response.getBody()).getDislikedCount()).isEqualTo(0);
 	}
 
 	@Test

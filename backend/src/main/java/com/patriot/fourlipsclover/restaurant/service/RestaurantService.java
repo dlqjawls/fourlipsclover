@@ -1,10 +1,12 @@
 package com.patriot.fourlipsclover.restaurant.service;
 
+import com.patriot.fourlipsclover.config.CustomUserDetails;
 import com.patriot.fourlipsclover.exception.DeletedResourceAccessException;
 import com.patriot.fourlipsclover.exception.InvalidDataException;
 import com.patriot.fourlipsclover.exception.ReviewNotFoundException;
 import com.patriot.fourlipsclover.exception.UnauthorizedAccessException;
 import com.patriot.fourlipsclover.exception.UserNotFoundException;
+import com.patriot.fourlipsclover.image.service.ReviewImageService;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberJpaRepository;
 import com.patriot.fourlipsclover.restaurant.dto.request.LikeStatus;
@@ -32,6 +34,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -43,9 +46,10 @@ public class RestaurantService {
 	private final ReviewMapper reviewMapper;
 	private final RestaurantMapper restaurantMapper;
 	private final ReviewJpaRepository reviewRepository;
+	private final ReviewImageService reviewImageService;
 
 	@Transactional
-	public ReviewResponse create(ReviewCreate reviewCreate) {
+	public ReviewResponse create(ReviewCreate reviewCreate, List<MultipartFile> images) {
 		Restaurant restaurant = restaurantRepository.findByKakaoPlaceId(
 				reviewCreate.getKakaoPlaceId()).orElseThrow();
 
@@ -57,14 +61,27 @@ public class RestaurantService {
 						LocalDateTime.now()).isDelete(false).visitedAt(reviewCreate.getVisitedAt())
 				.build();
 
-		return reviewMapper.toDto(reviewRepository.save(review));
+		reviewRepository.save(review);
+		List<String> imageUrls = reviewImageService.uploadFiles(review, images);
+		ReviewResponse response = reviewMapper.toReviewImageDto(review, imageUrls);
+		response.setLikedCount(0);
+		response.setDislikedCount(0);
+		return response;
 	}
 
 	@Transactional(readOnly = true)
 	public ReviewResponse findById(Integer reviewId) {
 		Review review = reviewRepository.findById(reviewId)
 				.orElseThrow(() -> new ReviewNotFoundException(reviewId));
-		return reviewMapper.toDto(review);
+		List<String> imageUrls = reviewImageService.getImageUrlsByReviewId(reviewId);
+		ReviewResponse response = reviewMapper.toReviewImageDto(review, imageUrls);
+		Long likedCount = reviewLikeJpaRepository.countByIdReviewIdAndLikeStatus(reviewId,
+				LikeStatus.LIKE);
+		Long dislikedCount = reviewLikeJpaRepository.countByIdReviewIdAndLikeStatus(reviewId,
+				LikeStatus.DISLIKE);
+		response.setLikedCount(likedCount.intValue());
+		response.setDislikedCount(dislikedCount.intValue());
+		return response;
 	}
 
 	@Transactional(readOnly = true)
@@ -73,7 +90,22 @@ public class RestaurantService {
 			throw new IllegalArgumentException("올바른 kakaoPlaceId 값을 입력하세요.");
 		}
 		List<Review> reviews = reviewRepository.findByKakaoPlaceId(kakaoPlaceId);
-		return reviews.stream().map(reviewMapper::toDto).toList();
+		return reviews.stream()
+				.map(review -> {
+					Integer reviewId = review.getReviewId();
+					List<String> imageUrls = reviewImageService.getImageUrlsByReviewId(reviewId);
+					ReviewResponse response = reviewMapper.toReviewImageDto(review, imageUrls);
+
+					Long likedCount = reviewLikeJpaRepository.countByIdReviewIdAndLikeStatus(
+							reviewId, LikeStatus.LIKE);
+					Long dislikedCount = reviewLikeJpaRepository.countByIdReviewIdAndLikeStatus(
+							reviewId, LikeStatus.DISLIKE);
+					response.setLikedCount(likedCount.intValue());
+					response.setDislikedCount(dislikedCount.intValue());
+
+					return response;
+				})
+				.toList();
 	}
 
 	@Transactional
@@ -81,8 +113,7 @@ public class RestaurantService {
 			ReviewUpdate reviewUpdate) {
 		Review review = reviewRepository.findById(reviewId)
 				.orElseThrow(() -> new ReviewNotFoundException(reviewId));
-		//TODO : 유저 로그인 후 autnentication 등록 구현 후에 주석 해제하기.
-//		checkReviewerIsCurrentUser(review.getMember().getMemberId());
+		checkReviewerIsCurrentUser(review.getMember().getMemberId());
 		if (review.getIsDelete()) {
 			throw new DeletedResourceAccessException("삭제된 리뷰 데이터는 접근할 수 없습니다.");
 		}
@@ -90,15 +121,19 @@ public class RestaurantService {
 		review.setContent(reviewUpdate.getContent());
 		review.setUpdatedAt(LocalDateTime.now());
 		review.setVisitedAt(reviewUpdate.getVisitedAt());
-		return reviewMapper.toDto(review);
+		List<String> reviewUrls = reviewImageService.getImageUrlsByReviewId(reviewId);
+		return reviewMapper.toReviewImageDto(review, reviewUrls);
 	}
 
-	private void checkReviewerIsCurrentUser(Integer reviewMemberId) {
-		// AOP로 분리해서 controller에서
+	private void checkReviewerIsCurrentUser(Long reviewMemberId) {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		String currentUsername = authentication.getName();
-		Member currentMember = memberRepository.findByEmail(currentUsername)
-				.orElseThrow(UserNotFoundException::new);
+		if (authentication == null || !authentication.isAuthenticated()) {
+			throw new UnauthorizedAccessException("인증되지 않은 사용자입니다.");
+		}
+
+		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+		Member currentMember = userDetails.getMember();
+
 		if (!Objects.equals(currentMember.getMemberId(), reviewMemberId)) {
 			throw new UnauthorizedAccessException("현재 User ID가 작성자 ID와 다릅니다.");
 		}
@@ -111,8 +146,7 @@ public class RestaurantService {
 		if (review.getIsDelete()) {
 			throw new DeletedResourceAccessException("이미 삭제된 리뷰입니다.");
 		}
-		//TODO : 유저 로그인 후 autnentication 등록 구현 후에 주석 해제하기.
-//		checkReviewerIsCurrentUser(review.getMember().getMemberId());
+		checkReviewerIsCurrentUser(review.getMember().getMemberId());
 		review.setIsDelete(true);
 		review.setDeletedAt(LocalDateTime.now());
 		reviewRepository.save(review);

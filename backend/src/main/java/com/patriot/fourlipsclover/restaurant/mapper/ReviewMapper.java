@@ -7,6 +7,7 @@ import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewRestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
 import com.patriot.fourlipsclover.restaurant.entity.Review;
+import java.util.List;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -43,6 +44,19 @@ public class ReviewMapper {
 				.visitedAt(entity.getVisitedAt())
 				.createdAt(entity.getCreatedAt())
 				.updatedAt(entity.getUpdatedAt())
+				.build();
+	}
+
+	public ReviewResponse toReviewImageDto(Review entity, List<String> imageUrls) {
+		return ReviewResponse.builder()
+				.reviewId(entity.getReviewId())
+				.content(entity.getContent())
+				.restaurant(toRestaurantResponse(entity.getRestaurant()))
+				.reviewer(toReviewer(entity.getMember()))
+				.visitedAt(entity.getVisitedAt())
+				.createdAt(entity.getCreatedAt())
+				.updatedAt(entity.getUpdatedAt())
+				.reviewImageUrls(imageUrls)
 				.build();
 	}
 }

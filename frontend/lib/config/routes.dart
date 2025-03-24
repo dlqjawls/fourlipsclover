@@ -8,6 +8,7 @@ import 'package:frontend/screens/user/user_edit.dart';
 import 'package:frontend/screens/user/user_profile.dart';
 import 'package:frontend/screens/group/group_detail_screen.dart';
 import 'package:frontend/models/group/group_model.dart';
+import 'package:frontend/widgets/full_map_screen.dart';
 
 class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
@@ -21,9 +22,17 @@ class AppRoutes {
     '/user_profile': (context) => const MyConsumptionPatternScreen(),
 
     '/group_detail': (context) {
-      final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      final arguments =
+          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
       final group = arguments['group'] as Group;
       return GroupDetailScreen(group: group);
+    },
+
+    '/full_map': (context) {
+      final arguments =
+          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      final locationName = arguments['locationName'] as String;
+      return FullMapScreen(locationName: locationName);
     },
 
     // 앱의 경로를 여기에 등록
