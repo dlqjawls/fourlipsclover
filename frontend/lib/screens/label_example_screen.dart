@@ -28,7 +28,7 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
     _prepareDemoLabels();
   }
 
-  // 데모용 라벨 데이터 준비
+  // 데모용 라벨 데이터 준비 - 색상 관련 속성 제거
   void _prepareDemoLabels() {
     // 맛집 라벨 예시
     _demoLabels.add(
@@ -38,12 +38,10 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
         longitude: 126.8145,
         text: '맛있는 식당',
         textSize: 20.0,
-        // textColor: Colors.black,
-        // backgroundColor: Colors.white.withOpacity(0.8),
         imageAsset: 'clover',
-        alpha: 1.0, // 이 값도 추가하는 것이 좋음
-        rotation: 0.0, // 이 값도 추가하는 것이 좋음
-        zIndex: 1, // 이 값도 추가하는 것이 좋음
+        alpha: 1.0,
+        rotation: 0.0,
+        zIndex: 1,
         isClickable: true,
       ),
     );
@@ -55,12 +53,10 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
         longitude: 126.8152,
         text: '카페',
         textSize: 20.0,
-        // textColor: Colors.black,
-        // backgroundColor: Colors.white.withOpacity(0.8),
         imageAsset: 'clover',
-        alpha: 1.0, // 이 값도 추가하는 것이 좋음
-        rotation: 0.0, // 이 값도 추가하는 것이 좋음
-        zIndex: 1, // 이 값도 추가하는 것이 좋음
+        alpha: 1.0,
+        rotation: 0.0,
+        zIndex: 1,
         isClickable: true,
       ),
     );
@@ -71,19 +67,17 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
         latitude: 35.1948,
         longitude: 126.8157,
         text: '분식집',
-        // textColor: Colors.black,  // 현재는 주석 처리된 상태
-        textSize: 20.0, // 이 값은 추가해야 함
-        // backgroundColor: Colors.white.withOpacity(0.8),  // 현재는 주석 처리된 상태
+        textSize: 20.0,
         imageAsset: 'clover',
-        alpha: 1.0, // 이 값도 추가하는 것이 좋음
-        rotation: 0.0, // 이 값도 추가하는 것이 좋음
-        zIndex: 1, // 이 값도 추가하는 것이 좋음
+        alpha: 1.0,
+        rotation: 0.0,
+        zIndex: 1,
         isClickable: true,
       ),
     );
   }
 
-  // _addLabelsToMap 메서드 수정
+  // _addLabelsToMap 메서드 수정 - 색상 관련 속성 제거
   Future<void> _addLabelsToMap() async {
     setState(() {
       _isAddingLabels = true;
@@ -139,8 +133,6 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
     }
 
     // 라벨 추가 후 원래 지도 상태로 복원
-    // 만약 위에서 KakaoMapPlugin.kt를 수정했다면 이 부분은 필요 없을 수도 있지만
-    // 보험으로 추가하는 것이 좋습니다
     await KakaoMapPlatform.setMapCenter(
       latitude: currentLat,
       longitude: currentLng,
@@ -152,7 +144,7 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
     });
   }
 
-  // 랜덤 위치에 라벨 추가
+  // 랜덤 위치에 라벨 추가 - 색상 관련 속성 제거
   Future<void> _addRandomLabel() async {
     // 현재 지도 중심에서 약간 떨어진 랜덤 위치 계산
     final mapProvider = Provider.of<MapProvider>(context, listen: false);
@@ -166,14 +158,6 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
     final newLat = mapProvider.centerLatitude + latOffset;
     final newLng = mapProvider.centerLongitude + lngOffset;
 
-    // 랜덤 색상 생성
-    final color = Color.fromRGBO(
-      random.nextInt(255),
-      random.nextInt(255),
-      random.nextInt(255),
-      1.0,
-    );
-
     // 라벨 ID 생성
     final labelId = 'random_label_${DateTime.now().millisecondsSinceEpoch}';
 
@@ -185,8 +169,6 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
         latitude: newLat,
         longitude: newLng,
         text: '랜덤 라벨',
-        // textColor: Colors.white,
-        // backgroundColor: color,
         textSize: 16.0,
         alpha: 1.0,
         rotation: 0.0,
@@ -200,8 +182,6 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
         latitude: newLat,
         longitude: newLng,
         text: '랜덤 라벨',
-        // textColor: Colors.white,
-        // backgroundColor: color,
         textSize: 16.0,
         alpha: 1.0,
         rotation: 0.0,
