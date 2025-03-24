@@ -52,19 +52,42 @@ class AuthService {
   // 서버 로그인 처리
   Future<Map<String, dynamic>> _processServerLogin(String accessToken) async {
     final baseUrl = dotenv.env['API_BASE_URL'];
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/kakao/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'accessToken': accessToken}),
-    );
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/auth/kakao/login'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $accessToken',
+            },
+          )
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw Exception('서버 연결 시간 초과');
+            },
+          );
 
-    if (response.statusCode == 200) {
-      debugPrint(accessToken);
-      debugPrint('로그인성공: ${response.body}');
-      return jsonDecode(response.body);
-    } else {
+      switch (response.statusCode) {
+        case 200:
+          final responseData = jsonDecode(response.body);
+          if (responseData['jwtToken'] == null) {
+            throw Exception('서버 응답에 JWT 토큰이 없습니다.');
+          }
+          debugPrint('로그인 성공');
+          debugPrint(accessToken);
+          return responseData;
+        case 401:
+          throw Exception('인증 실패: 유효하지 않은 토큰');
+        case 403:
+          throw Exception('접근 권한이 없습니다.');
+        default:
+          throw Exception('서버 응답 오류: ${response.statusCode}');
+      }
+    } catch (e) {
       debugPrint('API URL: $baseUrl');
-      throw Exception('서버 응답 오류: ${response.statusCode}');
+      debugPrint('서버 로그인 처리 중 오류: $e');
+      throw e;
     }
   }
 

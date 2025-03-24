@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/user_model.dart';
-import '../constants/api_constants.dart';
+
 import '../models/user_journey.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class UserService {
   final bool useDummyData = true; // API 연동 전까지 더미데이터 사용
@@ -36,8 +37,9 @@ class UserService {
 
     // API 구현
     try {
+      final baseUrl = dotenv.env['API_BASE_URL'];
       final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/users/$userId/profile'),
+        Uri.parse('$baseUrl/users/$userId/profile'),
       );
 
       if (response.statusCode == 200) {
@@ -62,8 +64,9 @@ class UserService {
 
     // API 구현
     try {
+      final baseUrl = dotenv.env['API_BASE_URL'];
       final response = await http.patch(
-        Uri.parse('${ApiConstants.baseUrl}/users/$userId/profile'),
+        Uri.parse('$baseUrl/users/$userId/profile'),
         body: json.encode(updates),
         headers: {'Content-Type': 'application/json'},
       );
