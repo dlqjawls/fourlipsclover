@@ -1,48 +1,68 @@
-import 'user_journey.dart';
+class Payment {
+  final String storeName;
+  final String menu;
+  final int paymentAmount;
+
+  Payment({
+    required this.storeName,
+    required this.menu,
+    required this.paymentAmount,
+  });
+
+  factory Payment.fromJson(Map<String, dynamic> json) {
+    return Payment(
+      storeName: json['storeName'],
+      menu: json['menu'],
+      paymentAmount: json['paymentAmount'],
+    );
+  }
+}
 
 class UserProfile {
-  final int memberId;//임시시
-  final String id;
+  final int userId;
+  final String name;
   final String nickname;
-  final int cloverCount;
-  final int writtenPosts;
-  final int receivedLikes;
-  final int writtenReviews;
-  final int completedJourneys; // 추가
-  final List<String> achievements;
-  final int currentProgress;
-  final Journey? currentJourney;
+  final String profileUrl;
+  final List<Payment> recentPayments;
+  final String badgeUrl;
+  final bool localAuth;
+  final int albumCount;
+  final int groupCount;
+  final int reviewCount;
+  final int luckGauge;
+  final String? currentJourney;
 
   UserProfile({
-    required this.memberId, //임시
-    required this.id,
+    required this.userId,
+    required this.name,
     required this.nickname,
-    required this.cloverCount,
-    required this.writtenPosts,
-    required this.receivedLikes,
-    required this.writtenReviews,
-    required this.completedJourneys, // 추가
-    required this.achievements,
-    required this.currentProgress,
+    required this.profileUrl,
+    required this.recentPayments,
+    required this.badgeUrl,
+    required this.localAuth,
+    required this.albumCount,
+    required this.groupCount,
+    required this.reviewCount,
+    required this.luckGauge,
     this.currentJourney,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
-      memberId: json['memberId'] as int, //임시
-      id: json['id'],
-      nickname: json['nickname']as String, //임시 STRING
-      cloverCount: json['cloverCount'],
-      writtenPosts: json['writtenPosts'],
-      receivedLikes: json['receivedLikes'],
-      writtenReviews: json['writtenReviews'],
-      completedJourneys: json['completedJourneys'], // 추가
-      achievements: List<String>.from(json['achievements']),
-      currentProgress: json['currentProgress'],
-      currentJourney:
-          json['currentJourney'] != null
-              ? Journey.fromJson(json['currentJourney'])
-              : null,
+     userId: int.parse(json['userId']),
+      name: json['name'],
+      nickname: json['nickname'],
+      profileUrl: json['profileUrl'],
+      recentPayments: (json['recentPayments'] as List)
+          .map((payment) => Payment.fromJson(payment))
+          .toList(),
+      badgeUrl: json['badgeUrl'],
+      localAuth: json['localAuth'],
+      albumCount: json['albumCount'],
+      groupCount: json['groupCount'],
+      reviewCount: json['reviewCount'],
+      luckGauge: json['luckGauge'],
+      currentJourney: json['currentJourney'],
     );
   }
 }

@@ -76,6 +76,7 @@ class AuthService {
           }
           debugPrint('로그인 성공');
           debugPrint(accessToken);
+          debugPrint(responseData['jwtToken']);
           return responseData;
         case 401:
           throw Exception('인증 실패: 유효하지 않은 토큰');
