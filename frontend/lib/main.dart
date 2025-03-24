@@ -11,6 +11,7 @@ import 'services/kakao_map_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/group_provider.dart';
 import 'providers/plan_provider.dart';
+import 'providers/map_provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 
@@ -34,6 +35,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => GroupProvider()),
         ChangeNotifierProvider(create: (_) => PlanProvider()),
+        ChangeNotifierProvider(create: (context) => MapProvider()),
       ],
       child: MaterialApp(
         title: '네입클로버',

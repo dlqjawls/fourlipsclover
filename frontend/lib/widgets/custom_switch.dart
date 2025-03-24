@@ -1,5 +1,6 @@
+// lib/widgets/custom_switch.dart
 import 'package:flutter/material.dart';
-import '../../config/theme.dart'; // 테마 파일 경로에 맞게 수정하세요
+import '../config/theme.dart'; // 테마 파일 경로에 맞게 수정하세요
 
 class CustomSwitch extends StatelessWidget {
   final bool value;
