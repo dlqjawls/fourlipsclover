@@ -13,6 +13,7 @@ import com.kakao.vectormap.label.LabelManager
 import com.kakao.vectormap.label.LabelStyle
 import com.kakao.vectormap.label.LabelStyles
 import com.kakao.vectormap.label.LabelTextStyle
+import com.kakao.vectormap.label.LabelTextBuilder
 import com.kakao.vectormap.label.OrderingType
 import com.kakao.vectormap.label.CompetitionType
 import com.kakao.vectormap.label.CompetitionUnit
@@ -106,9 +107,17 @@ class KakaoMapPlugin(private val context: Context) {
                 markerStyle.setTextStyles(LabelTextStyle.from(16, Color.BLACK))
             }
             
-            // 라벨 옵션 생성
+            // LabelOptions 생성
             val options = LabelOptions.from(position)
-                .setStyles(markerStyle)
+                .setStyles(markerStyle)  // labelStyle -> markerStyle 로 변경
+                .setClickable(true)      // isClickable -> true 로 변경
+
+            // 텍스트 설정 (title이 있는 경우)
+            if (title != null) {
+                // 새로운 LabelTextBuilder 방식 적용
+                // options.setTexts(title) 대신
+                options.setTexts(LabelTextBuilder().setTexts(title))
+            }
             
             // 라벨 추가
             val label = labelLayer?.addLabel(options)
@@ -125,109 +134,122 @@ class KakaoMapPlugin(private val context: Context) {
         }
     }
     
-    // 라벨 추가
-    fun addLabel(
-        labelId: String, 
-        latitude: Double, 
-        longitude: Double, 
-        text: String? = null,
-        imageAsset: String? = null,
-        textColor: Long? = null,
-        textSize: Float? = null,
-        backgroundColor: Long? = null,
-        alpha: Float = 1.0f,
-        rotation: Float = 0.0f,
-        zIndex: Int = 0,
-        isClickable: Boolean = true,
-        pinType: Boolean = false
-    ) {
-        Log.d("KakaoMapPlugin", "라벨 추가 시도: id=$labelId, lat=$latitude, lng=$longitude")
-        Log.d("KakaoMapPlugin", "KakaoMap 상태: ${kakaoMap != null}")
-        Log.d("KakaoMapPlugin", "LabelManager 상태: ${labelManager != null}")
-        Log.d("KakaoMapPlugin", "LabelLayer 상태: ${labelLayer != null}")
-        
-        labelLayer?.let { layer ->
-            try {
-                // 이미 존재하는 라벨 ID인 경우 먼저 제거
-                if (labels.containsKey(labelId)) {
-                    val oldLabel = labels[labelId]
-                    if (oldLabel != null) {
-                        oldLabel.remove()
-                        labels.remove(labelId)
-                    }
+// 라벨 추가 메서드
+fun addLabel(
+    labelId: String, 
+    latitude: Double, 
+    longitude: Double, 
+    text: String? = null,
+    imageAsset: String? = null,
+    textColor: Long? = null,
+    textSize: Float? = null,
+    backgroundColor: Long? = null,
+    alpha: Float = 1.0f,
+    rotation: Float = 0.0f,
+    zIndex: Int = 0,
+    isClickable: Boolean = true,
+    pinType: Boolean = false
+) {
+    Log.d("KakaoMapPlugin", "라벨 추가 시도: id=$labelId, lat=$latitude, lng=$longitude")
+    Log.d("KakaoMapPlugin", "KakaoMap 상태: ${kakaoMap != null}")
+    Log.d("KakaoMapPlugin", "LabelManager 상태: ${labelManager != null}")
+    Log.d("KakaoMapPlugin", "LabelLayer 상태: ${labelLayer != null}")
+    
+    labelLayer?.let { layer ->
+        try {
+            // 이미 존재하는 라벨 ID인 경우 먼저 제거
+            if (labels.containsKey(labelId)) {
+                val oldLabel = labels[labelId]
+                if (oldLabel != null) {
+                    oldLabel.remove()
+                    labels.remove(labelId)
+                }
+            }
+            
+            val position = LatLng.from(latitude, longitude)
+            
+            // 기본 이미지 리소스 ID
+            var resourceId = android.R.drawable.ic_menu_mylocation
+            
+            // 이미지 리소스 처리 부분 수정
+            if (imageAsset != null) {
+                Log.d("KakaoMapPlugin", "이미지 에셋 검색 시도: $imageAsset")
+                
+                // 이미지 매핑 - 특정 이미지 이름 변환
+                val mappedImageAsset = when(imageAsset) {
+                    "svg_clover" -> "logo"
+                    else -> imageAsset
                 }
                 
-                val position = LatLng.from(latitude, longitude)
+                // 변환된 이름으로 리소스 찾기
+                val customResourceId = context.resources.getIdentifier(
+                    mappedImageAsset, 
+                    "drawable", 
+                    context.packageName
+                )
                 
-                // 기본 이미지 리소스 ID
-                var resourceId = android.R.drawable.ic_menu_mylocation
+                if (customResourceId != 0) {
+                    resourceId = customResourceId
+                    Log.d("KakaoMapPlugin", "이미지 리소스 찾음: $mappedImageAsset ($customResourceId)")
+                } else {
+                    Log.e("KakaoMapPlugin", "이미지 리소스 찾을 수 없음: $mappedImageAsset")
+                    // 오류 시 기본 리소스 사용
+                    resourceId = android.R.drawable.ic_menu_mylocation
+                }
+            }
+            
+            // LabelStyle 생성
+            val labelStyle = LabelStyle.from(resourceId)
+            
+            // 텍스트 스타일 설정
+            if (textSize != null) {
+                val color = textColor?.toInt() ?: Color.BLACK
+                labelStyle.setTextStyles(LabelTextStyle.from(textSize.toInt(), color))
+                Log.d("KakaoMapPlugin", "텍스트 스타일 설정: 크기=${textSize.toInt()}, 색상=$color")
+            }
+            
+            // LabelOptions 생성
+            val options = LabelOptions.from(position)
+                .setStyles(labelStyle)
+                .setClickable(isClickable)
+            
+            // 텍스트가 있으면 설정
+            if (text != null) {
+                try {
+                    // LabelTextBuilder를 사용한 텍스트 설정
+                    options.setTexts(LabelTextBuilder().setTexts(text))
+                    Log.d("KakaoMapPlugin", "라벨 텍스트 설정: \"$text\"")
+                } catch (e: Exception) {
+                    Log.e("KakaoMapPlugin", "텍스트 설정 오류: ${e.message}")
+                    e.printStackTrace()
+                }
+            }
+            
+            Log.d("KakaoMapPlugin", "라벨 옵션 생성 완료")
+            
+            // 라벨 생성 및 등록
+            val label = layer.addLabel(options)
+            
+            if (label != null) {
+                // 회전 적용 (필요시)
+                if (rotation != 0.0f) {
+                    label.rotateTo(rotation)
+                }
                 
-// 이미지 리소스 처리 부분 수정
-if (imageAsset != null) {
-    Log.d("KakaoMapPlugin", "이미지 에셋 검색 시도: $imageAsset")
-    
-    // 이미지 매핑 - 특정 이미지 이름 변환
-    val mappedImageAsset = when(imageAsset) {
-        "svg_clover" -> "logo"
-        else -> imageAsset
-    }
-    
-    // 변환된 이름으로 리소스 찾기
-    val customResourceId = context.resources.getIdentifier(
-        mappedImageAsset, 
-        "drawable", 
-        context.packageName
-    )
-    
-    if (customResourceId != 0) {
-        resourceId = customResourceId
-        Log.d("KakaoMapPlugin", "이미지 리소스 찾음: $mappedImageAsset ($customResourceId)")
-    } else {
-        Log.e("KakaoMapPlugin", "이미지 리소스 찾을 수 없음: $mappedImageAsset")
-        // 오류 시 기본 리소스 사용
-        resourceId = android.R.drawable.ic_menu_mylocation
+                labels[labelId] = label
+                Log.d("KakaoMapPlugin", "라벨 추가 성공: $labelId, 위치: ${label.getPosition()}")
+            } else {
+                Log.e("KakaoMapPlugin", "라벨 추가 실패: 라벨 생성 실패")
+            }
+            
+        } catch (e: Exception) {
+            Log.e("KakaoMapPlugin", "라벨 추가 예외 발생: ${e.message}")
+            e.printStackTrace()
+        }
+    } ?: run {
+        Log.e("KakaoMapPlugin", "라벨 레이어가 초기화되지 않았습니다")
     }
 }
-                // LabelStyle 생성
-                val labelStyle = LabelStyle.from(resourceId)
-                
-                // 텍스트 스타일 설정
-                if (textSize != null) {
-                    val color = textColor?.toInt() ?: Color.BLACK
-                    labelStyle.setTextStyles(LabelTextStyle.from(textSize.toInt(), color))
-                    Log.d("KakaoMapPlugin", "텍스트 스타일 설정: 크기=${textSize.toInt()}, 색상=$color")
-                }
-                
-                // LabelOptions 생성
-                val options = LabelOptions.from(position)
-                    .setStyles(labelStyle)
-                    .setClickable(isClickable)
-                
-                Log.d("KakaoMapPlugin", "라벨 옵션 생성 완료")
-                
-                // 라벨 생성 및 등록
-                val label = layer.addLabel(options)
-                
-                if (label != null) {
-                    // 회전 적용 (필요시)
-                    if (rotation != 0.0f) {
-                        label.rotateTo(rotation)
-                    }
-                    
-                    labels[labelId] = label
-                    Log.d("KakaoMapPlugin", "라벨 추가 성공: $labelId, 위치: ${label.getPosition()}")
-                } else {
-                    Log.e("KakaoMapPlugin", "라벨 추가 실패: 라벨 생성 실패")
-                }
-                
-            } catch (e: Exception) {
-                Log.e("KakaoMapPlugin", "라벨 추가 예외 발생: ${e.message}")
-                e.printStackTrace()
-            }
-        } ?: run {
-            Log.e("KakaoMapPlugin", "라벨 레이어가 초기화되지 않았습니다")
-        }
-    }
     
     // 라벨 제거
     fun removeLabel(labelId: String) {
