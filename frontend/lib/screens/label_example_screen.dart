@@ -37,9 +37,13 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
         latitude: 35.1954,
         longitude: 126.8145,
         text: '맛있는 식당',
+        textSize: 20.0,
         // textColor: Colors.black,
         // backgroundColor: Colors.white.withOpacity(0.8),
-        imageAsset: 'logo',
+        imageAsset: 'clover',
+        alpha: 1.0, // 이 값도 추가하는 것이 좋음
+        rotation: 0.0, // 이 값도 추가하는 것이 좋음
+        zIndex: 1, // 이 값도 추가하는 것이 좋음
         isClickable: true,
       ),
     );
@@ -50,9 +54,13 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
         latitude: 35.1962,
         longitude: 126.8152,
         text: '카페',
+        textSize: 20.0,
         // textColor: Colors.black,
         // backgroundColor: Colors.white.withOpacity(0.8),
-        imageAsset: 'logo',
+        imageAsset: 'clover',
+        alpha: 1.0, // 이 값도 추가하는 것이 좋음
+        rotation: 0.0, // 이 값도 추가하는 것이 좋음
+        zIndex: 1, // 이 값도 추가하는 것이 좋음
         isClickable: true,
       ),
     );
@@ -64,9 +72,9 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
         longitude: 126.8157,
         text: '분식집',
         // textColor: Colors.black,  // 현재는 주석 처리된 상태
-        textSize: 16.0, // 이 값은 추가해야 함
+        textSize: 20.0, // 이 값은 추가해야 함
         // backgroundColor: Colors.white.withOpacity(0.8),  // 현재는 주석 처리된 상태
-        imageAsset: 'logo',
+        imageAsset: 'clover',
         alpha: 1.0, // 이 값도 추가하는 것이 좋음
         rotation: 0.0, // 이 값도 추가하는 것이 좋음
         zIndex: 1, // 이 값도 추가하는 것이 좋음
@@ -75,13 +83,18 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
     );
   }
 
-  // 지도에 라벨 추가
+  // _addLabelsToMap 메서드 수정
   Future<void> _addLabelsToMap() async {
     setState(() {
       _isAddingLabels = true;
     });
 
     final mapProvider = Provider.of<MapProvider>(context, listen: false);
+
+    // 현재 지도 상태 저장
+    final currentLat = mapProvider.centerLatitude;
+    final currentLng = mapProvider.centerLongitude;
+    final currentZoom = mapProvider.zoomLevel;
 
     // 기존 라벨 모두 제거
     await KakaoMapPlatform.clearLabels();
@@ -97,9 +110,7 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
           longitude: label.longitude,
           text: label.text,
           imageAsset: label.imageAsset,
-          // textColor: label.textColor,
           textSize: label.textSize,
-          // backgroundColor: label.backgroundColor,
           alpha: label.alpha ?? 1.0,
           rotation: label.rotation ?? 0.0,
           zIndex: label.zIndex,
@@ -113,9 +124,7 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
           longitude: label.longitude,
           text: label.text,
           imageAsset: label.imageAsset,
-          // textColor: label.textColor,
           textSize: label.textSize,
-          // backgroundColor: label.backgroundColor,
           alpha: label.alpha ?? 1.0,
           rotation: label.rotation ?? 0.0,
           zIndex: label.zIndex,
@@ -128,6 +137,15 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
         print('라벨 추가 오류: $e');
       }
     }
+
+    // 라벨 추가 후 원래 지도 상태로 복원
+    // 만약 위에서 KakaoMapPlugin.kt를 수정했다면 이 부분은 필요 없을 수도 있지만
+    // 보험으로 추가하는 것이 좋습니다
+    await KakaoMapPlatform.setMapCenter(
+      latitude: currentLat,
+      longitude: currentLng,
+      zoomLevel: currentZoom,
+    );
 
     setState(() {
       _isAddingLabels = false;
@@ -307,7 +325,33 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
                       ElevatedButton.icon(
                         icon: Icon(Icons.add_location),
                         label: Text('샘플 라벨'),
-                        onPressed: _mapInitialized ? _addLabelsToMap : null,
+                        onPressed:
+                            _mapInitialized
+                                ? () async {
+                                  // 현재 지도 상태 저장
+                                  final mapProvider = Provider.of<MapProvider>(
+                                    context,
+                                    listen: false,
+                                  );
+                                  final currentLat = mapProvider.centerLatitude;
+                                  final currentLng =
+                                      mapProvider.centerLongitude;
+                                  final currentZoom = mapProvider.zoomLevel;
+
+                                  // 라벨 추가 작업 수행
+                                  await _addLabelsToMap();
+
+                                  // 약간의 지연 후 원래 위치로 강제 복귀
+                                  await Future.delayed(
+                                    Duration(milliseconds: 300),
+                                  );
+                                  await KakaoMapPlatform.setMapCenter(
+                                    latitude: currentLat,
+                                    longitude: currentLng,
+                                    zoomLevel: currentZoom,
+                                  );
+                                }
+                                : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.darkGray,
                         ),
