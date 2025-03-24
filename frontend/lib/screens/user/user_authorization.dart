@@ -7,11 +7,12 @@ import 'package:frontend/screens/user/auth_widgets/location_status_card.dart';
 import 'package:frontend/services/local_certification_service.dart';
 
 class UserAuthorizationScreen extends StatefulWidget {
-  final int memberId;
+  final int memberId;  // String에서 int로 변경
+
   const UserAuthorizationScreen({
-    super.key,
+    Key? key,
     required this.memberId,
-  });
+  }) : super(key: key);
 
   @override
   State<UserAuthorizationScreen> createState() => _UserAuthorizationScreenState();
