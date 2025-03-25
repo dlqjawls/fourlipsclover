@@ -9,6 +9,9 @@ import 'package:frontend/screens/user/user_profile.dart';
 import 'package:frontend/screens/group/group_detail_screen.dart';
 import 'package:frontend/models/group/group_model.dart';
 import 'package:frontend/widgets/full_map_screen.dart';
+import 'package:frontend/screens/payment/kakao_pay_screen.dart';
+import 'package:flutter/material.dart';
+import '../screens/payment/kakao_pay_official_screen.dart';
 
 class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
@@ -20,6 +23,9 @@ class AppRoutes {
     '/home': (context) => const BaseScreen(),
     '/user_edit': (context) => const UserEditScreen(),
     '/user_profile': (context) => const MyConsumptionPatternScreen(),
+
+    '/kakaopay_test': (context) => KakaoPayScreen(),
+    '/kakaopay_official': (context) => const KakaoPayOfficialScreen(),
 
     '/group_detail': (context) {
       final arguments =

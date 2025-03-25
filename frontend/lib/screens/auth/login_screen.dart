@@ -114,6 +114,38 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               // 여기까지 임시 홈 화면 이동 버튼
+
+              const SizedBox(height: 20),
+
+              // 여기부터 카카오페이 테스트 결제 버튼
+              Container(
+                width: 300,
+                height: 45,
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple, // 원하는 색으로 변경 가능
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      AppRoutes.navigateTo(context, '/kakaopay_official'); //kakaopay_test
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: const Center(
+                      child: Text(
+                        '💳 카카오페이 테스트 결제',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // 여기까지 카카오페이 테스트 결제 버튼
             ],
           ),
         ),
