@@ -19,12 +19,12 @@ class Payment {
 }
 
 class UserProfile {
-  final int userId;
+  final String userId;
   final String name;
   final String nickname;
   final String profileUrl;
   final List<Payment> recentPayments;
-  final String badgeUrl;
+  final String badgeName;
   final bool localAuth;
   final int albumCount;
   final int groupCount;
@@ -38,7 +38,7 @@ class UserProfile {
     required this.nickname,
     required this.profileUrl,
     required this.recentPayments,
-    required this.badgeUrl,
+    required this.badgeName,
     required this.localAuth,
     required this.albumCount,
     required this.groupCount,
@@ -49,14 +49,15 @@ class UserProfile {
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
-     userId: int.parse(json['userId']),
+      userId: json['userId'],
       name: json['name'],
       nickname: json['nickname'],
       profileUrl: json['profileUrl'],
-      recentPayments: (json['recentPayments'] as List)
-          .map((payment) => Payment.fromJson(payment))
-          .toList(),
-      badgeUrl: json['badgeUrl'],
+      recentPayments:
+          (json['recentPayments'] as List)
+              .map((payment) => Payment.fromJson(payment))
+              .toList(),
+      badgeName: json['badgeName'],
       localAuth: json['localAuth'],
       albumCount: json['albumCount'],
       groupCount: json['groupCount'],

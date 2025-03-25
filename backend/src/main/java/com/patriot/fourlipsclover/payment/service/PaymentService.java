@@ -2,6 +2,8 @@ package com.patriot.fourlipsclover.payment.service;
 
 import com.patriot.fourlipsclover.payment.dto.response.PaymentApproveResponse;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentReadyResponse;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,8 +12,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 @Service
@@ -20,9 +20,9 @@ public class PaymentService {
 
 	private static final String KAKAO_PAY_READY_URL = "https://open-api.kakaopay.com/online/v1/payment/ready";
 	private static final String KAKAO_PAY_APPROVE_URL = "https://open-api.kakaopay.com/online/v1/payment/approve";
-	@Value("${kakao.payment.admin-key}")
-	private final String ADMIN_KEY;
 	private final String CID = "TC0ONETIME";
+	@Value("${kakao.payment.admin-key}")
+	private String ADMIN_KEY;
 
 	public PaymentReadyResponse ready(String userId, String itemName,
 			String quantity, String totalAmount) {
@@ -32,18 +32,18 @@ public class PaymentService {
 		headers.set("Authorization", "SECRET_KEY " + ADMIN_KEY);
 		headers.setContentType(MediaType.APPLICATION_JSON);
 
-		MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-		params.add("cid", CID);
-		params.add("partner_order_id", orderId);
-		params.add("partner_user_id", userId);
-		params.add("item_name", itemName);
-		params.add("quantity", quantity);
-		params.add("total_amount", totalAmount);
-		params.add("approval_url", "https://fourlipsclover.duckdns.org//api/payment/approve");
-		params.add("cancel_url", "https:///fourlipsclover.duckdns.org/api/payment/cancel");
-		params.add("fail_url", "https:///fourlipsclover.duckdns.org//api/payment/fail");
+		Map<String, Object> params = new HashMap<>();
+		params.put("cid", CID);
+		params.put("partner_order_id", orderId);
+		params.put("partner_user_id", userId);
+		params.put("item_name", itemName);
+		params.put("quantity", quantity);
+		params.put("total_amount", totalAmount);
+		params.put("approval_url", "https://fourlipsclover.duckdns.org/api/payment/approve");
+		params.put("cancel_url", "https://fourlipsclover.duckdns.org/api/payment/cancel");
+		params.put("fail_url", "https://fourlipsclover.duckdns.org/api/payment/fail");
 
-		HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(params, headers);
+		HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(params, headers);
 		ResponseEntity<PaymentReadyResponse> responseEntity = restTemplate.postForEntity(
 				KAKAO_PAY_READY_URL, requestEntity, PaymentReadyResponse.class);
 		PaymentReadyResponse response = responseEntity.getBody();
@@ -60,15 +60,15 @@ public class PaymentService {
 		headers.set("Authorization", "SECRET_KEY " + ADMIN_KEY);
 		headers.setContentType(MediaType.APPLICATION_JSON);
 
-		MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-		params.add("cid", CID);
-		params.add("tid", tid);
-		params.add("partner_order_id", orderId);
-		params.add("partner_user_id", userId);
-		params.add("pg_token", pgToken);
-		params.add("total_amount", String.valueOf(amount));
+		Map<String, Object> params = new HashMap<>();
+		params.put("cid", CID);
+		params.put("tid", tid);
+		params.put("partner_order_id", orderId);
+		params.put("partner_user_id", userId);
+		params.put("pg_token", pgToken);
+		params.put("total_amount", String.valueOf(amount));
 
-		HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(params, headers);
+		HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(params, headers);
 		ResponseEntity<PaymentApproveResponse> responseEntity = restTemplate.postForEntity(
 				KAKAO_PAY_APPROVE_URL, requestEntity, PaymentApproveResponse.class);
 

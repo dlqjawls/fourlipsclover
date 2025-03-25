@@ -8,6 +8,7 @@ import 'package:frontend/models/user_model.dart';
 
 class CloverProfileSection extends StatefulWidget {
   final UserProfile profile;
+  
   const CloverProfileSection({super.key, required this.profile});
 
   @override
@@ -37,7 +38,7 @@ class _CloverProfileSectionState extends State<CloverProfileSection> {
                   const Icon(Icons.thumb_up, color: AppColors.primary),
                   const SizedBox(width: 8),
                   Text(
-                     '${widget.profile.badgeUrl}',
+                     '${widget.profile.badgeName} 클로버=',
                     style: TextStyle(color: AppColors.darkGray, fontSize: 18),
                   ),
                 ],
