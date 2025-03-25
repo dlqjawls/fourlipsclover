@@ -14,8 +14,9 @@ public class PaymentReadyResponse {
 
 	private String tid;
 	private String orderId;
-	private String nextRedirect;
+	private String nextRedirectAppUrl;
 	private String nextRedirectMobileUrl;
+	private String nextRedirectPcUrl;
 	private String androidAppScheme;
 	private LocalDateTime createdAt;
 }
