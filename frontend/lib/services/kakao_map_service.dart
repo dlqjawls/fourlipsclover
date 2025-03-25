@@ -100,17 +100,6 @@ static Future<void> addLabel({
   try {
     print('addLabel 메서드 호출 전');
     print('파라미터: labelId=$labelId, 다른 파라미터들');
-    // 색상을 ARGB 정수로 변환 (주석 처리)
-    // int? textColorInt;
-    // int? backgroundColorInt;
-    // 
-    // if (textColor != null) {
-    //   textColorInt = textColor.value;
-    // }
-    // 
-    // if (backgroundColor != null) {
-    //   backgroundColorInt = backgroundColor.value;
-    // }
 
     await _channel.invokeMethod<void>('addLabel', {
       'labelId': labelId,

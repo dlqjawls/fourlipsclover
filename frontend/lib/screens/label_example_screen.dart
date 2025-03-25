@@ -77,7 +77,7 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
     );
   }
 
-  // _addLabelsToMap 메서드 수정 - 색상 관련 속성 제거
+  // _addLabelsToMap 메서드 
   Future<void> _addLabelsToMap() async {
     setState(() {
       _isAddingLabels = true;

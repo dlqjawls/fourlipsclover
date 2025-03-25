@@ -21,14 +21,6 @@ import android.util.Log
 import com.patriot.fourlipsclover.R
 import android.os.Handler
 import android.os.Looper
-import com.kakao.vectormap.animation.Interpolation
-import com.kakao.vectormap.shape.DotPoints
-import com.kakao.vectormap.shape.Polygon
-import com.kakao.vectormap.shape.PolygonOptions
-import com.kakao.vectormap.shape.PolygonStyles
-import com.kakao.vectormap.shape.PolygonStylesSet
-import com.kakao.vectormap.shape.animation.CircleWave
-import com.kakao.vectormap.shape.animation.CircleWaves
 
 class KakaoMapPlugin(private val context: Context) {
     
@@ -393,7 +385,7 @@ fun addLabel(
         }
     }
 
-    // KakaoMapPlugin.kt에 추가
+// KakaoMapPlugin.kt에 추가
 private var handler = Handler(Looper.getMainLooper())
 
 fun setupLabelClickListener(map: KakaoMap) {
@@ -403,8 +395,8 @@ fun setupLabelClickListener(map: KakaoMap) {
         if (clickedLabelId != null) {
             Log.d("KakaoMapPlugin", "라벨 클릭됨: $clickedLabelId")
             
-            // 물결 애니메이션 추가
-            addWaveAnimation(clickedLabelId)
+            // 펄스 애니메이션 추가
+            addPulseAnimation(label)
             
             true // 이벤트 처리 완료
         } else {
@@ -413,32 +405,41 @@ fun setupLabelClickListener(map: KakaoMap) {
     }
 }
 
-fun addWaveAnimation(labelId: String) {
-    val label = labels[labelId] ?: return
-    
-    // 애니메이션용 원형 폴리곤 생성
-    val circlePolygon = kakaoMap?.getShapeManager()?.getLayer()?.addPolygon(
-        PolygonOptions.from("circlePolygon_$labelId")
-            .setDotPoints(DotPoints.fromCircle(label.getPosition(), 1.0f))
-            .setStylesSet(PolygonStylesSet.from(PolygonStyles.from(Color.parseColor("#76C352"))))
-    )
-    
-    // 라벨과 폴리곤 연결
-    if (circlePolygon != null) {
-        label.addShareTransform(circlePolygon)
+fun addPulseAnimation(label: Label) {
+    try {
+        // 확대 및 축소 애니메이션 구현
+        val originalScale = 1.0f
         
-        // 물결 애니메이션 설정
-        val circleWaves = CircleWaves.from("waveAnim_$labelId", 
-                                CircleWave.from(1f, 0f, 0f, 120f))
-            .setHideShapeAtStop(true)
-            .setInterpolation(Interpolation.CubicInOut)
-            .setDuration(1500)
-            .setRepeatCount(1)
+        // 확대 (1.7배)
+        label.scaleTo(2.5f, 2.5f, 400)
         
-        // 애니메이터 생성 및 시작
-        val animator = kakaoMap?.getShapeManager()?.addAnimator(circleWaves)
-        animator?.addPolygons(circlePolygon)
-        animator?.start()
+        // 원래 크기로 돌아오기
+        handler.postDelayed({
+            label.scaleTo(originalScale, originalScale, 500)
+            
+            // 회전 효과 추가 (약간의 흔들림 효과)
+            val currentRotation = label.getRotation()
+            
+            handler.postDelayed({
+                // 오른쪽으로 살짝 회전
+                label.rotateTo(currentRotation + 0.3f, 100)
+                
+                handler.postDelayed({
+                    // 왼쪽으로 살짝 회전
+                    label.rotateTo(currentRotation - 0.3f, 100)
+                    
+                    handler.postDelayed({
+                        // 원래 위치로 복귀
+                        label.rotateTo(currentRotation, 100)
+                    }, 100)
+                }, 100)
+            }, 50)
+        }, 200)
+        
+        Log.d("KakaoMapPlugin", "펄스 애니메이션 시작됨")
+    } catch (e: Exception) {
+        Log.e("KakaoMapPlugin", "펄스 애니메이션 실패: ${e.message}")
+        e.printStackTrace()
     }
 }
     
