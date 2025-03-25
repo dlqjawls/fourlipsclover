@@ -18,6 +18,17 @@ import com.kakao.vectormap.label.OrderingType
 import com.kakao.vectormap.label.CompetitionType
 import com.kakao.vectormap.label.CompetitionUnit
 import android.util.Log
+import com.patriot.fourlipsclover.R
+import android.os.Handler
+import android.os.Looper
+import com.kakao.vectormap.animation.Interpolation
+import com.kakao.vectormap.shape.DotPoints
+import com.kakao.vectormap.shape.Polygon
+import com.kakao.vectormap.shape.PolygonOptions
+import com.kakao.vectormap.shape.PolygonStyles
+import com.kakao.vectormap.shape.PolygonStylesSet
+import com.kakao.vectormap.shape.animation.CircleWave
+import com.kakao.vectormap.shape.animation.CircleWaves
 
 class KakaoMapPlugin(private val context: Context) {
     
@@ -73,6 +84,7 @@ class KakaoMapPlugin(private val context: Context) {
             Log.e("KakaoMapPlugin", "LabelManager 초기화 실패: ${e.message}")
             e.printStackTrace()
         }
+        setupLabelClickListener(map)
     }
     
     // 지도 중심 이동
@@ -104,7 +116,7 @@ class KakaoMapPlugin(private val context: Context) {
             
             // 텍스트가 있는 경우 텍스트 스타일 설정
             if (title != null) {
-                markerStyle.setTextStyles(LabelTextStyle.from(16, Color.BLACK))
+                markerStyle.setTextStyles(LabelTextStyle.from(16, Color.RED))
             }
             
             // LabelOptions 생성
@@ -204,8 +216,14 @@ fun addLabel(
             // 텍스트 스타일 설정
             if (textSize != null) {
                 val color = textColor?.toInt() ?: Color.BLACK
-                labelStyle.setTextStyles(LabelTextStyle.from(textSize.toInt(), color))
-                Log.d("KakaoMapPlugin", "텍스트 스타일 설정: 크기=${textSize.toInt()}, 색상=$color")
+                
+                // 방법 1: 기본 스타일 생성 후 폰트 직접 설정
+                val textStyle = LabelTextStyle.from(textSize.toInt(), color)
+                textStyle.stroke = 3
+                textStyle.strokeColor = Color.WHITE
+                labelStyle.setTextStyles(textStyle)
+                
+                Log.d("KakaoMapPlugin", "텍스트 스타일 설정: 커스텀 폰트 적용")
             }
             
             // LabelOptions 생성
@@ -374,6 +392,55 @@ fun addLabel(
             Log.d("KakaoMapPlugin", "스타일 업데이트할 라벨 없음: $labelId")
         }
     }
+
+    // KakaoMapPlugin.kt에 추가
+private var handler = Handler(Looper.getMainLooper())
+
+fun setupLabelClickListener(map: KakaoMap) {
+    map.setOnLabelClickListener { kakaoMap, layer, label ->
+        val clickedLabelId = labels.entries.find { it.value == label }?.key
+        
+        if (clickedLabelId != null) {
+            Log.d("KakaoMapPlugin", "라벨 클릭됨: $clickedLabelId")
+            
+            // 물결 애니메이션 추가
+            addWaveAnimation(clickedLabelId)
+            
+            true // 이벤트 처리 완료
+        } else {
+            false // 이벤트 처리 안함
+        }
+    }
+}
+
+fun addWaveAnimation(labelId: String) {
+    val label = labels[labelId] ?: return
+    
+    // 애니메이션용 원형 폴리곤 생성
+    val circlePolygon = kakaoMap?.getShapeManager()?.getLayer()?.addPolygon(
+        PolygonOptions.from("circlePolygon_$labelId")
+            .setDotPoints(DotPoints.fromCircle(label.getPosition(), 1.0f))
+            .setStylesSet(PolygonStylesSet.from(PolygonStyles.from(Color.parseColor("#76C352"))))
+    )
+    
+    // 라벨과 폴리곤 연결
+    if (circlePolygon != null) {
+        label.addShareTransform(circlePolygon)
+        
+        // 물결 애니메이션 설정
+        val circleWaves = CircleWaves.from("waveAnim_$labelId", 
+                                CircleWave.from(1f, 0f, 0f, 120f))
+            .setHideShapeAtStop(true)
+            .setInterpolation(Interpolation.CubicInOut)
+            .setDuration(1500)
+            .setRepeatCount(1)
+        
+        // 애니메이터 생성 및 시작
+        val animator = kakaoMap?.getShapeManager()?.addAnimator(circleWaves)
+        animator?.addPolygons(circlePolygon)
+        animator?.start()
+    }
+}
     
     // 라벨 가시성 설정
     fun setLabelVisibility(labelId: String, isVisible: Boolean) {
