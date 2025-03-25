@@ -2,7 +2,6 @@ package com.patriot.fourlipsclover.payment.service;
 
 import com.patriot.fourlipsclover.payment.dto.response.PaymentApproveResponse;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentReadyResponse;
-import com.patriot.fourlipsclover.payment.repository.PaymentRepository;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,7 +22,6 @@ public class PaymentService {
 	private static final String KAKAO_PAY_APPROVE_URL = "https://open-api.kakaopay.com/online/v1/payment/approve";
 	@Value("${kakao.payment.admin-key}")
 	private final String ADMIN_KEY;
-	private final PaymentRepository paymentRepository;
 	private final String CID = "TC0ONETIME";
 
 	public PaymentReadyResponse ready(String userId, String itemName,
