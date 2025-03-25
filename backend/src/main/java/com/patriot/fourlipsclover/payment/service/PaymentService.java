@@ -39,6 +39,7 @@ public class PaymentService {
 		params.put("item_name", itemName);
 		params.put("quantity", quantity);
 		params.put("total_amount", totalAmount);
+		params.put("tax_free_amount", 0);
 		params.put("approval_url", "https://fourlipsclover.duckdns.org/api/payment/approve");
 		params.put("cancel_url", "https://fourlipsclover.duckdns.org/api/payment/cancel");
 		params.put("fail_url", "https://fourlipsclover.duckdns.org/api/payment/fail");
