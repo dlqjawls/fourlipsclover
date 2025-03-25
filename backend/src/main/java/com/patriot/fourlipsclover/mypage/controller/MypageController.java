@@ -21,7 +21,7 @@ public class MypageController {
 		response.put("userId", "1231414142");
 		response.put("nickname", "이범진(닉네임)");
 		response.put("name", "이범진");
-		response.put("badgeUrl", "http://fourlipsclover.duckdns.org:9000/mypage/star.jpeg");
+		response.put("badgeName", "현지인");
 		response.put("profileUrl", "http://fourlipsclover.duckdns.org:9000/mypage/download.jpeg");
 
 		response.put("reviewCount", 10);
