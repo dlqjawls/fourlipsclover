@@ -20,9 +20,9 @@ public class PaymentService {
 
 	private static final String KAKAO_PAY_READY_URL = "https://open-api.kakaopay.com/online/v1/payment/ready";
 	private static final String KAKAO_PAY_APPROVE_URL = "https://open-api.kakaopay.com/online/v1/payment/approve";
-	@Value("${kakao.payment.admin-key}")
-	private final String ADMIN_KEY;
 	private final String CID = "TC0ONETIME";
+	@Value("${kakao.payment.admin-key}")
+	private String ADMIN_KEY;
 
 	public PaymentReadyResponse ready(String userId, String itemName,
 			String quantity, String totalAmount) {
@@ -39,9 +39,9 @@ public class PaymentService {
 		params.add("item_name", itemName);
 		params.add("quantity", quantity);
 		params.add("total_amount", totalAmount);
-		params.add("approval_url", "https://fourlipsclover.duckdns.org//api/payment/approve");
-		params.add("cancel_url", "https:///fourlipsclover.duckdns.org/api/payment/cancel");
-		params.add("fail_url", "https:///fourlipsclover.duckdns.org//api/payment/fail");
+		params.add("approval_url", "https://fourlipsclover.duckdns.org/api/payment/approve");
+		params.add("cancel_url", "https://fourlipsclover.duckdns.org/api/payment/cancel");
+		params.add("fail_url", "https://fourlipsclover.duckdns.org/api/payment/fail");
 
 		HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(params, headers);
 		ResponseEntity<PaymentReadyResponse> responseEntity = restTemplate.postForEntity(
