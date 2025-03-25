@@ -388,12 +388,29 @@ fun addLabel(
 // KakaoMapPlugin.kt에 추가
 private var handler = Handler(Looper.getMainLooper())
 
+private lateinit var methodChannel: MethodChannel
+
+// 메서드 채널 설정 메서드 추가 (KakaoMapPlugin 클래스 내부에)
+fun setMethodChannel(channel: MethodChannel) {
+    this.methodChannel = channel
+}
+
 fun setupLabelClickListener(map: KakaoMap) {
     map.setOnLabelClickListener { kakaoMap, layer, label ->
         val clickedLabelId = labels.entries.find { it.value == label }?.key
         
         if (clickedLabelId != null) {
             Log.d("KakaoMapPlugin", "라벨 클릭됨: $clickedLabelId")
+            
+            // Flutter로 이벤트 전송
+            try {
+                val arguments = HashMap<String, Any>()
+                arguments["labelId"] = clickedLabelId
+                methodChannel.invokeMethod("onLabelClick", arguments)
+                Log.d("KakaoMapPlugin", "Flutter로 라벨 클릭 이벤트 전송 성공")
+            } catch (e: Exception) {
+                Log.e("KakaoMapPlugin", "Flutter로 이벤트 전송 실패: ${e.message}")
+            }
             
             // 펄스 애니메이션 추가
             addPulseAnimation(label)

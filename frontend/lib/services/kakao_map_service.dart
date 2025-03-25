@@ -2,6 +2,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 
+
+
 /// 카카오맵 플랫폼 채널을 통한 서비스
 class KakaoMapPlatform {
   static const MethodChannel _channel = MethodChannel(
@@ -19,6 +21,32 @@ class KakaoMapPlatform {
       print('메서드 채널 오류: ${e.message}');
       return false;
     }
+  }
+
+
+ // 라벨 클릭 콜백 변수
+  static Function(String labelId)? _labelClickCallback;
+  
+  // 라벨 클릭 리스너 설정 메서드
+  static void setLabelClickListener(Function(String labelId) callback) {
+    _labelClickCallback = callback;
+    
+    // 채널 핸들러 설정
+    _channel.setMethodCallHandler((call) async {
+      print('Flutter 측 메서드 콜백 수신: ${call.method}');
+      
+      if (call.method == 'onLabelClick') {
+        final String labelId = call.arguments['labelId'];
+        print('라벨 클릭 이벤트 수신: $labelId');
+        
+        if (_labelClickCallback != null) {
+          _labelClickCallback!(labelId);
+        }
+      }
+      return null;
+    });
+    
+    print('라벨 클릭 리스너 설정 완료');
   }
 
   /// 지도 중심 위치 설정
@@ -183,18 +211,6 @@ static Future<void> updateLabelStyle({
   int? zIndex,
 }) async {
   try {
-    // 색상을 ARGB 정수로 변환 (주석 처리)
-    // int? textColorInt;
-    // int? backgroundColorInt;
-    // 
-    // if (textColor != null) {
-    //   textColorInt = textColor.value;
-    // }
-    // 
-    // if (backgroundColor != null) {
-    //   backgroundColorInt = backgroundColor.value;
-    // }
-
     await _channel.invokeMethod<void>('updateLabelStyle', {
       'labelId': labelId,
       // 'textColor': textColorInt,            // 주석 처리
