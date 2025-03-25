@@ -42,7 +42,7 @@ class _MatchingScreenState extends State<MatchingScreen>
     super.didChangeDependencies();
     final isFromNavBar = ModalRoute.of(context)?.settings.name == null;
 
-    // 네비게이션 바에서 첫 진입시에만 데이터 로드
+   
     if (isFromNavBar) {
       _fetchMatches();
     }
