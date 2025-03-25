@@ -30,15 +30,18 @@ class _UserScreenState extends State<UserScreen> {
   Future<void> _loadUserProfile() async {
     setState(() => _isLoading = true);
     try {
-      final profile = await _userService.getUserProfile('1231414142');
+      print('프로필 로딩 시작');
+      final profile = await _userService.getUserProfile();
+      print('받아온 프로필 데이터: $profile');
       setState(() => _userProfile = profile);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('에러 발생: $e');
+      print('스택 트레이스: $stackTrace'); // 에러의 발생 위치를 추적
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('프로필 로딩 실패')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('프로필 로딩 실패: $e')));
       }
-      print('Error loading user profile: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -49,15 +52,11 @@ class _UserScreenState extends State<UserScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (_userProfile == null) {
-      return const Scaffold(
-        body: Center(child: Text('사용자 정보를 불러올 수 없습니다.')),
-      );
+      return const Scaffold(body: Center(child: Text('사용자 정보를 불러올 수 없습니다.')));
     }
 
     return Scaffold(
@@ -72,24 +71,24 @@ class _UserScreenState extends State<UserScreen> {
                 // 프로필 섹션 (이름, 닉네임, 프로필 이미지, 뱃지)
                 CloverProfileSection(profile: _userProfile!),
                 const SizedBox(height: 24),
-                
+
                 // 통계 섹션 (앨범 수, 그룹 수, 리뷰 수)
                 StatisticsSection(profile: _userProfile!),
                 const SizedBox(height: 16),
-                
+
                 // 액션 버튼들
                 const ActionButtons(),
                 const SizedBox(height: 16),
-                
+
                 // 행운 게이지 표시
                 LuckGaugeIndicator(luckGauge: _userProfile!.luckGauge),
                 const SizedBox(height: 16),
-                
+
                 // 현재 여정이 있는 경우 표시
                 if (_userProfile!.currentJourney != null)
                   CurrentJourneySection(journey: _userProfile!.currentJourney!),
                 const SizedBox(height: 16),
-                
+
                 // 최근 결제 내역
                 PaymentHistory(payments: _userProfile!.recentPayments),
               ],

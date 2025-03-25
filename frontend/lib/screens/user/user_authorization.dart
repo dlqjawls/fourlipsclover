@@ -7,7 +7,7 @@ import 'package:frontend/screens/user/auth_widgets/location_status_card.dart';
 import 'package:frontend/services/local_certification_service.dart';
 
 class UserAuthorizationScreen extends StatefulWidget {
-  final int memberId;  // String에서 int로 변경
+  final String memberId;  // String에서 int로 변경
 
   const UserAuthorizationScreen({
     Key? key,
