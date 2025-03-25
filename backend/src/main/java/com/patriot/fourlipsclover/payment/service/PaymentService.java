@@ -19,9 +19,9 @@ import org.springframework.web.client.RestTemplate;
 @RequiredArgsConstructor
 public class PaymentService {
 
-	private static final String KAKAO_PAY_READY_URL = "https://kapi.kakao.com/v1/payment/ready";
-	private static final String KAKAO_PAY_APPROVE_URL = "https://kapi.kakao.com/v1/payment/approve";
-	@Value("kakao.payment.adminKey")
+	private static final String KAKAO_PAY_READY_URL = "https://open-api.kakaopay.com/online/v1/payment/ready";
+	private static final String KAKAO_PAY_APPROVE_URL = "https://open-api.kakaopay.com/online/v1/payment/approve";
+	@Value("${kakao.payment.admin-key}")
 	private final String ADMIN_KEY;
 	private final PaymentRepository paymentRepository;
 	private final String CID = "TC0ONETIME";
@@ -31,8 +31,8 @@ public class PaymentService {
 		RestTemplate restTemplate = new RestTemplate();
 		String orderId = UUID.randomUUID().toString();
 		HttpHeaders headers = new HttpHeaders();
-		headers.set("Authorization", "KakaoAK " + ADMIN_KEY);
-		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+		headers.set("Authorization", "SECRET_KEY " + ADMIN_KEY);
+		headers.setContentType(MediaType.APPLICATION_JSON);
 
 		MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
 		params.add("cid", CID);
@@ -59,8 +59,8 @@ public class PaymentService {
 		RestTemplate restTemplate = new RestTemplate();
 
 		HttpHeaders headers = new HttpHeaders();
-		headers.set("Authorization", "KakaoAK " + ADMIN_KEY);
-		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+		headers.set("Authorization", "SECRET_KEY " + ADMIN_KEY);
+		headers.setContentType(MediaType.APPLICATION_JSON);
 
 		MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
 		params.add("cid", CID);
