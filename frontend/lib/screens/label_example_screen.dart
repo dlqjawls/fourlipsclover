@@ -2,10 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
+import 'dart:async'; // StreamSubscription을 위한 import
 import '../providers/map_provider.dart';
 import '../widgets/kakao_map_native_view.dart';
 import '../config/theme.dart';
 import '../services/kakao_map_service.dart';
+import 'package:geolocator/geolocator.dart'; // 위치 정보를 위한 패키지
 // url_launcher 패키지가 필요합니다 (pubspec.yaml에 추가 필요)
 // import 'package:url_launcher/url_launcher.dart';
 
@@ -66,8 +68,13 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
   // 인포윈도우 관련 상태
   String? _selectedLabelId;
   bool _showInfoWindow = false;
-  // 인포윈도우의 위치를 조절하기 위한 오프셋
   double _infoWindowTopOffset = 150;
+
+  // 위치 추적 관련 변수
+  String _userLocationLabelId = 'user_location_marker';
+  StreamSubscription<Position>? _positionStreamSubscription;
+  bool _isLocationTracking = false;
+  Position? _currentPosition;
 
   @override
   void initState() {
@@ -76,10 +83,20 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
     _prepareRestaurantData(); // 모의 가게 데이터 준비
 
     // 라벨 클릭 이벤트 리스너 설정
-    // 주의: 실제 구현에서는 Native<->Flutter 통신 채널을 통해 설정해야 함
-    // 아래 코드는 KakaoMapPlatform 클래스에 라벨 클릭 콜백을 설정하는 메서드가 있다고 가정
-    // 실제 구현 시에는 해당 메서드를 구현해야 함
     _setupLabelClickListener();
+
+    // 지도 생성 후 현재 위치 표시
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_mapInitialized) {
+        _moveToCurrentLocation();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _stopLocationTracking(); // 위치 추적 중지
+    super.dispose();
   }
 
   // 라벨 클릭 리스너 설정 메서드
@@ -206,6 +223,178 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
   }
   */
 
+  // 현재 위치 가져오기
+  Future<Position?> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // 위치 서비스가 활성화되어 있는지 확인
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // 위치 서비스가 비활성화되어 있으면 사용자에게 알림
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('위치 서비스가 비활성화되어 있습니다. 설정에서 활성화해주세요.')),
+      );
+      return null;
+    }
+
+    // 권한 체크
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('위치 권한이 거부되었습니다.')));
+        return null;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('위치 권한이 영구적으로 거부되었습니다. 설정에서 권한을 허용해주세요.')),
+      );
+      return null;
+    }
+
+    // 현재 위치 가져오기
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      _currentPosition = position;
+      return position;
+    } catch (e) {
+      print('위치 가져오기 오류: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('현재 위치를 가져오는데 실패했습니다.')));
+      return null;
+    }
+  }
+
+  // 현재 위치 마커 추가
+  Future<void> _addUserLocationMarker(double latitude, double longitude) async {
+    try {
+      final mapProvider = Provider.of<MapProvider>(context, listen: false);
+      bool markerExists = mapProvider.labels.any(
+        (label) => label.id == _userLocationLabelId,
+      );
+
+      // Provider에서만 제거 (이미 있는 경우)
+      if (markerExists) {
+        mapProvider.removeLabel(_userLocationLabelId);
+      }
+
+      // 사용자 위치 마커 추가
+      await KakaoMapPlatform.addLabel(
+        labelId: _userLocationLabelId,
+        latitude: latitude,
+        longitude: longitude,
+        text: null, // 텍스트 없음
+        imageAsset: 'swallow', // 현재 위치 마커 이미지 - 네잎클로버 이미지 이름에 맞게 변경
+        textSize: null,
+        alpha: 1.0,
+        rotation: 0.0,
+        zIndex: 10, // 다른 마커보다 위에 표시되도록 높은 zIndex 설정
+        isClickable: false, // 클릭 불가능하게 설정
+      );
+
+      // Provider에도 추가
+      mapProvider.addLabel(
+        id: _userLocationLabelId,
+        latitude: latitude,
+        longitude: longitude,
+        text: null,
+        imageAsset: 'swallow', // 네잎클로버 이미지 이름에 맞게 변경
+        textSize: null,
+        alpha: 1.0,
+        rotation: 0.0,
+        zIndex: 10,
+        isClickable: false,
+      );
+
+      print('사용자 위치 마커 추가됨: ($latitude, $longitude)');
+    } catch (e) {
+      print('사용자 위치 마커 추가 오류: $e');
+    }
+  }
+
+  // 위치 추적 시작
+  void _startLocationTracking() {
+    if (_isLocationTracking) return;
+
+    _positionStreamSubscription = Geolocator.getPositionStream(
+      locationSettings: LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10, // 10미터마다 업데이트
+      ),
+    ).listen((Position position) {
+      // 위치가 업데이트될 때마다 호출됨
+      _updateUserLocationMarker(position.latitude, position.longitude);
+      _currentPosition = position;
+    });
+
+    _isLocationTracking = true;
+    print('위치 추적 시작됨');
+  }
+
+  // 위치 추적 중지
+  void _stopLocationTracking() {
+    _positionStreamSubscription?.cancel();
+    _positionStreamSubscription = null;
+    _isLocationTracking = false;
+    print('위치 추적 중지됨');
+  }
+
+  // 사용자 위치 마커 업데이트 (수정)
+  Future<void> _updateUserLocationMarker(
+    double latitude,
+    double longitude,
+  ) async {
+    try {
+      // 위치 마커 업데이트
+      await KakaoMapPlatform.updateLabelPosition(
+        labelId: _userLocationLabelId,
+        latitude: latitude,
+        longitude: longitude,
+      );
+
+      // Provider 업데이트
+      final mapProvider = Provider.of<MapProvider>(context, listen: false);
+      mapProvider.updateLabelPosition(
+        _userLocationLabelId,
+        latitude,
+        longitude,
+      );
+
+      print('사용자 위치 마커 업데이트됨: ($latitude, $longitude)');
+    } catch (e) {
+      print('사용자 위치 마커 업데이트 오류: $e');
+    }
+  }
+
+  // 현재 위치로 이동 (수정)
+  Future<void> _moveToCurrentLocation() async {
+    Position? position = await _getCurrentLocation();
+    if (position != null) {
+      // 사용자 위치로 지도 이동
+      await KakaoMapPlatform.setMapCenter(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        zoomLevel: 16, // 적절한 줌 레벨
+      );
+
+      // 사용자 위치 마커 표시
+      await _addUserLocationMarker(position.latitude, position.longitude);
+
+      // 위치 추적 시작 (아직 시작되지 않았다면)
+      if (!_isLocationTracking) {
+        _startLocationTracking();
+      }
+    }
+  }
+
   // 라벨 클릭 처리 메서드
   void _handleLabelClick(String labelId) {
     print('라벨 클릭 처리: $labelId');
@@ -253,7 +442,7 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
                 topRight: Radius.circular(20),
               ),
             ),
-            child: RestaurantBottomSheet(restaurantInfo: restaurant),
+            child: RestaurantBottomSheet(restaurantInfo: restaurant, screenState: this,),
           ),
         );
       },
@@ -392,6 +581,14 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
     }
   }
 
+  // 인포윈도우 닫기 메서드 (바텀 시트에서는 필요 없지만 호환성을 위해 유지)
+  void _closeInfoWindow() {
+    setState(() {
+      _showInfoWindow = false;
+      _selectedLabelId = null;
+    });
+  }
+
   // 라벨 모두 제거
   Future<void> _clearAllLabels() async {
     try {
@@ -402,12 +599,7 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
       mapProvider.clearLabels();
 
       // 인포윈도우 닫기
-      void _closeInfoWindow() {
-        setState(() {
-          _showInfoWindow = false;
-          _selectedLabelId = null;
-        });
-      }
+      _closeInfoWindow();
 
       // 성공 메시지
       if (mounted) {
@@ -417,6 +609,95 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
       }
     } catch (e) {
       print('라벨 제거 오류: $e');
+    }
+  }
+
+  // 테스트용 경로 데이터 생성
+  List<Map<String, double>> _generateTestRoute(
+    double startLat,
+    double startLng,
+    double endLat,
+    double endLng,
+  ) {
+    List<Map<String, double>> route = [];
+
+    // 시작점
+    route.add({'latitude': startLat, 'longitude': startLng});
+
+    // 중간점 (단순히 직선의 중간점들을 생성)
+    final int steps = 10; // 중간점 개수
+    for (int i = 1; i < steps; i++) {
+      final double ratio = i / steps;
+      final double lat = startLat + (endLat - startLat) * ratio;
+      final double lng = startLng + (endLng - startLng) * ratio;
+
+      // 약간의 랜덤성 추가 (직선이 아닌 곡선처럼 보이게)
+      final double latJitter = (math.Random().nextDouble() - 0.5) * 0.001;
+      final double lngJitter = (math.Random().nextDouble() - 0.5) * 0.001;
+
+      route.add({'latitude': lat + latJitter, 'longitude': lng + lngJitter});
+    }
+
+    // 종료점
+    route.add({'latitude': endLat, 'longitude': endLng});
+
+    return route;
+  }
+
+  // 경로 그리기 메서드 - _generateTestRoute 메서드 아래에 추가
+  Future<void> _drawRouteToRestaurant(String restaurantId) async {
+    // 현재 위치 확인
+    Position? position = await _getCurrentLocation();
+    if (position == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('현재 위치를 가져올 수 없습니다')));
+      return;
+    }
+
+    // 선택한 가게 정보 확인
+    final restaurant = _restaurantData[restaurantId];
+    if (restaurant == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('가게 정보를 찾을 수 없습니다')));
+      return;
+    }
+
+    try {
+      // 기존 경로 제거
+      await KakaoMapPlatform.clearRoutes();
+
+      // 경로 데이터 생성 (실제로는 API에서 받아야 함)
+      final route = _generateTestRoute(
+        position.latitude,
+        position.longitude,
+        restaurant.latitude,
+        restaurant.longitude,
+      );
+
+      // 경로 그리기
+      final result = await KakaoMapPlatform.drawRoute(
+        routeId: 'route_to_${restaurantId}',
+        coordinates: route,
+        lineColor: 0xFF3395FF, // 파란색
+        lineWidth: 5.0,
+        showArrow: true,
+      );
+
+      if (result) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${restaurant.name}까지의 경로를 표시합니다')),
+        );
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('경로 그리기에 실패했습니다')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('경로 그리기 오류: $e')));
     }
   }
 
@@ -456,6 +737,8 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
                 setState(() {
                   _mapInitialized = true;
                 });
+                // 지도가 생성되면 현재 위치로 이동
+                _moveToCurrentLocation();
               },
             ),
           ),
@@ -483,6 +766,19 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
                 ),
               ),
             ),
+
+          // 현재 위치 버튼
+          Positioned(
+            right: 16,
+            bottom: 120, // 컨트롤 패널 위에 위치하도록 조정
+            child: FloatingActionButton(
+              heroTag: 'current_location',
+              onPressed: _moveToCurrentLocation,
+              backgroundColor: Colors.white,
+              mini: true,
+              child: Icon(Icons.my_location, color: Colors.blue),
+            ),
+          ),
 
           // 하단 컨트롤 패널
           Positioned(
@@ -570,6 +866,40 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
                     style: TextStyle(fontSize: 14, color: AppColors.mediumGray),
                   ),
 
+                  // 위치 트래킹 컨트롤
+                  SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton.icon(
+                        icon: Icon(
+                          _isLocationTracking
+                              ? Icons.location_off
+                              : Icons.location_on,
+                        ),
+                        label: Text(
+                          _isLocationTracking ? '위치 추적 중지' : '위치 추적 시작',
+                        ),
+                        onPressed:
+                            _mapInitialized
+                                ? () {
+                                  if (_isLocationTracking) {
+                                    _stopLocationTracking();
+                                  } else {
+                                    _startLocationTracking();
+                                    _moveToCurrentLocation();
+                                  }
+                                  setState(() {}); // UI 업데이트
+                                }
+                                : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              _isLocationTracking ? Colors.red : Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+
                   // 테스트용 인포윈도우 버튼 (실제 구현 시 제거 필요)
                   // 이 부분은 테스트를 위한 것으로, 실제 구현 시에는 네이티브에서 라벨 클릭 이벤트를 받아서 처리해야 함
                   SizedBox(height: 12),
@@ -619,9 +949,13 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
 // 바텀 시트 위젯
 class RestaurantBottomSheet extends StatelessWidget {
   final RestaurantInfo restaurantInfo;
+  final _LabelExampleScreenState screenState;
 
-  const RestaurantBottomSheet({Key? key, required this.restaurantInfo})
-    : super(key: key);
+  const RestaurantBottomSheet({
+    Key? key,
+    required this.restaurantInfo,
+    required this.screenState,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -665,10 +999,9 @@ class RestaurantBottomSheet extends StatelessWidget {
                 '길찾기',
                 Colors.blue,
                 () {
-                  // 길찾기 기능 구현
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('길찾기 기능은 실제 구현 시 추가 예정')),
-                  );
+                // 길찾기 기능 호출
+                Navigator.pop(context); // 바텀 시트 닫기
+                screenState._drawRouteToRestaurant(restaurantInfo.id);
                 },
               ),
               _buildActionButton(

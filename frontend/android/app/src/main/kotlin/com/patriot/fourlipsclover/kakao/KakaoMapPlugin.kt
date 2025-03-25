@@ -21,6 +21,13 @@ import android.util.Log
 import com.patriot.fourlipsclover.R
 import android.os.Handler
 import android.os.Looper
+import io.flutter.plugin.common.MethodChannel
+import com.kakao.vectormap.route.RouteLine
+import com.kakao.vectormap.route.RouteLineLayer
+import com.kakao.vectormap.route.RouteLineManager
+import com.kakao.vectormap.route.RouteLineOptions
+import com.kakao.vectormap.route.RouteLineSegment
+import com.kakao.vectormap.route.RouteLineStyle
 
 class KakaoMapPlugin(private val context: Context) {
     
@@ -39,6 +46,11 @@ class KakaoMapPlugin(private val context: Context) {
     private var labelManager: LabelManager? = null
     private var labelLayer: LabelLayer? = null
     private val labels = mutableMapOf<String, Label>()
+
+    //루트라인
+    private var routeLineManager: RouteLineManager? = null
+    private var routeLineLayer: RouteLineLayer? = null
+    private val routeLines = mutableMapOf<String, RouteLine>()
     
     // KakaoMap 등록 및 초기화
     fun registerKakaoMap(map: KakaoMap) {
@@ -50,6 +62,16 @@ class KakaoMapPlugin(private val context: Context) {
         try {
             this.labelManager = map.getLabelManager()
             Log.d("KakaoMapPlugin", "LabelManager 초기화 성공: ${labelManager != null}")
+
+            //루트 라인인
+        try {
+        this.routeLineManager = map.getRouteLineManager()
+        this.routeLineLayer = routeLineManager?.getLayer()
+        Log.d("KakaoMapPlugin", "RouteLineManager 초기화 성공: ${routeLineManager != null}")
+        } catch (e: Exception) {
+            Log.e("KakaoMapPlugin", "RouteLineManager 초기화 실패: ${e.message}")
+            e.printStackTrace()
+        }           
             
             // 커스텀 LabelLayer 생성
             try {
@@ -260,6 +282,7 @@ fun addLabel(
         Log.e("KakaoMapPlugin", "라벨 레이어가 초기화되지 않았습니다")
     }
 }
+
     
     // 라벨 제거
     fun removeLabel(labelId: String) {
@@ -335,6 +358,88 @@ fun addLabel(
             Log.d("KakaoMapPlugin", "텍스트 업데이트할 라벨 없음: $labelId")
         }
     }
+    // 루트라인 
+    fun drawRoute(
+    routeId: String, 
+    points: List<LatLng>,
+    lineColor: Int = Color.BLUE,
+    lineWidth: Float = 5f,
+    showArrow: Boolean = true
+) {
+    Log.d("KakaoMapPlugin", "경로 그리기 시작: $routeId, 포인트 수: ${points.size}")
+    
+    if (routeLineLayer == null) {
+        Log.e("KakaoMapPlugin", "경로 레이어가 초기화되지 않았습니다")
+        return
+    }
+    
+    try {
+        // 기존 경로가 있으면 제거
+        if (routeLines.containsKey(routeId)) {
+            val oldRouteLine = routeLines[routeId]
+            oldRouteLine?.remove()
+            routeLines.remove(routeId)
+        }
+        
+        // 경로 스타일 설정 - 공식 API 문서에 맞게 수정
+        val routeLineStyle = RouteLineStyle.from(lineWidth, lineColor)
+        
+        // 경로 세그먼트 생성
+        val segment = RouteLineSegment.from(points, routeLineStyle)
+        
+        // 경로 옵션 생성
+        val options = RouteLineOptions.from(listOf(segment))
+        
+        // 경로 추가
+        val routeLine = routeLineLayer?.addRouteLine(options)
+        
+        if (routeLine != null) {
+            routeLines[routeId] = routeLine
+            Log.d("KakaoMapPlugin", "경로 그리기 성공: $routeId")
+        } else {
+            Log.e("KakaoMapPlugin", "경로 그리기 실패")
+        }
+    } catch (e: Exception) {
+        Log.e("KakaoMapPlugin", "경로 그리기 오류: ${e.message}")
+        e.printStackTrace()
+    }
+}
+
+// 경로 제거 메서드 - drawRoute 메서드 아래에 추가
+// removeRoute 메서드 추가
+fun removeRoute(routeId: String) {
+    Log.d("KakaoMapPlugin", "경로 제거: $routeId")
+    
+    val routeLine = routeLines[routeId]
+    if (routeLine != null) {
+        try {
+            routeLine.remove()
+            routeLines.remove(routeId)
+            Log.d("KakaoMapPlugin", "경로 제거 성공: $routeId")
+        } catch (e: Exception) {
+            Log.e("KakaoMapPlugin", "경로 제거 실패: ${e.message}")
+            e.printStackTrace()
+        }
+    } else {
+        Log.d("KakaoMapPlugin", "제거할 경로 없음: $routeId")
+    }
+}
+
+// clearRoutes 메서드 추가
+fun clearRoutes() {
+    Log.d("KakaoMapPlugin", "모든 경로 제거")
+    
+    try {
+        for (routeLine in routeLines.values) {
+            routeLine.remove()
+        }
+        routeLines.clear()
+        Log.d("KakaoMapPlugin", "모든 경로 제거 성공")
+    } catch (e: Exception) {
+        Log.e("KakaoMapPlugin", "모든 경로 제거 실패: ${e.message}")
+        e.printStackTrace()
+    }
+}
     
     // 라벨 스타일 업데이트
     fun updateLabelStyle(

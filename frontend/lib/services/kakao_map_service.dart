@@ -291,4 +291,53 @@ static Future<void> updateLabelStyle({
       rethrow;
     }
   }
+
+ /// 경로 그리기
+static Future<bool> drawRoute({
+  required String routeId,
+  required List<Map<String, double>> coordinates,
+  int? lineColor,
+  double? lineWidth,
+  bool? showArrow,
+}) async {
+  try {
+    // lineColor가 int32 범위를 넘어가지 않도록 확인
+    final safeLineColor = lineColor != null ? (lineColor & 0xFFFFFFFF) : null;
+    
+    final bool result = await _channel.invokeMethod<bool>('drawRoute', {
+      'routeId': routeId,
+      'coordinates': coordinates,
+      'lineColor': safeLineColor,
+      'lineWidth': lineWidth,
+      'showArrow': showArrow,
+    }) ?? false;
+    
+    return result;
+  } catch (e) {
+    print('경로 그리기 실패: $e');
+    rethrow;
+  }
+}
+
+/// 경로 제거
+static Future<void> removeRoute(String routeId) async {
+  try {
+    await _channel.invokeMethod<void>('removeRoute', {
+      'routeId': routeId,
+    });
+  } catch (e) {
+    print('경로 제거 실패: $e');
+    rethrow;
+  }
+}
+
+/// 모든 경로 제거
+static Future<void> clearRoutes() async {
+  try {
+    await _channel.invokeMethod<void>('clearRoutes');
+  } catch (e) {
+    print('모든 경로 제거 실패: $e');
+    rethrow;
+  }
+}
 }

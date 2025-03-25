@@ -8,6 +8,8 @@ import androidx.annotation.NonNull
 import android.util.Log
 import com.patriot.fourlipsclover.kakao.KakaoMapViewFactory
 import com.patriot.fourlipsclover.kakao.KakaoMapPlugin
+import android.graphics.Color
+import com.kakao.vectormap.LatLng
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.patriot.fourlipsclover/kakao_map"
@@ -230,6 +232,46 @@ class MainActivity : FlutterActivity() {
                         kakaoMapPlugin.setNightMode(enable)
                         result.success(null)
                     }
+                    // 루트라인 
+                    "drawRoute" -> {
+                    Log.d("KakaoMap", "drawRoute 메서드 호출됨")
+                    try {
+                        val routeId = call.argument<String>("routeId")!!
+                        val coordinates = call.argument<List<Map<String, Double>>>("coordinates")!!
+                        
+                        // 여기가 문제입니다. 플러터에서 Int 대신 Long으로 값이 전달됨
+                        // val lineColor = call.argument<Int>("lineColor") ?: Color.BLUE
+                        // 수정된 코드:
+                        val lineColorValue = call.argument<Number>("lineColor")
+                        val lineColor = lineColorValue?.toInt() ?: Color.BLUE
+                        
+                        val lineWidth = call.argument<Double>("lineWidth")?.toFloat() ?: 5f
+                        val showArrow = call.argument<Boolean>("showArrow") ?: true
+                        
+                        // 좌표 리스트 변환
+                        val points = coordinates.map { coordinate ->
+                            LatLng.from(coordinate["latitude"]!!, coordinate["longitude"]!!)
+                        }
+                        
+                        kakaoMapPlugin.drawRoute(routeId, points, lineColor, lineWidth, showArrow)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        Log.e("KakaoMap", "경로 그리기 오류: ${e.message}")
+                        e.printStackTrace() // 스택 트레이스 출력 추가
+                        result.error("ROUTE_ERROR", "경로 그리기 실패: ${e.message}", null)
+                    }
+                }
+                "removeRoute" -> {
+                    Log.d("KakaoMap", "removeRoute 메서드 호출됨")
+                    val routeId = call.argument<String>("routeId")!!
+                    kakaoMapPlugin.removeRoute(routeId)
+                    result.success(null)
+                }
+                "clearRoutes" -> {
+                    Log.d("KakaoMap", "clearRoutes 메서드 호출됨")
+                    kakaoMapPlugin.clearRoutes()
+                    result.success(null)
+                }
                     else -> {
                         Log.d("KakaoMap", "미구현 메서드 호출: ${call.method}")
                         result.notImplemented()
