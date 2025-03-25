@@ -37,7 +37,7 @@ class _CloverProfileSectionState extends State<CloverProfileSection> {
                   const Icon(Icons.thumb_up, color: AppColors.primary),
                   const SizedBox(width: 8),
                   Text(
-                    widget.profile.completedJourneys > 5 ? '새내기' : '현지마스터',
+                     '${widget.profile.badgeUrl}',
                     style: TextStyle(color: AppColors.darkGray, fontSize: 18),
                   ),
                 ],
@@ -84,7 +84,7 @@ class _CloverProfileSectionState extends State<CloverProfileSection> {
                             MaterialPageRoute(
                               builder:
                                   (context) => UserAuthorizationScreen(
-                                    memberId: widget.profile.memberId,
+                                    memberId: widget.profile.userId,
                                   ),
                             ),
                           );
