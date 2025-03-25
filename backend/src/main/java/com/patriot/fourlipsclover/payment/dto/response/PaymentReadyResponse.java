@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 public class PaymentReadyResponse {
 
 	private String tid;
+	private String orderId;
 	private String nextRedirect;
 	private String nextRedirectMobileUrl;
 	private String androidAppScheme;

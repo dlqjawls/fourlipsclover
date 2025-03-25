@@ -18,11 +18,11 @@ public class PaymentController {
 	private final PaymentService paymentService;
 
 	@PostMapping("/ready")
-	public ResponseEntity<PaymentReadyResponse> ready(@RequestParam String orderId,
+	public ResponseEntity<PaymentReadyResponse> ready(
 			@RequestParam String userId, @RequestParam String itemName,
 			@RequestParam String quantity, @RequestParam String totalAmount) {
 
-		PaymentReadyResponse response = paymentService.ready(orderId, userId, itemName, quantity,
+		PaymentReadyResponse response = paymentService.ready(userId, itemName, quantity,
 				totalAmount);
 		return ResponseEntity.ok(response);
 	}
@@ -39,6 +39,4 @@ public class PaymentController {
 				amount);
 		return ResponseEntity.ok(response);
 	}
-
-
 }
