@@ -91,7 +91,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // 현지인 인증 생성
-  Future<void> createLocalCertification(int memberId) async {
+  Future<void> createLocalCertification(String memberId) async {
     if (_currentPosition == null) {
       updateState(message: '위치 정보가 필요합니다.');
       return;
