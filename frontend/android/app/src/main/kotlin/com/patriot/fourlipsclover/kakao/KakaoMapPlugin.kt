@@ -28,6 +28,8 @@ import com.kakao.vectormap.route.RouteLineManager
 import com.kakao.vectormap.route.RouteLineOptions
 import com.kakao.vectormap.route.RouteLineSegment
 import com.kakao.vectormap.route.RouteLineStyle
+import com.kakao.vectormap.route.RouteLineStyles
+import com.kakao.vectormap.route.RouteLinePattern
 
 class KakaoMapPlugin(private val context: Context) {
     
@@ -358,8 +360,10 @@ fun addLabel(
             Log.d("KakaoMapPlugin", "텍스트 업데이트할 라벨 없음: $labelId")
         }
     }
-    // 루트라인 
-    fun drawRoute(
+
+// 루트라인 
+// 루트라인 
+fun drawRoute(
     routeId: String, 
     points: List<LatLng>,
     lineColor: Int = Color.BLUE,
@@ -381,11 +385,53 @@ fun addLabel(
             routeLines.remove(routeId)
         }
         
-        // 경로 스타일 설정 - 공식 API 문서에 맞게 수정
-        val routeLineStyle = RouteLineStyle.from(lineWidth, lineColor)
+        // 초록색 라인으로 설정 (색상 #189E1E)
+        val greenColor = Color.parseColor("#189E1E")
+        val strokeWidth = 4f
         
-        // 경로 세그먼트 생성
-        val segment = RouteLineSegment.from(points, routeLineStyle)
+        // 화살표 패턴 생성 - 줌 레벨에 따라 간격 조정
+        val arrowPattern1 = if (showArrow) {
+            RouteLinePattern.from(R.drawable.route_arrow, 120f)  // 낮은 줌에서는 간격 넓게
+        } else null
+        
+        val arrowPattern2 = if (showArrow) {
+            RouteLinePattern.from(R.drawable.route_arrow, 80f)   // 중간 줌에서는 중간 간격
+        } else null
+        
+        val arrowPattern3 = if (showArrow) {
+            RouteLinePattern.from(R.drawable.route_arrow, 50f)   // 높은 줌에서는 간격 좁게
+        } else null
+        
+        // 줌 레벨별 스타일 설정
+        val style1 = if (arrowPattern1 != null) {
+            RouteLineStyle.from(25f, greenColor, strokeWidth, Color.WHITE, arrowPattern1)
+                .setZoomLevel(10)  // 줌 레벨 10부터 적용 (멀리서 볼 때 굵게)
+        } else {
+            RouteLineStyle.from(25f, greenColor, strokeWidth, Color.WHITE)
+                .setZoomLevel(10)
+        }
+            
+        val style2 = if (arrowPattern2 != null) {
+            RouteLineStyle.from(17f, greenColor, strokeWidth, Color.WHITE, arrowPattern2)
+                .setZoomLevel(14)  // 줌 레벨 14부터 적용 (중간 거리)
+        } else {
+            RouteLineStyle.from(17f, greenColor, strokeWidth, Color.WHITE)
+                .setZoomLevel(14)
+        }
+            
+        val style3 = if (arrowPattern3 != null) {
+            RouteLineStyle.from(15f, greenColor, strokeWidth, Color.WHITE, arrowPattern3)
+                .setZoomLevel(17)  // 줌 레벨 17부터 적용 (가까이서 볼 때 얇게)
+        } else {
+            RouteLineStyle.from(15f, greenColor, strokeWidth, Color.WHITE)
+                .setZoomLevel(17)
+        }
+        
+        // 여러 스타일을 하나로 묶기
+        val routeLineStyles = RouteLineStyles.from(style1, style2, style3)
+        
+        // 경로 세그먼트 생성 (스타일 모음 적용)
+        val segment = RouteLineSegment.from(points, routeLineStyles)
         
         // 경로 옵션 생성
         val options = RouteLineOptions.from(listOf(segment))
