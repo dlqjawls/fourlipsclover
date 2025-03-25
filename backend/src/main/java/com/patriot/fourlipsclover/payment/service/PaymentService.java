@@ -41,16 +41,15 @@ public class PaymentService {
 		params.add("item_name", itemName);
 		params.add("quantity", quantity);
 		params.add("total_amount", totalAmount);
-		// 실제 결제 완료 후 호출할 URL (도메인과 경로는 본인 환경에 맞게 설정)
-		params.add("approval_url", "https://your-backend.com//api/payment/approve");
-		params.add("cancel_url", "https://your-backend.com/api/payment/cancel");
-		params.add("fail_url", "https://your-backend.com//api/payment/fail");
+		params.add("approval_url", "https://fourlipsclover.duckdns.org//api/payment/approve");
+		params.add("cancel_url", "https:///fourlipsclover.duckdns.org/api/payment/cancel");
+		params.add("fail_url", "https:///fourlipsclover.duckdns.org//api/payment/fail");
 
 		HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(params, headers);
 		ResponseEntity<PaymentReadyResponse> responseEntity = restTemplate.postForEntity(
 				KAKAO_PAY_READY_URL, requestEntity, PaymentReadyResponse.class);
 		PaymentReadyResponse response = responseEntity.getBody();
-		
+
 		response.setOrderId(orderId);
 		return response;
 	}
