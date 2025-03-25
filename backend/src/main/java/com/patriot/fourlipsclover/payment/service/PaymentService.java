@@ -48,8 +48,9 @@ public class PaymentService {
 		ResponseEntity<PaymentReadyResponse> responseEntity = restTemplate.postForEntity(
 				KAKAO_PAY_READY_URL, requestEntity, PaymentReadyResponse.class);
 		PaymentReadyResponse response = responseEntity.getBody();
-
 		response.setOrderId(orderId);
+		System.out.println(response);
+		
 		return response;
 	}
 
