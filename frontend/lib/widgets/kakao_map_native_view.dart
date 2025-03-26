@@ -152,9 +152,6 @@ class _KakaoMapNativeViewState extends State<KakaoMapNativeView> {
       'longitude': longitude,
       'zoomLevel': zoomLevel,
       'showLabels': mapProvider.showLabels,
-      'showBuildings': mapProvider.showBuildings,
-      'showTraffic': mapProvider.showTraffic,
-      'nightMode': mapProvider.nightMode,
     };
 
     return AndroidView(

@@ -226,7 +226,7 @@ static Future<void> updateLabelStyle({
   }
 }
 
-  /// 라벨 가시성 설정
+  /// 라벨 가시성 설정 (쓸지는 모르겠음음)
   static Future<void> setLabelVisibility({
     required String labelId,
     required bool isVisible,
@@ -241,57 +241,6 @@ static Future<void> updateLabelStyle({
       rethrow;
     }
   }
-
-  /// 지도 타입 설정
-  static Future<void> setMapType(int mapType) async {
-    try {
-      await _channel.invokeMethod<void>('setMapType', {'mapType': mapType});
-    } catch (e) {
-      print('지도 타입 설정 실패: $e');
-      rethrow;
-    }
-  }
-
-  /// 지도 레이블 표시 설정
-  static Future<void> setShowMapLabels(bool show) async {
-    try {
-      await _channel.invokeMethod<void>('setShowMapLabels', {'show': show});
-    } catch (e) {
-      print('지도 레이블 표시 설정 실패: $e');
-      rethrow;
-    }
-  }
-
-  /// 건물 표시 설정
-  static Future<void> setShowBuildings(bool show) async {
-    try {
-      await _channel.invokeMethod<void>('setShowBuildings', {'show': show});
-    } catch (e) {
-      print('건물 표시 설정 실패: $e');
-      rethrow;
-    }
-  }
-
-  /// 교통정보 표시 설정
-  static Future<void> setShowTraffic(bool show) async {
-    try {
-      await _channel.invokeMethod<void>('setShowTraffic', {'show': show});
-    } catch (e) {
-      print('교통정보 표시 설정 실패: $e');
-      rethrow;
-    }
-  }
-
-  /// 야간 모드 설정
-  static Future<void> setNightMode(bool enable) async {
-    try {
-      await _channel.invokeMethod<void>('setNightMode', {'enable': enable});
-    } catch (e) {
-      print('야간 모드 설정 실패: $e');
-      rethrow;
-    }
-  }
-
  /// 경로 그리기
 static Future<bool> drawRoute({
   required String routeId,

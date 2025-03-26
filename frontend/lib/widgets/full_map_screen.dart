@@ -38,13 +38,6 @@ class _FullMapScreenState extends State<FullMapScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          // 지도 타입 변경 버튼
-          IconButton(
-            icon: Icon(Icons.layers, color: AppColors.darkGray),
-            onPressed: () {
-              _showMapTypeOptions(context, mapProvider);
-            },
-          ),
           // 라벨 예제 버튼 추가
           IconButton(
             icon: Icon(Icons.location_on, color: AppColors.primary),
@@ -139,49 +132,6 @@ class _FullMapScreenState extends State<FullMapScreen> {
     );
   }
 
-  // 지도 타입 옵션 표시
-  void _showMapTypeOptions(BuildContext context, MapProvider mapProvider) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Container(
-          padding: EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(Icons.map),
-                title: Text('일반 지도'),
-                selected: mapProvider.mapType == MapType.normal,
-                onTap: () {
-                  mapProvider.setMapType(MapType.normal);
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.satellite),
-                title: Text('위성 지도'),
-                selected: mapProvider.mapType == MapType.satellite,
-                onTap: () {
-                  mapProvider.setMapType(MapType.satellite);
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.layers),
-                title: Text('하이브리드'),
-                selected: mapProvider.mapType == MapType.hybrid,
-                onTap: () {
-                  mapProvider.setMapType(MapType.hybrid);
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   // 지도 추가 옵션 표시 - CustomSwitch 사용
   void _showMapOptions(BuildContext context, MapProvider mapProvider) {
@@ -216,90 +166,6 @@ class _FullMapScreenState extends State<FullMapScreen> {
                           value: mapProvider.showLabels,
                           onChanged: (value) {
                             mapProvider.toggleLabels(value);
-                            setState(() {});
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // 건물 표시 옵션 - CustomSwitch 사용
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '건물 표시',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'Anemone_air',
-                            color: AppColors.darkGray,
-                          ),
-                        ),
-                        CustomSwitch(
-                          value: mapProvider.showBuildings,
-                          onChanged: (value) {
-                            mapProvider.toggleBuildings(value);
-                            setState(() {});
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // 교통 정보 옵션 - CustomSwitch 사용
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '교통 정보',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'Anemone_air',
-                            color: AppColors.darkGray,
-                          ),
-                        ),
-                        CustomSwitch(
-                          value: mapProvider.showTraffic,
-                          onChanged: (value) {
-                            mapProvider.toggleTraffic(value);
-                            setState(() {});
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // 야간 모드 옵션 - CustomSwitch 사용
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '야간 모드',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'Anemone_air',
-                            color: AppColors.darkGray,
-                          ),
-                        ),
-                        CustomSwitch(
-                          value: mapProvider.nightMode,
-                          onChanged: (value) {
-                            mapProvider.toggleNightMode(value);
                             setState(() {});
                           },
                         ),

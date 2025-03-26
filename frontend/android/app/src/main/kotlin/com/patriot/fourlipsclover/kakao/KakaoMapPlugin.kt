@@ -48,11 +48,11 @@ class KakaoMapPlugin(private val context: Context) {
     private var labelManager: LabelManager? = null
     private var labelLayer: LabelLayer? = null
     private val labels = mutableMapOf<String, Label>()
-
-    //루트라인
     private var routeLineManager: RouteLineManager? = null
     private var routeLineLayer: RouteLineLayer? = null
     private val routeLines = mutableMapOf<String, RouteLine>()
+    private var handler = Handler(Looper.getMainLooper())
+    private lateinit var methodChannel: MethodChannel
     
     // KakaoMap 등록 및 초기화
     fun registerKakaoMap(map: KakaoMap) {
@@ -65,15 +65,15 @@ class KakaoMapPlugin(private val context: Context) {
             this.labelManager = map.getLabelManager()
             Log.d("KakaoMapPlugin", "LabelManager 초기화 성공: ${labelManager != null}")
 
-            //루트 라인인
-        try {
-        this.routeLineManager = map.getRouteLineManager()
-        this.routeLineLayer = routeLineManager?.getLayer()
-        Log.d("KakaoMapPlugin", "RouteLineManager 초기화 성공: ${routeLineManager != null}")
-        } catch (e: Exception) {
-            Log.e("KakaoMapPlugin", "RouteLineManager 초기화 실패: ${e.message}")
-            e.printStackTrace()
-        }           
+            // RouteLineManager 초기화
+            try {
+                this.routeLineManager = map.getRouteLineManager()
+                this.routeLineLayer = routeLineManager?.getLayer()
+                Log.d("KakaoMapPlugin", "RouteLineManager 초기화 성공: ${routeLineManager != null}")
+            } catch (e: Exception) {
+                Log.e("KakaoMapPlugin", "RouteLineManager 초기화 실패: ${e.message}")
+                e.printStackTrace()
+            }           
             
             // 커스텀 LabelLayer 생성
             try {
@@ -105,7 +105,7 @@ class KakaoMapPlugin(private val context: Context) {
     
     // 지도 중심 이동
     fun setMapCenter(latitude: Double, longitude: Double, zoomLevel: Int) {
-        Log.d("KakaoMapPlugin", "지도 중심 이동@@@@@: lat=$latitude, lng=$longitude, zoom=$zoomLevel")
+        Log.d("KakaoMapPlugin", "지도 중심 이동: lat=$latitude, lng=$longitude, zoom=$zoomLevel")
 
         kakaoMap?.let { map ->
             val position = LatLng.from(latitude, longitude)
@@ -137,13 +137,11 @@ class KakaoMapPlugin(private val context: Context) {
             
             // LabelOptions 생성
             val options = LabelOptions.from(position)
-                .setStyles(markerStyle)  // labelStyle -> markerStyle 로 변경
-                .setClickable(true)      // isClickable -> true 로 변경
+                .setStyles(markerStyle)
+                .setClickable(true)
 
             // 텍스트 설정 (title이 있는 경우)
             if (title != null) {
-                // 새로운 LabelTextBuilder 방식 적용
-                // options.setTexts(title) 대신
                 options.setTexts(LabelTextBuilder().setTexts(title))
             }
             
@@ -162,129 +160,125 @@ class KakaoMapPlugin(private val context: Context) {
         }
     }
     
-// 라벨 추가 메서드
-fun addLabel(
-    labelId: String, 
-    latitude: Double, 
-    longitude: Double, 
-    text: String? = null,
-    imageAsset: String? = null,
-    textColor: Long? = null,
-    textSize: Float? = null,
-    backgroundColor: Long? = null,
-    alpha: Float = 1.0f,
-    rotation: Float = 0.0f,
-    zIndex: Int = 0,
-    isClickable: Boolean = true,
-    pinType: Boolean = false
-) {
-    Log.d("KakaoMapPlugin", "라벨 추가 시도: id=$labelId, lat=$latitude, lng=$longitude")
-    Log.d("KakaoMapPlugin", "KakaoMap 상태: ${kakaoMap != null}")
-    Log.d("KakaoMapPlugin", "LabelManager 상태: ${labelManager != null}")
-    Log.d("KakaoMapPlugin", "LabelLayer 상태: ${labelLayer != null}")
-    
-    labelLayer?.let { layer ->
-        try {
-            // 이미 존재하는 라벨 ID인 경우 먼저 제거
-            if (labels.containsKey(labelId)) {
-                val oldLabel = labels[labelId]
-                if (oldLabel != null) {
-                    oldLabel.remove()
-                    labels.remove(labelId)
-                }
-            }
-            
-            val position = LatLng.from(latitude, longitude)
-            
-            // 기본 이미지 리소스 ID
-            var resourceId = android.R.drawable.ic_menu_mylocation
-            
-            // 이미지 리소스 처리 부분 수정
-            if (imageAsset != null) {
-                Log.d("KakaoMapPlugin", "이미지 에셋 검색 시도: $imageAsset")
-                
-                // 이미지 매핑 - 특정 이미지 이름 변환
-                val mappedImageAsset = when(imageAsset) {
-                    "svg_clover" -> "logo"
-                    else -> imageAsset
+    // 라벨 추가
+    fun addLabel(
+        labelId: String, 
+        latitude: Double, 
+        longitude: Double, 
+        text: String? = null,
+        imageAsset: String? = null,
+        textColor: Long? = null,
+        textSize: Float? = null,
+        backgroundColor: Long? = null,
+        alpha: Float = 1.0f,
+        rotation: Float = 0.0f,
+        zIndex: Int = 0,
+        isClickable: Boolean = true,
+        pinType: Boolean = false
+    ) {
+        Log.d("KakaoMapPlugin", "라벨 추가 시도: id=$labelId, lat=$latitude, lng=$longitude")
+        Log.d("KakaoMapPlugin", "KakaoMap 상태: ${kakaoMap != null}")
+        Log.d("KakaoMapPlugin", "LabelManager 상태: ${labelManager != null}")
+        Log.d("KakaoMapPlugin", "LabelLayer 상태: ${labelLayer != null}")
+        
+        labelLayer?.let { layer ->
+            try {
+                // 이미 존재하는 라벨 ID인 경우 먼저 제거
+                if (labels.containsKey(labelId)) {
+                    val oldLabel = labels[labelId]
+                    if (oldLabel != null) {
+                        oldLabel.remove()
+                        labels.remove(labelId)
+                    }
                 }
                 
-                // 변환된 이름으로 리소스 찾기
-                val customResourceId = context.resources.getIdentifier(
-                    mappedImageAsset, 
-                    "drawable", 
-                    context.packageName
-                )
+                val position = LatLng.from(latitude, longitude)
                 
-                if (customResourceId != 0) {
-                    resourceId = customResourceId
-                    Log.d("KakaoMapPlugin", "이미지 리소스 찾음: $mappedImageAsset ($customResourceId)")
+                // 기본 이미지 리소스 ID
+                var resourceId = android.R.drawable.ic_menu_mylocation
+                
+                // 이미지 리소스 처리
+                if (imageAsset != null) {
+                    Log.d("KakaoMapPlugin", "이미지 에셋 검색 시도: $imageAsset")
+                    
+                    // 이미지 매핑 - 특정 이미지 이름 변환
+                    val mappedImageAsset = when(imageAsset) {
+                        "svg_clover" -> "logo"
+                        else -> imageAsset
+                    }
+                    
+                    // 변환된 이름으로 리소스 찾기
+                    val customResourceId = context.resources.getIdentifier(
+                        mappedImageAsset, 
+                        "drawable", 
+                        context.packageName
+                    )
+                    
+                    if (customResourceId != 0) {
+                        resourceId = customResourceId
+                        Log.d("KakaoMapPlugin", "이미지 리소스 찾음: $mappedImageAsset ($customResourceId)")
+                    } else {
+                        Log.e("KakaoMapPlugin", "이미지 리소스 찾을 수 없음: $mappedImageAsset")
+                        resourceId = android.R.drawable.ic_menu_mylocation
+                    }
+                }
+                
+                // LabelStyle 생성
+                val labelStyle = LabelStyle.from(resourceId)
+                
+                // 텍스트 스타일 설정
+                if (textSize != null) {
+                    val color = textColor?.toInt() ?: Color.BLACK
+                    
+                    val textStyle = LabelTextStyle.from(textSize.toInt(), color)
+                    textStyle.stroke = 3
+                    textStyle.strokeColor = Color.WHITE
+                    labelStyle.setTextStyles(textStyle)
+                    
+                    Log.d("KakaoMapPlugin", "텍스트 스타일 설정: 커스텀 폰트 적용")
+                }
+                
+                // LabelOptions 생성
+                val options = LabelOptions.from(position)
+                    .setStyles(labelStyle)
+                    .setClickable(isClickable)
+                
+                // 텍스트가 있으면 설정
+                if (text != null) {
+                    try {
+                        options.setTexts(LabelTextBuilder().setTexts(text))
+                        Log.d("KakaoMapPlugin", "라벨 텍스트 설정: \"$text\"")
+                    } catch (e: Exception) {
+                        Log.e("KakaoMapPlugin", "텍스트 설정 오류: ${e.message}")
+                        e.printStackTrace()
+                    }
+                }
+                
+                Log.d("KakaoMapPlugin", "라벨 옵션 생성 완료")
+                
+                // 라벨 생성 및 등록
+                val label = layer.addLabel(options)
+                
+                if (label != null) {
+                    // 회전 적용 (필요시)
+                    if (rotation != 0.0f) {
+                        label.rotateTo(rotation)
+                    }
+                    
+                    labels[labelId] = label
+                    Log.d("KakaoMapPlugin", "라벨 추가 성공: $labelId, 위치: ${label.getPosition()}")
                 } else {
-                    Log.e("KakaoMapPlugin", "이미지 리소스 찾을 수 없음: $mappedImageAsset")
-                    // 오류 시 기본 리소스 사용
-                    resourceId = android.R.drawable.ic_menu_mylocation
-                }
-            }
-            
-            // LabelStyle 생성
-            val labelStyle = LabelStyle.from(resourceId)
-            
-            // 텍스트 스타일 설정
-            if (textSize != null) {
-                val color = textColor?.toInt() ?: Color.BLACK
-                
-                // 방법 1: 기본 스타일 생성 후 폰트 직접 설정
-                val textStyle = LabelTextStyle.from(textSize.toInt(), color)
-                textStyle.stroke = 3
-                textStyle.strokeColor = Color.WHITE
-                labelStyle.setTextStyles(textStyle)
-                
-                Log.d("KakaoMapPlugin", "텍스트 스타일 설정: 커스텀 폰트 적용")
-            }
-            
-            // LabelOptions 생성
-            val options = LabelOptions.from(position)
-                .setStyles(labelStyle)
-                .setClickable(isClickable)
-            
-            // 텍스트가 있으면 설정
-            if (text != null) {
-                try {
-                    // LabelTextBuilder를 사용한 텍스트 설정
-                    options.setTexts(LabelTextBuilder().setTexts(text))
-                    Log.d("KakaoMapPlugin", "라벨 텍스트 설정: \"$text\"")
-                } catch (e: Exception) {
-                    Log.e("KakaoMapPlugin", "텍스트 설정 오류: ${e.message}")
-                    e.printStackTrace()
-                }
-            }
-            
-            Log.d("KakaoMapPlugin", "라벨 옵션 생성 완료")
-            
-            // 라벨 생성 및 등록
-            val label = layer.addLabel(options)
-            
-            if (label != null) {
-                // 회전 적용 (필요시)
-                if (rotation != 0.0f) {
-                    label.rotateTo(rotation)
+                    Log.e("KakaoMapPlugin", "라벨 추가 실패: 라벨 생성 실패")
                 }
                 
-                labels[labelId] = label
-                Log.d("KakaoMapPlugin", "라벨 추가 성공: $labelId, 위치: ${label.getPosition()}")
-            } else {
-                Log.e("KakaoMapPlugin", "라벨 추가 실패: 라벨 생성 실패")
+            } catch (e: Exception) {
+                Log.e("KakaoMapPlugin", "라벨 추가 예외 발생: ${e.message}")
+                e.printStackTrace()
             }
-            
-        } catch (e: Exception) {
-            Log.e("KakaoMapPlugin", "라벨 추가 예외 발생: ${e.message}")
-            e.printStackTrace()
+        } ?: run {
+            Log.e("KakaoMapPlugin", "라벨 레이어가 초기화되지 않았습니다")
         }
-    } ?: run {
-        Log.e("KakaoMapPlugin", "라벨 레이어가 초기화되지 않았습니다")
     }
-}
-
     
     // 라벨 제거
     fun removeLabel(labelId: String) {
@@ -293,7 +287,7 @@ fun addLabel(
         val label = labels[labelId]
         if (label != null) {
             try {
-                label.remove() // Label 클래스의 remove() 메서드 사용
+                label.remove()
                 labels.remove(labelId)
                 Log.d("KakaoMapPlugin", "라벨 제거 성공: $labelId")
             } catch (e: Exception) {
@@ -312,7 +306,7 @@ fun addLabel(
         try {
             // 각 라벨 제거
             for (label in labels.values) {
-                label.remove() // Label 클래스의 remove() 메서드 사용
+                label.remove()
             }
             
             // 맵 초기화
@@ -332,7 +326,7 @@ fun addLabel(
         if (label != null) {
             try {
                 val position = LatLng.from(latitude, longitude)
-                label.moveTo(position) // Label 클래스의 moveTo() 메서드 사용
+                label.moveTo(position)
                 Log.d("KakaoMapPlugin", "라벨 위치 업데이트 성공: $labelId")
             } catch (e: Exception) {
                 Log.e("KakaoMapPlugin", "라벨 위치 업데이트 실패: ${e.message}")
@@ -350,7 +344,7 @@ fun addLabel(
         val label = labels[labelId]
         if (label != null) {
             try {
-                // label.changeText(text) // Label 클래스의 changeText() 메서드 사용
+                // label.changeText(text) // 텍스트 변경 메서드 구현 필요
                 Log.d("KakaoMapPlugin", "라벨 텍스트 업데이트 성공: $labelId")
             } catch (e: Exception) {
                 Log.e("KakaoMapPlugin", "라벨 텍스트 업데이트 실패: ${e.message}")
@@ -360,132 +354,130 @@ fun addLabel(
             Log.d("KakaoMapPlugin", "텍스트 업데이트할 라벨 없음: $labelId")
         }
     }
-
-// 루트라인 
-// 루트라인 
-fun drawRoute(
-    routeId: String, 
-    points: List<LatLng>,
-    lineColor: Int = Color.BLUE,
-    lineWidth: Float = 5f,
-    showArrow: Boolean = true
-) {
-    Log.d("KakaoMapPlugin", "경로 그리기 시작: $routeId, 포인트 수: ${points.size}")
     
-    if (routeLineLayer == null) {
-        Log.e("KakaoMapPlugin", "경로 레이어가 초기화되지 않았습니다")
-        return
-    }
-    
-    try {
-        // 기존 경로가 있으면 제거
-        if (routeLines.containsKey(routeId)) {
-            val oldRouteLine = routeLines[routeId]
-            oldRouteLine?.remove()
-            routeLines.remove(routeId)
+    // 경로 그리기
+    fun drawRoute(
+        routeId: String, 
+        points: List<LatLng>,
+        lineColor: Int = Color.BLUE,
+        lineWidth: Float = 5f,
+        showArrow: Boolean = true
+    ) {
+        Log.d("KakaoMapPlugin", "경로 그리기 시작: $routeId, 포인트 수: ${points.size}")
+        
+        if (routeLineLayer == null) {
+            Log.e("KakaoMapPlugin", "경로 레이어가 초기화되지 않았습니다")
+            return
         }
         
-        // 초록색 라인으로 설정 (색상 #189E1E)
-        val greenColor = Color.parseColor("#189E1E")
-        val strokeWidth = 4f
-        
-        // 화살표 패턴 생성 - 줌 레벨에 따라 간격 조정
-        val arrowPattern1 = if (showArrow) {
-            RouteLinePattern.from(R.drawable.route_arrow, 120f)  // 낮은 줌에서는 간격 넓게
-        } else null
-        
-        val arrowPattern2 = if (showArrow) {
-            RouteLinePattern.from(R.drawable.route_arrow, 80f)   // 중간 줌에서는 중간 간격
-        } else null
-        
-        val arrowPattern3 = if (showArrow) {
-            RouteLinePattern.from(R.drawable.route_arrow, 50f)   // 높은 줌에서는 간격 좁게
-        } else null
-        
-        // 줌 레벨별 스타일 설정
-        val style1 = if (arrowPattern1 != null) {
-            RouteLineStyle.from(25f, greenColor, strokeWidth, Color.WHITE, arrowPattern1)
-                .setZoomLevel(10)  // 줌 레벨 10부터 적용 (멀리서 볼 때 굵게)
-        } else {
-            RouteLineStyle.from(25f, greenColor, strokeWidth, Color.WHITE)
-                .setZoomLevel(10)
-        }
-            
-        val style2 = if (arrowPattern2 != null) {
-            RouteLineStyle.from(17f, greenColor, strokeWidth, Color.WHITE, arrowPattern2)
-                .setZoomLevel(14)  // 줌 레벨 14부터 적용 (중간 거리)
-        } else {
-            RouteLineStyle.from(17f, greenColor, strokeWidth, Color.WHITE)
-                .setZoomLevel(14)
-        }
-            
-        val style3 = if (arrowPattern3 != null) {
-            RouteLineStyle.from(15f, greenColor, strokeWidth, Color.WHITE, arrowPattern3)
-                .setZoomLevel(17)  // 줌 레벨 17부터 적용 (가까이서 볼 때 얇게)
-        } else {
-            RouteLineStyle.from(15f, greenColor, strokeWidth, Color.WHITE)
-                .setZoomLevel(17)
-        }
-        
-        // 여러 스타일을 하나로 묶기
-        val routeLineStyles = RouteLineStyles.from(style1, style2, style3)
-        
-        // 경로 세그먼트 생성 (스타일 모음 적용)
-        val segment = RouteLineSegment.from(points, routeLineStyles)
-        
-        // 경로 옵션 생성
-        val options = RouteLineOptions.from(listOf(segment))
-        
-        // 경로 추가
-        val routeLine = routeLineLayer?.addRouteLine(options)
-        
-        if (routeLine != null) {
-            routeLines[routeId] = routeLine
-            Log.d("KakaoMapPlugin", "경로 그리기 성공: $routeId")
-        } else {
-            Log.e("KakaoMapPlugin", "경로 그리기 실패")
-        }
-    } catch (e: Exception) {
-        Log.e("KakaoMapPlugin", "경로 그리기 오류: ${e.message}")
-        e.printStackTrace()
-    }
-}
-
-// 경로 제거 메서드 - drawRoute 메서드 아래에 추가
-// removeRoute 메서드 추가
-fun removeRoute(routeId: String) {
-    Log.d("KakaoMapPlugin", "경로 제거: $routeId")
-    
-    val routeLine = routeLines[routeId]
-    if (routeLine != null) {
         try {
-            routeLine.remove()
-            routeLines.remove(routeId)
-            Log.d("KakaoMapPlugin", "경로 제거 성공: $routeId")
+            // 기존 경로가 있으면 제거
+            if (routeLines.containsKey(routeId)) {
+                val oldRouteLine = routeLines[routeId]
+                oldRouteLine?.remove()
+                routeLines.remove(routeId)
+            }
+            
+            // 초록색 라인으로 설정 (색상 #189E1E)
+            val greenColor = Color.parseColor("#189E1E")
+            val strokeWidth = 4f
+            
+            // 화살표 패턴 생성 - 줌 레벨에 따라 간격 조정
+            val arrowPattern1 = if (showArrow) {
+                RouteLinePattern.from(R.drawable.route_arrow, 120f)  // 낮은 줌에서는 간격 넓게
+            } else null
+            
+            val arrowPattern2 = if (showArrow) {
+                RouteLinePattern.from(R.drawable.route_arrow, 80f)   // 중간 줌에서는 중간 간격
+            } else null
+            
+            val arrowPattern3 = if (showArrow) {
+                RouteLinePattern.from(R.drawable.route_arrow, 50f)   // 높은 줌에서는 간격 좁게
+            } else null
+            
+            // 줌 레벨별 스타일 설정
+            val style1 = if (arrowPattern1 != null) {
+                RouteLineStyle.from(25f, greenColor, strokeWidth, Color.WHITE, arrowPattern1)
+                    .setZoomLevel(10)  // 줌 레벨 10부터 적용 (멀리서 볼 때 굵게)
+            } else {
+                RouteLineStyle.from(25f, greenColor, strokeWidth, Color.WHITE)
+                    .setZoomLevel(10)
+            }
+                
+            val style2 = if (arrowPattern2 != null) {
+                RouteLineStyle.from(17f, greenColor, strokeWidth, Color.WHITE, arrowPattern2)
+                    .setZoomLevel(14)  // 줌 레벨 14부터 적용 (중간 거리)
+            } else {
+                RouteLineStyle.from(17f, greenColor, strokeWidth, Color.WHITE)
+                    .setZoomLevel(14)
+            }
+                
+            val style3 = if (arrowPattern3 != null) {
+                RouteLineStyle.from(15f, greenColor, strokeWidth, Color.WHITE, arrowPattern3)
+                    .setZoomLevel(17)  // 줌 레벨 17부터 적용 (가까이서 볼 때 얇게)
+            } else {
+                RouteLineStyle.from(15f, greenColor, strokeWidth, Color.WHITE)
+                    .setZoomLevel(17)
+            }
+            
+            // 여러 스타일을 하나로 묶기
+            val routeLineStyles = RouteLineStyles.from(style1, style2, style3)
+            
+            // 경로 세그먼트 생성 (스타일 모음 적용)
+            val segment = RouteLineSegment.from(points, routeLineStyles)
+            
+            // 경로 옵션 생성
+            val options = RouteLineOptions.from(listOf(segment))
+            
+            // 경로 추가
+            val routeLine = routeLineLayer?.addRouteLine(options)
+            
+            if (routeLine != null) {
+                routeLines[routeId] = routeLine
+                Log.d("KakaoMapPlugin", "경로 그리기 성공: $routeId")
+            } else {
+                Log.e("KakaoMapPlugin", "경로 그리기 실패")
+            }
         } catch (e: Exception) {
-            Log.e("KakaoMapPlugin", "경로 제거 실패: ${e.message}")
+            Log.e("KakaoMapPlugin", "경로 그리기 오류: ${e.message}")
             e.printStackTrace()
         }
-    } else {
-        Log.d("KakaoMapPlugin", "제거할 경로 없음: $routeId")
     }
-}
-
-// clearRoutes 메서드 추가
-fun clearRoutes() {
-    Log.d("KakaoMapPlugin", "모든 경로 제거")
     
-    try {
-        for (routeLine in routeLines.values) {
-            routeLine.remove()
+    // 경로 제거
+    fun removeRoute(routeId: String) {
+        Log.d("KakaoMapPlugin", "경로 제거: $routeId")
+        
+        val routeLine = routeLines[routeId]
+        if (routeLine != null) {
+            try {
+                routeLine.remove()
+                routeLines.remove(routeId)
+                Log.d("KakaoMapPlugin", "경로 제거 성공: $routeId")
+            } catch (e: Exception) {
+                Log.e("KakaoMapPlugin", "경로 제거 실패: ${e.message}")
+                e.printStackTrace()
+            }
+        } else {
+            Log.d("KakaoMapPlugin", "제거할 경로 없음: $routeId")
         }
-        routeLines.clear()
-        Log.d("KakaoMapPlugin", "모든 경로 제거 성공")
-    } catch (e: Exception) {
-        Log.e("KakaoMapPlugin", "모든 경로 제거 실패: ${e.message}")
-        e.printStackTrace()
     }
-}
+    
+    // 모든 경로 제거
+    fun clearRoutes() {
+        Log.d("KakaoMapPlugin", "모든 경로 제거")
+        
+        try {
+            for (routeLine in routeLines.values) {
+                routeLine.remove()
+            }
+            routeLines.clear()
+            Log.d("KakaoMapPlugin", "모든 경로 제거 성공")
+        } catch (e: Exception) {
+            Log.e("KakaoMapPlugin", "모든 경로 제거 실패: ${e.message}")
+            e.printStackTrace()
+        }
+    }
     
     // 라벨 스타일 업데이트
     fun updateLabelStyle(
@@ -535,81 +527,78 @@ fun clearRoutes() {
             Log.d("KakaoMapPlugin", "스타일 업데이트할 라벨 없음: $labelId")
         }
     }
-
-// KakaoMapPlugin.kt에 추가
-private var handler = Handler(Looper.getMainLooper())
-
-private lateinit var methodChannel: MethodChannel
-
-// 메서드 채널 설정 메서드 추가 (KakaoMapPlugin 클래스 내부에)
-fun setMethodChannel(channel: MethodChannel) {
-    this.methodChannel = channel
-}
-
-fun setupLabelClickListener(map: KakaoMap) {
-    map.setOnLabelClickListener { kakaoMap, layer, label ->
-        val clickedLabelId = labels.entries.find { it.value == label }?.key
-        
-        if (clickedLabelId != null) {
-            Log.d("KakaoMapPlugin", "라벨 클릭됨: $clickedLabelId")
+    
+    // 메서드 채널 설정
+    fun setMethodChannel(channel: MethodChannel) {
+        this.methodChannel = channel
+    }
+    
+    // 라벨 클릭 리스너 설정
+    fun setupLabelClickListener(map: KakaoMap) {
+        map.setOnLabelClickListener { kakaoMap, layer, label ->
+            val clickedLabelId = labels.entries.find { it.value == label }?.key
             
-            // Flutter로 이벤트 전송
-            try {
-                val arguments = HashMap<String, Any>()
-                arguments["labelId"] = clickedLabelId
-                methodChannel.invokeMethod("onLabelClick", arguments)
-                Log.d("KakaoMapPlugin", "Flutter로 라벨 클릭 이벤트 전송 성공")
-            } catch (e: Exception) {
-                Log.e("KakaoMapPlugin", "Flutter로 이벤트 전송 실패: ${e.message}")
+            if (clickedLabelId != null) {
+                Log.d("KakaoMapPlugin", "라벨 클릭됨: $clickedLabelId")
+                
+                // Flutter로 이벤트 전송
+                try {
+                    val arguments = HashMap<String, Any>()
+                    arguments["labelId"] = clickedLabelId
+                    methodChannel.invokeMethod("onLabelClick", arguments)
+                    Log.d("KakaoMapPlugin", "Flutter로 라벨 클릭 이벤트 전송 성공")
+                } catch (e: Exception) {
+                    Log.e("KakaoMapPlugin", "Flutter로 이벤트 전송 실패: ${e.message}")
+                }
+                
+                // 펄스 애니메이션 추가
+                addPulseAnimation(label)
+                
+                true // 이벤트 처리 완료
+            } else {
+                false // 이벤트 처리 안함
             }
-            
-            // 펄스 애니메이션 추가
-            addPulseAnimation(label)
-            
-            true // 이벤트 처리 완료
-        } else {
-            false // 이벤트 처리 안함
         }
     }
-}
-
-fun addPulseAnimation(label: Label) {
-    try {
-        // 확대 및 축소 애니메이션 구현
-        val originalScale = 1.0f
-        
-        // 확대 (1.7배)
-        label.scaleTo(2.5f, 2.5f, 400)
-        
-        // 원래 크기로 돌아오기
-        handler.postDelayed({
-            label.scaleTo(originalScale, originalScale, 500)
+    
+    // 펄스 애니메이션 추가
+    fun addPulseAnimation(label: Label) {
+        try {
+            // 확대 및 축소 애니메이션 구현
+            val originalScale = 1.0f
             
-            // 회전 효과 추가 (약간의 흔들림 효과)
-            val currentRotation = label.getRotation()
+            // 확대 (2.5배)
+            label.scaleTo(2.5f, 2.5f, 400)
             
+            // 원래 크기로 돌아오기
             handler.postDelayed({
-                // 오른쪽으로 살짝 회전
-                label.rotateTo(currentRotation + 0.3f, 100)
+                label.scaleTo(originalScale, originalScale, 500)
+                
+                // 회전 효과 추가 (약간의 흔들림 효과)
+                val currentRotation = label.getRotation()
                 
                 handler.postDelayed({
-                    // 왼쪽으로 살짝 회전
-                    label.rotateTo(currentRotation - 0.3f, 100)
+                    // 오른쪽으로 살짝 회전
+                    label.rotateTo(currentRotation + 0.3f, 100)
                     
                     handler.postDelayed({
-                        // 원래 위치로 복귀
-                        label.rotateTo(currentRotation, 100)
+                        // 왼쪽으로 살짝 회전
+                        label.rotateTo(currentRotation - 0.3f, 100)
+                        
+                        handler.postDelayed({
+                            // 원래 위치로 복귀
+                            label.rotateTo(currentRotation, 100)
+                        }, 100)
                     }, 100)
-                }, 100)
-            }, 50)
-        }, 200)
-        
-        Log.d("KakaoMapPlugin", "펄스 애니메이션 시작됨")
-    } catch (e: Exception) {
-        Log.e("KakaoMapPlugin", "펄스 애니메이션 실패: ${e.message}")
-        e.printStackTrace()
+                }, 50)
+            }, 200)
+            
+            Log.d("KakaoMapPlugin", "펄스 애니메이션 시작됨")
+        } catch (e: Exception) {
+            Log.e("KakaoMapPlugin", "펄스 애니메이션 실패: ${e.message}")
+            e.printStackTrace()
+        }
     }
-}
     
     // 라벨 가시성 설정
     fun setLabelVisibility(labelId: String, isVisible: Boolean) {
@@ -619,9 +608,9 @@ fun addPulseAnimation(label: Label) {
         if (label != null) {
             try {
                 if (isVisible) {
-                    label.show() // Label 클래스의 show() 메서드 사용
+                    label.show()
                 } else {
-                    label.hide() // Label 클래스의 hide() 메서드 사용
+                    label.hide()
                 }
                 Log.d("KakaoMapPlugin", "라벨 가시성 설정 성공: $labelId")
             } catch (e: Exception) {
@@ -631,35 +620,5 @@ fun addPulseAnimation(label: Label) {
         } else {
             Log.d("KakaoMapPlugin", "가시성 설정할 라벨 없음: $labelId")
         }
-    }
-    
-    // 지도 타입 설정
-    fun setMapType(mapType: Int) {
-        Log.d("KakaoMapPlugin", "지도 타입 설정: $mapType")
-        // 카카오맵 SDK에서 지도 타입 설정 구현
-    }
-    
-    // 지도 레이블 표시 설정
-    fun setShowMapLabels(show: Boolean) {
-        Log.d("KakaoMapPlugin", "지도 레이블 표시 설정: $show")
-        // 카카오맵 SDK에서 지도 레이블 표시 설정 구현
-    }
-    
-    // 건물 표시 설정
-    fun setShowBuildings(show: Boolean) {
-        Log.d("KakaoMapPlugin", "건물 표시 설정: $show")
-        // 카카오맵 SDK에서 건물 표시 설정 구현
-    }
-    
-    // 교통정보 표시 설정
-    fun setShowTraffic(show: Boolean) {
-        Log.d("KakaoMapPlugin", "교통정보 표시 설정: $show")
-        // 카카오맵 SDK에서 교통정보 표시 설정 구현
-    }
-    
-    // 야간 모드 설정
-    fun setNightMode(enable: Boolean) {
-        Log.d("KakaoMapPlugin", "야간 모드 설정: $enable")
-        // 카카오맵 SDK에서 야간 모드 설정 구현
     }
 }
