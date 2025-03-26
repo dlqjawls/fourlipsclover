@@ -706,6 +706,29 @@ class MapProvider extends ChangeNotifier {
     }
   }
 
+  // 모든 길찾기 관련 상태 초기화
+void resetRouteState() {
+  clearRoutes();
+  
+  // 출발지, 목적지, 경유지 라벨 제거
+  if (_originLabel != null) {
+    removeLabel(_originLabel!.id);
+    _originLabel = null;
+  }
+  
+  if (_destinationLabel != null) {
+    removeLabel(_destinationLabel!.id);
+    _destinationLabel = null;
+  }
+  
+  clearWaypoints();
+  
+  _routeResponse = null;
+  _routeError = null;
+  _isRouteFetching = false;
+  notifyListeners();
+}
+
   // 지도 상태 초기화
   void resetMapState() {
     _centerLatitude = 35.1958;
