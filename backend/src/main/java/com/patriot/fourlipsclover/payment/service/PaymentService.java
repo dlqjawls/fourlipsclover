@@ -21,6 +21,7 @@ public class PaymentService {
 
 	private static final String KAKAO_PAY_READY_URL = "https://open-api.kakaopay.com/online/v1/payment/ready";
 	private static final String KAKAO_PAY_APPROVE_URL = "https://open-api.kakaopay.com/online/v1/payment/approve";
+	private static final String KAKAO_PAY_CANCEL = "https://open-api.kakaopay.com/online/v1/payment/cancel";
 	private final String CID = "TC0ONETIME";
 	@Value("${kakao.payment.admin-key}")
 	private String ADMIN_KEY;
@@ -95,7 +96,7 @@ public class PaymentService {
 
 		HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(params, headers);
 		ResponseEntity<PaymentCancelResponse> responseEntity = restTemplate.postForEntity(
-				KAKAO_PAY_APPROVE_URL, requestEntity, PaymentCancelResponse.class);
+				KAKAO_PAY_CANCEL, requestEntity, PaymentCancelResponse.class);
 
 		return responseEntity.getBody();
 	}

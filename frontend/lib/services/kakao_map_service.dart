@@ -2,6 +2,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 
+
+
 /// 카카오맵 플랫폼 채널을 통한 서비스
 class KakaoMapPlatform {
   static const MethodChannel _channel = MethodChannel(
@@ -19,6 +21,32 @@ class KakaoMapPlatform {
       print('메서드 채널 오류: ${e.message}');
       return false;
     }
+  }
+
+
+ // 라벨 클릭 콜백 변수
+  static Function(String labelId)? _labelClickCallback;
+  
+  // 라벨 클릭 리스너 설정 메서드
+  static void setLabelClickListener(Function(String labelId) callback) {
+    _labelClickCallback = callback;
+    
+    // 채널 핸들러 설정
+    _channel.setMethodCallHandler((call) async {
+      print('Flutter 측 메서드 콜백 수신: ${call.method}');
+      
+      if (call.method == 'onLabelClick') {
+        final String labelId = call.arguments['labelId'];
+        print('라벨 클릭 이벤트 수신: $labelId');
+        
+        if (_labelClickCallback != null) {
+          _labelClickCallback!(labelId);
+        }
+      }
+      return null;
+    });
+    
+    print('라벨 클릭 리스너 설정 완료');
   }
 
   /// 지도 중심 위치 설정
@@ -100,17 +128,6 @@ static Future<void> addLabel({
   try {
     print('addLabel 메서드 호출 전');
     print('파라미터: labelId=$labelId, 다른 파라미터들');
-    // 색상을 ARGB 정수로 변환 (주석 처리)
-    // int? textColorInt;
-    // int? backgroundColorInt;
-    // 
-    // if (textColor != null) {
-    //   textColorInt = textColor.value;
-    // }
-    // 
-    // if (backgroundColor != null) {
-    //   backgroundColorInt = backgroundColor.value;
-    // }
 
     await _channel.invokeMethod<void>('addLabel', {
       'labelId': labelId,
@@ -194,18 +211,6 @@ static Future<void> updateLabelStyle({
   int? zIndex,
 }) async {
   try {
-    // 색상을 ARGB 정수로 변환 (주석 처리)
-    // int? textColorInt;
-    // int? backgroundColorInt;
-    // 
-    // if (textColor != null) {
-    //   textColorInt = textColor.value;
-    // }
-    // 
-    // if (backgroundColor != null) {
-    //   backgroundColorInt = backgroundColor.value;
-    // }
-
     await _channel.invokeMethod<void>('updateLabelStyle', {
       'labelId': labelId,
       // 'textColor': textColorInt,            // 주석 처리
@@ -221,7 +226,7 @@ static Future<void> updateLabelStyle({
   }
 }
 
-  /// 라벨 가시성 설정
+  /// 라벨 가시성 설정 (쓸지는 모르겠음음)
   static Future<void> setLabelVisibility({
     required String labelId,
     required bool isVisible,
@@ -236,54 +241,52 @@ static Future<void> updateLabelStyle({
       rethrow;
     }
   }
-
-  /// 지도 타입 설정
-  static Future<void> setMapType(int mapType) async {
-    try {
-      await _channel.invokeMethod<void>('setMapType', {'mapType': mapType});
-    } catch (e) {
-      print('지도 타입 설정 실패: $e');
-      rethrow;
-    }
+ /// 경로 그리기
+static Future<bool> drawRoute({
+  required String routeId,
+  required List<Map<String, double>> coordinates,
+  int? lineColor,
+  double? lineWidth,
+  bool? showArrow,
+}) async {
+  try {
+    // lineColor가 int32 범위를 넘어가지 않도록 확인
+    final safeLineColor = lineColor != null ? (lineColor & 0xFFFFFFFF) : null;
+    
+    final bool result = await _channel.invokeMethod<bool>('drawRoute', {
+      'routeId': routeId,
+      'coordinates': coordinates,
+      'lineColor': safeLineColor,
+      'lineWidth': lineWidth,
+      'showArrow': showArrow,
+    }) ?? false;
+    
+    return result;
+  } catch (e) {
+    print('경로 그리기 실패: $e');
+    rethrow;
   }
+}
 
-  /// 지도 레이블 표시 설정
-  static Future<void> setShowMapLabels(bool show) async {
-    try {
-      await _channel.invokeMethod<void>('setShowMapLabels', {'show': show});
-    } catch (e) {
-      print('지도 레이블 표시 설정 실패: $e');
-      rethrow;
-    }
+/// 경로 제거
+static Future<void> removeRoute(String routeId) async {
+  try {
+    await _channel.invokeMethod<void>('removeRoute', {
+      'routeId': routeId,
+    });
+  } catch (e) {
+    print('경로 제거 실패: $e');
+    rethrow;
   }
+}
 
-  /// 건물 표시 설정
-  static Future<void> setShowBuildings(bool show) async {
-    try {
-      await _channel.invokeMethod<void>('setShowBuildings', {'show': show});
-    } catch (e) {
-      print('건물 표시 설정 실패: $e');
-      rethrow;
-    }
+/// 모든 경로 제거
+static Future<void> clearRoutes() async {
+  try {
+    await _channel.invokeMethod<void>('clearRoutes');
+  } catch (e) {
+    print('모든 경로 제거 실패: $e');
+    rethrow;
   }
-
-  /// 교통정보 표시 설정
-  static Future<void> setShowTraffic(bool show) async {
-    try {
-      await _channel.invokeMethod<void>('setShowTraffic', {'show': show});
-    } catch (e) {
-      print('교통정보 표시 설정 실패: $e');
-      rethrow;
-    }
-  }
-
-  /// 야간 모드 설정
-  static Future<void> setNightMode(bool enable) async {
-    try {
-      await _channel.invokeMethod<void>('setNightMode', {'enable': enable});
-    } catch (e) {
-      print('야간 모드 설정 실패: $e');
-      rethrow;
-    }
-  }
+}
 }

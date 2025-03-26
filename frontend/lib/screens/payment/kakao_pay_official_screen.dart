@@ -1,11 +1,10 @@
-import 'dart:convert';
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:http/http.dart' as http;
-
 import '../../services/payment_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:android_intent_plus/android_intent.dart';
+import 'payment_success_screen.dart';
 
 class KakaoPayOfficialScreen extends StatefulWidget {
   const KakaoPayOfficialScreen({super.key});
@@ -15,84 +14,177 @@ class KakaoPayOfficialScreen extends StatefulWidget {
 }
 
 class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
-  /// 새 방식에서는 WebViewController를 먼저 만들고,
-  /// WebViewWidget으로 표시합니다.
   late final WebViewController _controller;
-
-  String? paymentUrl;
   bool isLoading = true;
+  String? paymentUrl;
+
+  // 새로 추가된 상태값: tid, orderId 저장용
+  String? _tid;
+  String? _orderId;
 
   @override
   void initState() {
     super.initState();
-
-
-    // if (Platform.isAndroid) {
-    //   WebView.platform = AndroidWebView(); // 필요하면 pubspec.yaml에 webview_flutter_android 추가
-    // }
-
-    // WebViewController 생성 및 설정
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onNavigationRequest: (NavigationRequest request) {
-            return _handleNavigation(request);
-          },
+          onNavigationRequest: (request) => _handleNavigation(request),
         ),
       );
-
-    // 결제 준비 요청
     _initPayment();
   }
 
-  // 결제 준비 로직
   Future<void> _initPayment() async {
     try {
-      final url = await PaymentService.requestPaymentReady(
-        amount: 1,
-        itemName: "현지인 매칭",
-        memberId: 1,
+      final result = await PaymentService.requestPaymentReady(
+        userId: '3963528811',
+        itemName: '현지인 매칭',
+        quantity: '1',
+        totalAmount: 2000,
       );
-      setState(() {
-        paymentUrl = url;
-        isLoading = false;
-      });
 
-      // 웹뷰 로드
+      // 저장
+      _tid = result.tid;
+      _orderId = result.orderId;
+      paymentUrl = result.redirectUrl;
+
+      setState(() => isLoading = false);
+
       if (paymentUrl != null) {
         _controller.loadRequest(Uri.parse(paymentUrl!));
       }
     } catch (e) {
       print("결제 준비 중 오류: $e");
+      setState(() => isLoading = false);
     }
   }
 
-  ///특정 URL로 이동할 때 결제 승인 처리
   NavigationDecision _handleNavigation(NavigationRequest request) {
-    if (request.url.contains('https://yourserver.com/payment/success')) {
-      final pgToken = Uri.parse(request.url).queryParameters['pg_token'];
-      _approvePayment(pgToken);
+    final url = request.url;
+    print("이동 URL: $url");
+
+    if (url.startsWith('intent://')) {
+      _launchIntentUrl(url);
       return NavigationDecision.prevent;
     }
+
+    // 승인 리디렉션 감지
+    if (url.startsWith('https://fourlipsclover.duckdns.org/api/payment/approve')) {
+      final uri = Uri.parse(url);
+      final pgToken = uri.queryParameters['pg_token'];
+
+      print('pgToken: $pgToken');
+      print('tid: $_tid');
+      print('orderId: $_orderId');
+
+      if (pgToken != null && _tid != null && _orderId != null) {
+        _approvePayment(
+          tid: _tid!,
+          pgToken: pgToken,
+          orderId: _orderId!,
+          userId: '3963528811',
+          amount: 2000,
+        );
+      } else {
+        print("필요한 파라미터 없음. JS 추출 시도.");
+        _tryExtractPgToken();
+      }
+
+      return NavigationDecision.prevent;
+    }
+
+    if (url.contains("pg_token")) {
+      print("pg_token 포함된 URL 탐지됨. JS 추출 시도.");
+      _tryExtractPgToken();
+    }
+
     return NavigationDecision.navigate;
   }
 
-  // 결제 승인
-  Future<void> _approvePayment(String? pgToken) async {
-    if (pgToken == null) return;
+  void _launchIntentUrl(String url) async {
+    try {
+      if (Platform.isAndroid) {
+        final regex = RegExp(r';scheme=([^;]+);');
+        final match = regex.firstMatch(url);
+        if (match != null) {
+          final scheme = match.group(1);
+          final newUrl = url.replaceFirst('intent://', '$scheme://').split('#')[0];
+          final parsedUrl = Uri.parse(newUrl);
+          if (await canLaunchUrl(parsedUrl)) {
+            await launchUrl(parsedUrl);
+          } else {
+            final intent = AndroidIntent(action: 'action_view', data: newUrl);
+            await intent.launch();
+          }
+        } else {
+          throw Exception('intent URL 파싱 실패');
+        }
+      } else {
+        final parsedUrl = Uri.parse(url);
+        if (await canLaunchUrl(parsedUrl)) {
+          await launchUrl(parsedUrl);
+        } else {
+          print('실행 불가 URL: $url');
+        }
+      }
+    } catch (e) {
+      print('intent 실행 오류: $e');
+    }
+  }
+
+  Future<void> _tryExtractPgToken() async {
+    try {
+      final result = await _controller.runJavaScriptReturningResult("window.location.href");
+      final currentUrl = result.toString().replaceAll('"', '');
+      final uri = Uri.parse(currentUrl);
+      final pgToken = uri.queryParameters['pg_token'];
+
+      print("JS 추출 URL: $currentUrl");
+      print("추출된 pg_token: $pgToken, tid: $_tid, orderId: $_orderId");
+
+      if (pgToken != null && _tid != null && _orderId != null) {
+        await _approvePayment(
+          tid: _tid!,
+          pgToken: pgToken,
+          orderId: _orderId!,
+          userId: '3963528811',
+          amount: 2000,
+        );
+      } else {
+        print("JS에서도 필요한 값이 없음.");
+      }
+    } catch (e) {
+      print("JS URL 추출 중 오류: $e");
+    }
+  }
+
+  Future<void> _approvePayment({
+    required String tid,
+    required String pgToken,
+    required String orderId,
+    required String userId,
+    required int amount,
+  }) async {
     try {
       await PaymentService.requestPaymentApprove(
+        tid: tid,
         pgToken: pgToken,
-        memberId: 1,
+        orderId: orderId,
+        userId: userId,
+        amount: amount,
       );
       if (!mounted) return;
 
-      showDialog(
-        context: context,
-        builder: (_) => const AlertDialog(
-          title: Text("🎉 결제 성공"),
-          content: Text("카카오페이 결제가 완료되었습니다."),
+      // 결제 완료 페이지로 이동
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PaymentSuccessScreen(
+            itemName: '현지인 매칭',
+            amount: amount,
+            orderId: orderId,
+          ),
         ),
       );
     } catch (e) {
@@ -100,13 +192,12 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("카카오페이 결제")),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-      // (4) WebViewWidget(controller: _controller)로 웹뷰 표시
           : WebViewWidget(controller: _controller),
     );
   }
