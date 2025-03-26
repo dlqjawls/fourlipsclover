@@ -1,13 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-
 import '../../services/payment_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:android_intent_plus/android_intent.dart';
-
-
-
+import 'payment_success_screen.dart';
 
 class KakaoPayOfficialScreen extends StatefulWidget {
   const KakaoPayOfficialScreen({super.key});
@@ -18,51 +15,42 @@ class KakaoPayOfficialScreen extends StatefulWidget {
 
 class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
   late final WebViewController _controller;
-
   bool isLoading = true;
   String? paymentUrl;
+
+  // 새로 추가된 상태값: tid, orderId 저장용
+  String? _tid;
+  String? _orderId;
 
   @override
   void initState() {
     super.initState();
-
-    // 안드로이드 장치(또는 에뮬레이터)에서 WebView.platform 지정 (선택적)
-    // if (Platform.isAndroid) {
-    //   WebView.platform = AndroidWebView();
-    // }
-
-    // (1) WebViewController 생성
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onNavigationRequest: (request) {
-            return _handleNavigation(request);
-          },
+          onNavigationRequest: (request) => _handleNavigation(request),
         ),
       );
-
-    // (2) 결제 준비 요청
     _initPayment();
   }
 
-  /// 서버에 결제 준비 요청 (PaymentService.requestPaymentReady)
   Future<void> _initPayment() async {
     try {
-      // 아래 userId, itemName, quantity, totalAmount는
-      final redirectUrl = await PaymentService.requestPaymentReady(
+      final result = await PaymentService.requestPaymentReady(
         userId: '3963528811',
         itemName: '현지인 매칭',
         quantity: '1',
-        totalAmount: 2000, // 예: 1000원
+        totalAmount: 2000,
       );
 
-      setState(() {
-        paymentUrl = redirectUrl;
-        isLoading = false;
-      });
+      // 저장
+      _tid = result.tid;
+      _orderId = result.orderId;
+      paymentUrl = result.redirectUrl;
 
-      // 결제 페이지로 로드
+      setState(() => isLoading = false);
+
       if (paymentUrl != null) {
         _controller.loadRequest(Uri.parse(paymentUrl!));
       }
@@ -72,33 +60,43 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
     }
   }
 
-  /// 웹뷰에서 특정 URL로 넘어갈 때 결제 승인
   NavigationDecision _handleNavigation(NavigationRequest request) {
     final url = request.url;
-    // 예: 카카오 결제가 완료되면 서버가 yourserver.com/payment/success 로 리다이렉트
+    print("이동 URL: $url");
+
     if (url.startsWith('intent://')) {
       _launchIntentUrl(url);
       return NavigationDecision.prevent;
     }
 
-    if (url.contains('yourserver.com/payment/success')) {
-      // 예) https://yourserver.com/payment/success?tid=xxx&pg_token=xxx&orderId=xxx
+    // 승인 리디렉션 감지
+    if (url.startsWith('https://fourlipsclover.duckdns.org/api/payment/approve')) {
       final uri = Uri.parse(url);
-      final tid     = uri.queryParameters['tid'];
       final pgToken = uri.queryParameters['pg_token'];
-      final orderId = uri.queryParameters['orderId'];
 
-      if (tid != null && pgToken != null && orderId != null) {
+      print('pgToken: $pgToken');
+      print('tid: $_tid');
+      print('orderId: $_orderId');
+
+      if (pgToken != null && _tid != null && _orderId != null) {
         _approvePayment(
-          tid: tid,
+          tid: _tid!,
           pgToken: pgToken,
-          orderId: orderId,
-          userId: '3963528811', // 실제 유저 ID
+          orderId: _orderId!,
+          userId: '3963528811',
           amount: 2000,
         );
+      } else {
+        print("필요한 파라미터 없음. JS 추출 시도.");
+        _tryExtractPgToken();
       }
-      // 리다이렉트 막기
+
       return NavigationDecision.prevent;
+    }
+
+    if (url.contains("pg_token")) {
+      print("pg_token 포함된 URL 탐지됨. JS 추출 시도.");
+      _tryExtractPgToken();
     }
 
     return NavigationDecision.navigate;
@@ -107,34 +105,27 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
   void _launchIntentUrl(String url) async {
     try {
       if (Platform.isAndroid) {
-        // intent:// URL에서 'scheme' 값을 추출
         final regex = RegExp(r';scheme=([^;]+);');
         final match = regex.firstMatch(url);
         if (match != null) {
-          final scheme = match.group(1); // 예: "kakaotalk"
-          // intent:// 를 해당 스킴 URL로 변환
-          // #Intent; 이후의 정보는 제거
+          final scheme = match.group(1);
           final newUrl = url.replaceFirst('intent://', '$scheme://').split('#')[0];
           final parsedUrl = Uri.parse(newUrl);
           if (await canLaunchUrl(parsedUrl)) {
             await launchUrl(parsedUrl);
           } else {
-            // 만약 launchUrl로 열리지 않으면 android_intent_plus 사용
-            final intent = AndroidIntent(
-              action: 'action_view',
-              data: newUrl,
-            );
+            final intent = AndroidIntent(action: 'action_view', data: newUrl);
             await intent.launch();
           }
         } else {
-          throw Exception('intent URL 파싱 실패: scheme 정보를 찾을 수 없습니다.');
+          throw Exception('intent URL 파싱 실패');
         }
       } else {
         final parsedUrl = Uri.parse(url);
         if (await canLaunchUrl(parsedUrl)) {
           await launchUrl(parsedUrl);
         } else {
-          print('❌ 실행할 수 없는 URL: $url');
+          print('실행 불가 URL: $url');
         }
       }
     } catch (e) {
@@ -142,8 +133,32 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
     }
   }
 
+  Future<void> _tryExtractPgToken() async {
+    try {
+      final result = await _controller.runJavaScriptReturningResult("window.location.href");
+      final currentUrl = result.toString().replaceAll('"', '');
+      final uri = Uri.parse(currentUrl);
+      final pgToken = uri.queryParameters['pg_token'];
 
-  /// 결제 승인
+      print("JS 추출 URL: $currentUrl");
+      print("추출된 pg_token: $pgToken, tid: $_tid, orderId: $_orderId");
+
+      if (pgToken != null && _tid != null && _orderId != null) {
+        await _approvePayment(
+          tid: _tid!,
+          pgToken: pgToken,
+          orderId: _orderId!,
+          userId: '3963528811',
+          amount: 2000,
+        );
+      } else {
+        print("JS에서도 필요한 값이 없음.");
+      }
+    } catch (e) {
+      print("JS URL 추출 중 오류: $e");
+    }
+  }
+
   Future<void> _approvePayment({
     required String tid,
     required String pgToken,
@@ -161,11 +176,15 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
       );
       if (!mounted) return;
 
-      showDialog(
-        context: context,
-        builder: (_) => const AlertDialog(
-          title: Text("결제 성공"),
-          content: Text("카카오페이 결제가 완료되었습니다."),
+      // 결제 완료 페이지로 이동
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PaymentSuccessScreen(
+            itemName: '현지인 매칭',
+            amount: amount,
+            orderId: orderId,
+          ),
         ),
       );
     } catch (e) {
@@ -173,12 +192,10 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text("카카오페이 결제"),
-      // ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : WebViewWidget(controller: _controller),
