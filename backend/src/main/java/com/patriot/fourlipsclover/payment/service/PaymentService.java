@@ -6,6 +6,7 @@ import com.patriot.fourlipsclover.payment.dto.response.PaymentReadyResponse;
 import com.patriot.fourlipsclover.payment.mapper.PaymentMapper;
 import com.patriot.fourlipsclover.payment.repository.PaymentApprovalRepository;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -108,5 +109,9 @@ public class PaymentService {
 				KAKAO_PAY_CANCEL, requestEntity, PaymentCancelResponse.class);
 
 		return responseEntity.getBody();
+	}
+
+	public List<PaymentApproveResponse> findById(Long memberId) {
+		return null;
 	}
 }
