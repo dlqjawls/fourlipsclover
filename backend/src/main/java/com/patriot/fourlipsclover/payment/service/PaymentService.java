@@ -3,8 +3,11 @@ package com.patriot.fourlipsclover.payment.service;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentApproveResponse;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentCancelResponse;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentReadyResponse;
+import com.patriot.fourlipsclover.payment.mapper.PaymentMapper;
+import com.patriot.fourlipsclover.payment.repository.PaymentApprovalRepository;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +25,8 @@ public class PaymentService {
 	private static final String KAKAO_PAY_READY_URL = "https://open-api.kakaopay.com/online/v1/payment/ready";
 	private static final String KAKAO_PAY_APPROVE_URL = "https://open-api.kakaopay.com/online/v1/payment/approve";
 	private static final String KAKAO_PAY_CANCEL = "https://open-api.kakaopay.com/online/v1/payment/cancel";
+	private final PaymentApprovalRepository paymentApprovalRepository;
+	private final PaymentMapper paymentMapper;
 	private final String CID = "TC0ONETIME";
 	@Value("${kakao.payment.admin-key}")
 	private String ADMIN_KEY;
@@ -75,7 +80,11 @@ public class PaymentService {
 		HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(params, headers);
 		ResponseEntity<PaymentApproveResponse> responseEntity = restTemplate.postForEntity(
 				KAKAO_PAY_APPROVE_URL, requestEntity, PaymentApproveResponse.class);
-
+		PaymentApproveResponse response = responseEntity.getBody();
+		if (Objects.isNull(response)) {
+			throw new IllegalArgumentException("존재하지 않는 거래입니다.");
+		}
+		paymentApprovalRepository.save(paymentMapper.toEntity(response));
 		return responseEntity.getBody();
 	}
 
