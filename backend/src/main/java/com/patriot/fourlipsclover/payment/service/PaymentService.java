@@ -1,6 +1,7 @@
 package com.patriot.fourlipsclover.payment.service;
 
 import com.patriot.fourlipsclover.payment.dto.response.PaymentApproveResponse;
+import com.patriot.fourlipsclover.payment.dto.response.PaymentCancelResponse;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentReadyResponse;
 import java.util.HashMap;
 import java.util.Map;
@@ -50,7 +51,7 @@ public class PaymentService {
 		PaymentReadyResponse response = responseEntity.getBody();
 		response.setOrderId(orderId);
 		System.out.println(response);
-		
+
 		return response;
 	}
 
@@ -73,6 +74,28 @@ public class PaymentService {
 		HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(params, headers);
 		ResponseEntity<PaymentApproveResponse> responseEntity = restTemplate.postForEntity(
 				KAKAO_PAY_APPROVE_URL, requestEntity, PaymentApproveResponse.class);
+
+		return responseEntity.getBody();
+	}
+
+	public PaymentCancelResponse cancel(String cid, String tid, Integer cancelAmount,
+			Integer cancelTaxFreeAmount) {
+		RestTemplate restTemplate = new RestTemplate();
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.set("Authorization", "SECRET_KEY " + ADMIN_KEY);
+		headers.setContentType(MediaType.APPLICATION_JSON);
+
+		Map<String, Object> params = new HashMap<>();
+
+		params.put("cid", cid);
+		params.put("tid", tid);
+		params.put("cancel_amount", cancelAmount);
+		params.put("cancel_tax_free_amount", cancelTaxFreeAmount);
+
+		HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(params, headers);
+		ResponseEntity<PaymentCancelResponse> responseEntity = restTemplate.postForEntity(
+				KAKAO_PAY_APPROVE_URL, requestEntity, PaymentCancelResponse.class);
 
 		return responseEntity.getBody();
 	}
