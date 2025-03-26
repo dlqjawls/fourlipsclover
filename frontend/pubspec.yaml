@@ -8,6 +8,7 @@ environment:
   sdk: ^3.7.0
 
 dependencies:
+  shimmer: ^3.0.0
   jwt_decoder: ^2.0.1   
   flutter:
     sdk: flutter

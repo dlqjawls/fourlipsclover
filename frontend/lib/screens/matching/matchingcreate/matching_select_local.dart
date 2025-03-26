@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/config/theme.dart';
 import 'package:frontend/screens/matching/matchingcreate/styles/matching_styles.dart';
 import 'package:frontend/screens/matching/matchingcreate/matching_resist.dart';
-
+import 'package:frontend/widgets/skeleton_loading.dart';
 class MatchingSelectLocalScreen extends StatefulWidget {
   const MatchingSelectLocalScreen({Key? key}) : super(key: key);
 
@@ -14,7 +14,19 @@ class MatchingSelectLocalScreen extends StatefulWidget {
 class _MatchingSelectLocalScreenState extends State<MatchingSelectLocalScreen> {
   String _selectedFilter = '전체';
   String? _selectedSort;
+  bool _isLoading = true; 
 
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+  Future<void> _loadData() async {
+    await Future.delayed(const Duration(seconds: 2)); // 테스트용 딜레이
+    setState(() {
+      _isLoading = false;
+    });
+  }
   // 임시 데이터 (가이드 목록)
   final List<Map<String, dynamic>> guideList = [
     {
@@ -192,7 +204,9 @@ class _MatchingSelectLocalScreenState extends State<MatchingSelectLocalScreen> {
 
           // 가이드 리스트
           Expanded(
-            child: ListView.builder(
+             child: _isLoading
+      ? const SkeletonLoading()
+      : ListView.builder(
               itemCount: guideList.length,
               itemBuilder: (context, index) {
                 final guide = guideList[index];
