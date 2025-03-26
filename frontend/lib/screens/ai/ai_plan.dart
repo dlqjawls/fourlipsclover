@@ -19,13 +19,13 @@ class AIPlanScreen extends StatelessWidget {
               style: TextStyle(fontSize: 24),
             ),
             const SizedBox(height: 30),
-            // ✅ 분리한 버튼 삽입
+            // 버튼 삽입
             PaymentHistoryButton(
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const PaymentHistoryListScreen(),
+                    builder: (_) => const PaymentHistoryListScreen(memberId: '3963528811'),
                   ),
                 );
               },
