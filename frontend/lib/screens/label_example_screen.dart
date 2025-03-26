@@ -644,62 +644,78 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
     return route;
   }
 
-  // 경로 그리기 메서드 - _generateTestRoute 메서드 아래에 추가
-  Future<void> _drawRouteToRestaurant(String restaurantId) async {
-    // 현재 위치 확인
-    Position? position = await _getCurrentLocation();
-    if (position == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('현재 위치를 가져올 수 없습니다')));
-      return;
-    }
-
-    // 선택한 가게 정보 확인
-    final restaurant = _restaurantData[restaurantId];
-    if (restaurant == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('가게 정보를 찾을 수 없습니다')));
-      return;
-    }
-
-    try {
-      // 기존 경로 제거
-      await KakaoMapPlatform.clearRoutes();
-
-      // 경로 데이터 생성 (실제로는 API에서 받아야 함)
-      final route = _generateTestRoute(
-        position.latitude,
-        position.longitude,
-        restaurant.latitude,
-        restaurant.longitude,
-      );
-
-      // 경로 그리기
-      final result = await KakaoMapPlatform.drawRoute(
-        routeId: 'route_to_${restaurantId}',
-        coordinates: route,
-        lineColor: 0xFF3395FF, // 파란색
-        lineWidth: 5.0,
-        showArrow: true,
-      );
-
-      if (result) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${restaurant.name}까지의 경로를 표시합니다')),
-        );
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('경로 그리기에 실패했습니다')));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('경로 그리기 오류: $e')));
-    }
+  // 경로 그리기 메서드
+Future<void> _drawRouteToRestaurant(String restaurantId) async {
+  // 현재 위치 확인
+  Position? position = await _getCurrentLocation();
+  if (position == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('현재 위치를 가져올 수 없습니다')),
+    );
+    return;
   }
+
+  // 선택한 가게 정보 확인
+  final restaurant = _restaurantData[restaurantId];
+  if (restaurant == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('가게 정보를 찾을 수 없습니다')),
+    );
+    return;
+  }
+
+  try {
+    // 프로그레스 표시
+    setState(() {
+      _isAddingLabels = true; // 기존 로딩 인디케이터 재활용
+    });
+
+    // MapProvider 접근
+    final mapProvider = Provider.of<MapProvider>(context, listen: false);
+    
+    // 출발지와 목적지 설정
+    mapProvider.setOrigin(
+      position.latitude, 
+      position.longitude, 
+      name: '현재 위치'
+    );
+    
+    mapProvider.setDestination(
+      restaurant.latitude, 
+      restaurant.longitude, 
+      name: restaurant.name
+    );
+    
+    // 경로 요청
+    await mapProvider.fetchRoute(
+      priority: 'RECOMMEND',
+      alternatives: false,
+      roadDetails: true,
+    );
+    
+    setState(() {
+      _isAddingLabels = false;
+    });
+    
+    // 성공 메시지
+    if (mapProvider.routeError == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${restaurant.name}까지의 경로를 표시합니다')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('경로 요청 오류: ${mapProvider.routeError}')),
+      );
+    }
+  } catch (e) {
+    setState(() {
+      _isAddingLabels = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('경로 그리기 오류: $e')),
+    );
+  }
+}
 
   // 테스트용 라벨 클릭 시뮬레이션 (실제 구현에서는 Native에서 호출됨)
   void _simulateLabelClick(String labelId) {

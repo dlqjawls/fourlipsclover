@@ -1,6 +1,9 @@
 // lib/providers/map_provider.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import '../services/kakao_route_service.dart';
+import '../services/kakao_map_service.dart';
+import '../models/route_model.dart';
 
 class MapMarker {
   final double latitude;
@@ -95,8 +98,6 @@ class MapLabel {
   }
 }
 
-enum MapType { normal, satellite, hybrid, terrain }
-
 enum MapLoadingState { loading, success, failure }
 
 class MapProvider extends ChangeNotifier {
@@ -106,9 +107,6 @@ class MapProvider extends ChangeNotifier {
 
   // 줌 레벨
   int _zoomLevel = 15;
-
-  // 지도 타입
-  MapType _mapType = MapType.normal;
 
   // 마커 컬렉션
   List<MapMarker> _markers = [];
@@ -138,11 +136,20 @@ class MapProvider extends ChangeNotifier {
   double? _eastLongitude;
   double? _westLongitude;
 
+  // 경로 관련 속성
+  KakaoRouteResponse? _routeResponse;
+  bool _isRouteFetching = false;
+  String? _routeError;
+  List<String> _routeLineIds = [];
+  // 출발지/목적지 위치 속성 추가
+  MapLabel? _originLabel;
+  MapLabel? _destinationLabel;
+  List<MapLabel> _waypointLabels = [];
+
   // Getters
   double get centerLatitude => _centerLatitude;
   double get centerLongitude => _centerLongitude;
   int get zoomLevel => _zoomLevel;
-  MapType get mapType => _mapType;
   List<MapMarker> get markers => List.unmodifiable(_markers);
   List<MapLabel> get labels => List.unmodifiable(_labels); // 라벨 getter 추가
   String? get selectedMarkerId => _selectedMarkerId;
@@ -151,6 +158,16 @@ class MapProvider extends ChangeNotifier {
   String? get lastError => _lastError;
   bool get showLabels => _showLabels;
   bool get showCurrentLocation => _showCurrentLocation;
+  //길찾기 게터
+  KakaoRouteResponse? get routeResponse => _routeResponse;
+  bool get isRouteFetching => _isRouteFetching;
+  String? get routeError => _routeError;
+  bool get hasRoute => _routeResponse != null;
+  List<String> get routeLineIds => List.unmodifiable(_routeLineIds);
+  // 출발지/목적지 getter
+  MapLabel? get originLabel => _originLabel;
+  MapLabel? get destinationLabel => _destinationLabel;
+  List<MapLabel> get waypointLabels => List.unmodifiable(_waypointLabels);
 
   // 바운딩 박스 getter
   Map<String, double?> get viewportBounds => {
@@ -448,12 +465,252 @@ class MapProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 출발지 설정 메서드
+  void setOrigin(double latitude, double longitude, {String? name}) {
+    // 기존 출발지 라벨 제거
+    if (_originLabel != null) {
+      removeLabel(_originLabel!.id);
+    }
+
+    // 새 출발지 라벨 추가
+    final labelId = 'origin_${DateTime.now().millisecondsSinceEpoch}';
+
+    _originLabel = MapLabel(
+      id: labelId,
+      latitude: latitude,
+      longitude: longitude,
+      text: name ?? '출발',
+      imageAsset: 'swallow', // 시작 위치 마커 이미지
+      textSize: 16,
+      zIndex: 10,
+      isClickable: true,
+    );
+
+    // 라벨 목록에 추가
+    _labels.add(_originLabel!);
+    notifyListeners();
+  }
+
+  // 목적지 설정 메서드
+  void setDestination(double latitude, double longitude, {String? name}) {
+    // 기존 목적지 라벨 제거
+    if (_destinationLabel != null) {
+      removeLabel(_destinationLabel!.id);
+    }
+
+    // 새 목적지 라벨 추가
+    final labelId = 'destination_${DateTime.now().millisecondsSinceEpoch}';
+
+    _destinationLabel = MapLabel(
+      id: labelId,
+      latitude: latitude,
+      longitude: longitude,
+      text: name ?? '도착',
+      imageAsset: 'clover', // 도착 위치 마커 이미지
+      textSize: 16,
+      zIndex: 10,
+      isClickable: true,
+    );
+
+    // 라벨 목록에 추가
+    _labels.add(_destinationLabel!);
+    notifyListeners();
+  }
+
+  // 경유지 추가 메서드
+  void addWaypoint(double latitude, double longitude, {String? name}) {
+    final labelId = 'waypoint_${DateTime.now().millisecondsSinceEpoch}';
+
+    final waypoint = MapLabel(
+      id: labelId,
+      latitude: latitude,
+      longitude: longitude,
+      text: name ?? '경유지',
+      imageAsset: 'swallow', // 경유지 마커 이미지
+      textSize: 16,
+      zIndex: 5,
+      isClickable: true,
+    );
+
+    // 경유지 목록에 추가
+    _waypointLabels.add(waypoint);
+
+    // 라벨 목록에도 추가
+    _labels.add(waypoint);
+    notifyListeners();
+  }
+
+  // 경유지 제거 메서드
+  void removeWaypoint(String id) {
+    _waypointLabels.removeWhere((waypoint) => waypoint.id == id);
+    removeLabel(id);
+    notifyListeners();
+  }
+
+  // 모든 경유지 제거
+  void clearWaypoints() {
+    for (var waypoint in _waypointLabels) {
+      removeLabel(waypoint.id);
+    }
+    _waypointLabels.clear();
+    notifyListeners();
+  }
+
+  // 경로 탐색 메서드
+  Future<void> fetchRoute({
+    String priority = 'RECOMMEND',
+    bool alternatives = false,
+    bool roadDetails = true,
+    String carFuel = 'GASOLINE',
+    bool carHipass = false,
+  }) async {
+    // 출발지나 목적지가 설정되지 않은 경우
+    if (_originLabel == null || _destinationLabel == null) {
+      _routeError = '출발지와 목적지를 모두 설정해주세요';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      _isRouteFetching = true;
+      _routeError = null;
+      notifyListeners();
+
+      // 경유지 좌표 리스트 생성
+      List<Map<String, double>>? waypoints;
+      if (_waypointLabels.isNotEmpty) {
+        waypoints =
+            _waypointLabels
+                .map(
+                  (label) => {
+                    'longitude': label.longitude,
+                    'latitude': label.latitude,
+                  },
+                )
+                .toList();
+      }
+
+      // 기존 경로 제거
+      clearRoutes();
+
+      // 카카오 모빌리티 API 호출
+      final response = await KakaoRouteService.getCarRoute(
+        originLng: _originLabel!.longitude,
+        originLat: _originLabel!.latitude,
+        destinationLng: _destinationLabel!.longitude,
+        destinationLat: _destinationLabel!.latitude,
+        waypoints: waypoints,
+        priority: priority,
+        alternatives: alternatives,
+        roadDetails: roadDetails,
+        carFuel: carFuel,
+        carHipass: carHipass,
+      );
+
+      _routeResponse = response;
+      _isRouteFetching = false;
+      notifyListeners();
+
+      // 성공적으로 경로를 받으면 지도에 표시
+      if (response.routes.isNotEmpty && response.routes[0].resultCode == 0) {
+        await drawRouteOnMap(response.routes[0]);
+      }
+    } catch (e) {
+      _isRouteFetching = false;
+      _routeError = '경로 검색 실패: $e';
+      notifyListeners();
+    }
+  }
+
+  // 경로를 지도에 그리는 메서드
+  Future<void> drawRouteOnMap(KakaoRoute  route) async {
+    try {
+      int sectionIndex = 0;
+
+      // 각 구간별로 경로 그리기
+      for (final section in route.sections) {
+        if (section.roads == null || section.roads!.isEmpty) continue;
+
+        // 구간별로 모든 도로 세그먼트의 좌표를 하나의 리스트로 합침
+        List<Map<String, double>> allCoordinates = [];
+
+        for (final road in section.roads!) {
+          final coordinates = road.getCoordinatesForDrawRoute();
+          if (coordinates.isNotEmpty) {
+            allCoordinates.addAll(coordinates);
+          }
+        }
+
+        if (allCoordinates.isNotEmpty) {
+          final routeId =
+              'route_${DateTime.now().millisecondsSinceEpoch}_$sectionIndex';
+
+          // 섹션 별로 다른 색상 사용
+          final colors = [
+            0xFF4285F4,
+            0xFFEA4335,
+            0xFFFBBC05,
+            0xFF34A853,
+            0xFF9C27B0,
+          ];
+          final color = colors[sectionIndex % colors.length];
+
+          // 경로 그리기 API 호출 (KakaoMapPlatform 서비스 통해)
+          await KakaoMapPlatform.drawRoute(
+            routeId: routeId,
+            coordinates: allCoordinates,
+            lineColor: color,
+            lineWidth: 5.0,
+            showArrow: true,
+          );
+
+          // 그려진 경로 ID 저장
+          _routeLineIds.add(routeId);
+        }
+
+        sectionIndex++;
+      }
+
+      // 카메라를 경로가 모두 보이는 영역으로 이동
+      final bound = route.summary.bound;
+      if (bound != null) {
+        // 카메라 이동은 여기서 구현
+        // (현재 코드에서는 좌표를 직접 계산하지 않고 API에서 주는 바운드 정보를 활용)
+        final centerLat = (bound.minY + bound.maxY) / 2;
+        final centerLng = (bound.minX + bound.maxX) / 2;
+
+        // 확대 레벨 결정 로직 필요 (바운드 크기에 따라 적절한 줌 레벨 계산)
+        // 여기서는 고정값 사용
+        setMapCenter(latitude: centerLat, longitude: centerLng, zoomLevel: 14);
+      }
+
+      notifyListeners();
+    } catch (e) {
+      _routeError = '경로 표시 실패: $e';
+      notifyListeners();
+    }
+  }
+
+  // 경로 제거 메서드
+  Future<void> clearRoutes() async {
+    try {
+      // KakaoMapPlatform을 통해 모든 경로 제거
+      await KakaoMapPlatform.clearRoutes();
+
+      // 저장된 경로 ID 목록 초기화
+      _routeLineIds.clear();
+      _routeResponse = null;
+      notifyListeners();
+    } catch (e) {
+      print('경로 제거 실패: $e');
+    }
+  }
+
   // 지도 상태 초기화
   void resetMapState() {
     _centerLatitude = 35.1958;
     _centerLongitude = 126.8149;
     _zoomLevel = 15;
-    _mapType = MapType.normal;
     _markers = [];
     _labels = []; // 라벨 초기화 추가
     _selectedMarkerId = null;
@@ -466,6 +723,15 @@ class MapProvider extends ChangeNotifier {
     _southLatitude = null;
     _eastLongitude = null;
     _westLongitude = null;
+
+    // 경로 관련 상태 초기화
+    _routeResponse = null;
+    _routeError = null;
+    _isRouteFetching = false;
+    _routeLineIds = [];
+    _originLabel = null;
+    _destinationLabel = null;
+    _waypointLabels = [];
     notifyListeners();
   }
 }
