@@ -25,13 +25,14 @@ public class PaymentMapper {
 						response.getAmount().getPoint(),
 						response.getAmount().getDiscount(),
 						response.getAmount().getGreenDeposit()))
-				.cardInfo(new PaymentCardInfo(
+				.cardInfo(response.getCardInfo() != null ? new PaymentCardInfo(
 						response.getCardInfo().getKakaopayPurchaseCorp(),
 						response.getCardInfo().getKakaopayIssuerCorp(),
 						response.getCardInfo().getBin(),
 						response.getCardInfo().getCardType(),
 						response.getCardInfo().getInstallMonth(),
-						response.getCardInfo().getApprovedId())).itemName(response.getItemName())
+						response.getCardInfo().getApprovedId()) : null)
+				.itemName(response.getItemName())
 				.itemCode(response.getItemCode())
 				.quantity(response.getQuantity())
 				.createdAt(response.getCreatedAt())
