@@ -1,17 +1,21 @@
 package com.patriot.fourlipsclover.group.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.patriot.fourlipsclover.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Table(name = "`group`")
 public class Group {
 
