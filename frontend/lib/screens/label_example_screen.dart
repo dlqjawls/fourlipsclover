@@ -829,7 +829,7 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
 
                                   // 약간의 지연 후 원래 위치로 강제 복귀
                                   await Future.delayed(
-                                    Duration(milliseconds: 300),
+                                    Duration(milliseconds: 500),
                                   );
                                   await KakaoMapPlatform.setMapCenter(
                                     latitude: currentLat,

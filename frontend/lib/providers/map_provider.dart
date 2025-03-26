@@ -114,7 +114,7 @@ class MapProvider extends ChangeNotifier {
   double _centerLongitude = 126.8149;
   
   // 줌 레벨
-  int _zoomLevel = 3;
+  int _zoomLevel = 15;
   
   // 지도 타입
   MapType _mapType = MapType.normal;
@@ -483,7 +483,7 @@ class MapProvider extends ChangeNotifier {
   void resetMapState() {
     _centerLatitude = 35.1958;
     _centerLongitude = 126.8149;
-    _zoomLevel = 3;
+    _zoomLevel = 15;
     _mapType = MapType.normal;
     _markers = [];
     _labels = []; // 라벨 초기화 추가
