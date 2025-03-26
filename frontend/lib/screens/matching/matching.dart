@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/config/theme.dart';
-import 'package:frontend/screens/matching/matching_create.dart';
+import 'package:frontend/screens/matching/matchingcreate/matching_hashtag.dart';
 import 'package:frontend/screens/matching/matching_detail.dart';
 import 'package:frontend/screens/matching/matching_local_list.dart';
+
 class MatchData {
   final int matchId;
   final String localNickname;
@@ -42,7 +43,6 @@ class _MatchingScreenState extends State<MatchingScreen>
     super.didChangeDependencies();
     final isFromNavBar = ModalRoute.of(context)?.settings.name == null;
 
-   
     if (isFromNavBar) {
       _fetchMatches();
     }
@@ -81,7 +81,7 @@ class _MatchingScreenState extends State<MatchingScreen>
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => const MatchingCreateScreen(),
+                builder: (context) => const MatchingCreateHashtagScreen(),
               ),
             );
           });
@@ -90,7 +90,7 @@ class _MatchingScreenState extends State<MatchingScreen>
     }
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
     super.build(context);
 
@@ -130,11 +130,7 @@ class _MatchingScreenState extends State<MatchingScreen>
               ),
               child: Row(
                 children: [
-                  Image.asset(
-                    'assets/images/logo.png',
-                    width: 60,
-                    height: 60,
-                  ),
+                  Image.asset('assets/images/logo.png', width: 60, height: 60),
                   const SizedBox(width: 16),
                   const Expanded(
                     child: Column(
@@ -149,10 +145,7 @@ class _MatchingScreenState extends State<MatchingScreen>
                         ),
                         Text(
                           '확인하러 가기',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
                         ),
                       ],
                     ),
@@ -162,75 +155,82 @@ class _MatchingScreenState extends State<MatchingScreen>
               ),
             ),
           ),
-          
+
           // Existing list or empty state
           Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : matches.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '아직 매칭 내역이 없습니다',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: AppColors.mediumGray,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const MatchingCreateScreen(),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+            child:
+                isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : matches.isEmpty
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '아직 매칭 내역이 없습니다',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: AppColors.mediumGray,
                             ),
                           ),
-                          child: const Text(
-                            '새로운 매칭 만들기',
-                            style: TextStyle(fontSize: 16, color: Colors.white),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) =>
+                                          const MatchingCreateHashtagScreen(),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              '새로운 매칭 만들기',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    )
+                    : RefreshIndicator(
+                      onRefresh: _fetchMatches,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: matches.length,
+                        itemBuilder: (context, index) {
+                          final match = matches[index];
+                          return _buildMatchCard(match);
+                        },
+                      ),
                     ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: _fetchMatches,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: matches.length,
-                      itemBuilder: (context, index) {
-                        final match = matches[index];
-                        return _buildMatchCard(match);
-                      },
-                    ),
-                  ),
           ),
         ],
       ),
-      floatingActionButton: matches.isNotEmpty
-          ? FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MatchingCreateScreen(),
-                  ),
-                );
-              },
-              backgroundColor: AppColors.primary,
-              child: const Icon(Icons.add),
-            )
-          : null,
+      floatingActionButton:
+          matches.isNotEmpty
+              ? FloatingActionButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MatchingCreateHashtagScreen(),
+                    ),
+                  );
+                },
+                backgroundColor: AppColors.primary,
+                child: const Icon(Icons.add),
+              )
+              : null,
     );
   }
 

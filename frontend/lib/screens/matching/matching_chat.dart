@@ -1,12 +1,32 @@
 import 'package:flutter/material.dart';
 
-class MatchingChatScreen extends StatelessWidget {
-  const MatchingChatScreen({Key? key}) : super(key: key);
+void main() {
+  runApp(MyApp());
+}
 
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('대충 현지인과 카카오톡', style: TextStyle(fontSize: 24))),
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(title: Text('채팅이요')),
+        body: Center(child: Text('채팅화면')),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            // 버튼 클릭 시 동작
+          },
+          child: Icon(Icons.add),
+        ),
+        drawer: Drawer(
+          child: ListView(
+            children: [
+              DrawerHeader(child: Text('Drawer Header')),
+              ListTile(title: Text('메뉴1'), onTap: () {}),
+              ListTile(title: Text('메뉴2'), onTap: () {}),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
