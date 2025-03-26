@@ -9,8 +9,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -86,6 +89,12 @@ public class PaymentController {
 			@Parameter(description = "취소 비과세 금액", required = true) @RequestParam Integer cancelTaxFreeAmount) {
 		PaymentCancelResponse response = paymentService.cancel(cid, tid, cancelAmount,
 				cancelTaxFreeAmount);
+		return ResponseEntity.ok(response);
+	}
+
+	@GetMapping("/{memberId}")
+	public ResponseEntity<List<PaymentApproveResponse>> findByList(@PathVariable Long memberId) {
+		List<PaymentApproveResponse> response = paymentService.findById(memberId);
 		return ResponseEntity.ok(response);
 	}
 }
