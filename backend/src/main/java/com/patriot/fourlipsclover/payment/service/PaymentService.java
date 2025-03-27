@@ -3,6 +3,7 @@ package com.patriot.fourlipsclover.payment.service;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentApproveResponse;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentCancelResponse;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentReadyResponse;
+import com.patriot.fourlipsclover.payment.entity.PaymentApproval;
 import com.patriot.fourlipsclover.payment.mapper.PaymentMapper;
 import com.patriot.fourlipsclover.payment.repository.PaymentApprovalRepository;
 import java.util.HashMap;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 @Service
@@ -32,6 +34,7 @@ public class PaymentService {
 	@Value("${kakao.payment.admin-key}")
 	private String ADMIN_KEY;
 
+	@Transactional
 	public PaymentReadyResponse ready(String userId, String itemName,
 			String quantity, String totalAmount) {
 		RestTemplate restTemplate = new RestTemplate();
@@ -62,6 +65,7 @@ public class PaymentService {
 		return response;
 	}
 
+	@Transactional
 	public PaymentApproveResponse approve(String tid, String pgToken, String orderId, String userId,
 			int amount) {
 		RestTemplate restTemplate = new RestTemplate();
@@ -89,6 +93,7 @@ public class PaymentService {
 		return responseEntity.getBody();
 	}
 
+	@Transactional
 	public PaymentCancelResponse cancel(String cid, String tid, Integer cancelAmount,
 			Integer cancelTaxFreeAmount) {
 		RestTemplate restTemplate = new RestTemplate();
@@ -111,7 +116,10 @@ public class PaymentService {
 		return responseEntity.getBody();
 	}
 
+	@Transactional(readOnly = true)
 	public List<PaymentApproveResponse> findById(Long memberId) {
-		return null;
+		List<PaymentApproval> paymentApprovals = paymentApprovalRepository.findByPartnerOrderId(
+				String.valueOf(memberId));
+		return paymentApprovals.stream().map(paymentMapper::toDto).toList();
 	}
 }
