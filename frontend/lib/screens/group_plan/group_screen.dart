@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/group_provider.dart';
-import 'widgets/empty_group_view.dart';
-import 'widgets/group_list_view.dart';
-import 'widgets/group_create_dialog.dart';
+import 'group_widgets/empty_group_view.dart';
+import 'group_widgets/group_list_view.dart';
+import 'group_widgets/group_create_dialog.dart';
 
 class GroupScreen extends StatefulWidget {
   const GroupScreen({Key? key}) : super(key: key);
