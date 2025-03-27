@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/config/theme.dart';
-import 'package:frontend/screens/matching/matching_create.dart';
+import 'package:frontend/screens/matching/matchingcreate/matching_hashtag.dart';
 import 'package:frontend/screens/matching/matching_detail.dart';
+import 'package:frontend/screens/matching/matching_local_list.dart';
 
 class MatchData {
   final int matchId;
@@ -42,7 +43,6 @@ class _MatchingScreenState extends State<MatchingScreen>
     super.didChangeDependencies();
     final isFromNavBar = ModalRoute.of(context)?.settings.name == null;
 
-    // 네비게이션 바에서 첫 진입시에만 데이터 로드
     if (isFromNavBar) {
       _fetchMatches();
     }
@@ -81,7 +81,7 @@ class _MatchingScreenState extends State<MatchingScreen>
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => const MatchingCreateScreen(),
+                builder: (context) => const MatchingCreateHashtagScreen(),
               ),
             );
           });
@@ -109,56 +109,113 @@ class _MatchingScreenState extends State<MatchingScreen>
         ),
         centerTitle: true,
       ),
-      body:
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : matches.isEmpty
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '아직 매칭 내역이 없습니다',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: AppColors.mediumGray,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MatchingCreateScreen(),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        '새로운 매칭 만들기',
-                        style: TextStyle(fontSize: 16, color: Colors.white),
-                      ),
-                    ),
-                  ],
+      body: Column(
+        children: [
+          // Banner
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MatchingLocalListScreen(),
                 ),
-              )
-              : RefreshIndicator(
-                onRefresh: _fetchMatches,
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: matches.length,
-                  itemBuilder: (context, index) {
-                    final match = matches[index];
-                    return _buildMatchCard(match);
-                  },
-                ),
+              );
+            },
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(12),
               ),
+              child: Row(
+                children: [
+                  Image.asset('assets/images/logo.png', width: 60, height: 60),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '미확인 매칭 2건',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '확인하러 가기',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right),
+                ],
+              ),
+            ),
+          ),
+
+          // Existing list or empty state
+          Expanded(
+            child:
+                isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : matches.isEmpty
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '아직 매칭 내역이 없습니다',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: AppColors.mediumGray,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) =>
+                                          const MatchingCreateHashtagScreen(),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              '새로운 매칭 만들기',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                    : RefreshIndicator(
+                      onRefresh: _fetchMatches,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: matches.length,
+                        itemBuilder: (context, index) {
+                          final match = matches[index];
+                          return _buildMatchCard(match);
+                        },
+                      ),
+                    ),
+          ),
+        ],
+      ),
       floatingActionButton:
           matches.isNotEmpty
               ? FloatingActionButton(
@@ -166,7 +223,7 @@ class _MatchingScreenState extends State<MatchingScreen>
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const MatchingCreateScreen(),
+                      builder: (context) => const MatchingCreateHashtagScreen(),
                     ),
                   );
                 },
