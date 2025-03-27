@@ -12,8 +12,8 @@ import 'providers/auth_provider.dart';
 import 'providers/group_provider.dart';
 import 'providers/plan_provider.dart';
 import 'providers/map_provider.dart';
+import 'providers/user_provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-
 
 void main() async {
   // Flutter 엔진 초기화
@@ -30,7 +30,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AppProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(
+          create:
+              (context) => AppProvider(
+                userProvider: Provider.of<UserProvider>(context, listen: false),
+              ),
+        ),
         ChangeNotifierProvider(create: (_) => SearchProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => GroupProvider()),

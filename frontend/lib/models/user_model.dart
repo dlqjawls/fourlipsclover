@@ -16,6 +16,15 @@ class Payment {
       paymentAmount: json['paymentAmount'],
     );
   }
+
+  // Payment toJson 메서드 추가
+  Map<String, dynamic> toJson() {
+    return {
+      'storeName': storeName,
+      'menu': menu,
+      'paymentAmount': paymentAmount,
+    };
+  }
 }
 
 class UserProfile {
@@ -65,5 +74,24 @@ class UserProfile {
       luckGauge: json['luckGauge'],
       currentJourney: json['currentJourney'],
     );
+  }
+
+  // UserProfile toJson 메서드 추가
+  Map<String, dynamic> toJson() {
+    return {
+      'userId': userId,
+      'name': name,
+      'nickname': nickname,
+      'profileUrl': profileUrl,
+      'recentPayments':
+          recentPayments.map((payment) => payment.toJson()).toList(),
+      'badgeName': badgeName,
+      'localAuth': localAuth,
+      'albumCount': albumCount,
+      'groupCount': groupCount,
+      'reviewCount': reviewCount,
+      'luckGauge': luckGauge,
+      'currentJourney': currentJourney,
+    };
   }
 }

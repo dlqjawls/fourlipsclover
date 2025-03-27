@@ -19,4 +19,14 @@ class Payment {
       description: json['description'],
     );
   }
+
+  // Payment toJson 메서드 추가
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'amount': amount,
+      'date': date.toIso8601String(),
+      'description': description,
+    };
+  }
 }
