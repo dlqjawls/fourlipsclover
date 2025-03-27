@@ -8,13 +8,13 @@ import '../../models/plan/plan_list_model.dart';
 import '../../providers/plan_provider.dart';
 import '../../providers/group_provider.dart';
 import '../../config/theme.dart';
-import 'widgets/group_calendar.dart';
-import 'widgets/empty_plan_view.dart';
-import 'widgets/plan_list_view.dart';
-import 'widgets/plan_create_dialog.dart';
-import 'widgets/calendar_event_bottom_sheet.dart';
-import 'widgets/group_members_bar.dart';
-import 'widgets/group_edit_dialog.dart';
+import 'group_widgets/group_calendar.dart';
+import 'plan_widgets/empty_plan_view.dart';
+import 'plan_widgets/plan_list_view.dart';
+import 'plan_widgets/plan_create_dialog.dart';
+import 'group_widgets/calendar_event_bottom_sheet.dart';
+import 'group_widgets/group_members_bar.dart';
+import 'group_widgets/group_edit_dialog.dart';
 import '../../models/plan/plan_model.dart';
 
 class GroupDetailScreen extends StatefulWidget {
