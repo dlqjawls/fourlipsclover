@@ -3,17 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../config/theme.dart';
-import '../../../models/plan_model.dart';
+import '../../../models/plan/plan_model.dart';
 import '../../../providers/plan_provider.dart';
 
 class PlanCreateDialog extends StatefulWidget {
   final int groupId;
-  
-  const PlanCreateDialog({
-    Key? key,
-    required this.groupId,
-  }) : super(key: key);
-  
+
+  const PlanCreateDialog({Key? key, required this.groupId}) : super(key: key);
+
   @override
   State<PlanCreateDialog> createState() => _PlanCreateDialogState();
 }
@@ -24,14 +21,14 @@ class _PlanCreateDialogState extends State<PlanCreateDialog> {
   DateTime _startDate = DateTime.now();
   DateTime _endDate = DateTime.now().add(const Duration(days: 1));
   bool _isTitleEmpty = false;
-  
+
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -62,7 +59,7 @@ class _PlanCreateDialogState extends State<PlanCreateDialog> {
               maxLength: 30,
             ),
             const SizedBox(height: 16),
-            
+
             // 설명 입력
             TextField(
               controller: _descriptionController,
@@ -78,7 +75,7 @@ class _PlanCreateDialogState extends State<PlanCreateDialog> {
               maxLength: 100,
             ),
             const SizedBox(height: 16),
-            
+
             // 날짜 선택 - 시작일
             InkWell(
               onTap: () => _selectDate(context, true),
@@ -106,7 +103,7 @@ class _PlanCreateDialogState extends State<PlanCreateDialog> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // 날짜 선택 - 종료일
             InkWell(
               onTap: () => _selectDate(context, false),
@@ -147,11 +144,12 @@ class _PlanCreateDialogState extends State<PlanCreateDialog> {
             ),
           ),
         ),
+        // 여행 계획 생성 부분 수정
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
           onPressed: () {
             final title = _titleController.text.trim();
-            
+
             if (title.isEmpty) {
               setState(() {
                 _isTitleEmpty = true;
@@ -159,51 +157,47 @@ class _PlanCreateDialogState extends State<PlanCreateDialog> {
             } else if (_endDate.isBefore(_startDate)) {
               // 종료일이 시작일보다 이전인 경우 알림
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('종료일은 시작일 이후로 설정해주세요'),
-                ),
+                const SnackBar(content: Text('종료일은 시작일 이후로 설정해주세요')),
               );
             } else {
-              // 임시 ID 생성 (실제로는 API 응답에서 받아야 함)
-              final planId = DateTime.now().millisecondsSinceEpoch;
-              
-              // 여행 계획 생성
-              final newPlan = Plan(
-                planId: planId,
+              // Provider의 createPlan 메서드 사용
+              final planProvider = Provider.of<PlanProvider>(
+                context,
+                listen: false,
+              );
+
+              // TODO: 현재 사용자 ID와 멤버 ID 목록 가져오기
+              final currentUserId = 1; // 임시값
+              final memberIds = [currentUserId]; // 임시값
+
+              planProvider.createPlan(
                 groupId: widget.groupId,
                 title: title,
                 description: _descriptionController.text.trim(),
                 startDate: _startDate,
                 endDate: _endDate,
-                createdAt: DateTime.now(),
-                planPlaces: [],
+                members: memberIds,
+                treasurerId: currentUserId,
               );
-              
-              // Provider에 추가
-              Provider.of<PlanProvider>(context, listen: false).addPlan(newPlan);
-              
+
               Navigator.of(context).pop();
             }
           },
           child: Text(
             '생성',
-            style: TextStyle(
-              fontFamily: 'Anemone_air',
-              color: Colors.white,
-            ),
+            style: TextStyle(fontFamily: 'Anemone_air', color: Colors.white),
           ),
         ),
       ],
     );
   }
-  
+
   // 날짜 선택 다이얼로그 표시
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
     final initialDate = isStartDate ? _startDate : _endDate;
-    final firstDate = isStartDate 
-        ? DateTime.now() 
-        : _startDate; // 종료일은 시작일 이후로만 선택 가능
-    
+    final firstDate =
+        isStartDate ? DateTime.now() : _startDate; // 종료일은 시작일 이후로만 선택 가능
+
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: initialDate,
@@ -219,16 +213,14 @@ class _PlanCreateDialogState extends State<PlanCreateDialog> {
               onSurface: AppColors.darkGray,
             ),
             textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
-              ),
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
             ),
           ),
           child: child!,
         );
       },
     );
-    
+
     if (pickedDate != null) {
       setState(() {
         if (isStartDate) {

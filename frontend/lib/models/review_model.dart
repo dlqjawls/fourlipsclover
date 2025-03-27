@@ -1,4 +1,4 @@
-import 'restaurant_models.dart';
+import 'restaurant_model.dart';
 
 class Review {
   final String id;

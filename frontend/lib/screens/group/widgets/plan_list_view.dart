@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../../models/plan_model.dart';
+import '../../../models/plan/plan_model.dart';
 import '../../../config/theme.dart';
 
 class PlanListView extends StatelessWidget {

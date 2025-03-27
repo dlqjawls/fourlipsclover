@@ -5,7 +5,7 @@ import '../../../config/theme.dart';
 import '../../../utils/text_style_extensions.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/nearby_restaurant_service.dart';
-import '../../../models/restaurant_models.dart';
+import '../../../models/restaurant_model.dart';
 
 class CategoryRecommendations extends StatefulWidget {
   const CategoryRecommendations({Key? key}) : super(key: key);
