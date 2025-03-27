@@ -1,4 +1,4 @@
-// screens/group/group_detail_screen.dart
+// screens/group/group_detail_screen.dartloading
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -115,7 +115,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
     final planProvider = Provider.of<PlanProvider>(context, listen: false);
     try {
-      final plans = await planProvider.fetchPlansForGroup(
+      final plans = await planProvider.fetchPlans(
         _currentGroup.groupId,
       );
 
