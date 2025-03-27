@@ -64,12 +64,26 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         _currentGroup.groupId,
       );
 
-      if (mounted) {
-        // 위젯이 아직 마운트 상태인지 확인
+      if (mounted && detail != null) {
+        // detail이 null이 아닌지 확인
+        // 역할 설정 로직
+        _setMemberRoles(detail);
+
         setState(() {
           _groupDetail = detail;
           _isLoadingDetail = false;
         });
+      } else {
+        // detail이 null인 경우 처리
+        if (mounted) {
+          setState(() {
+            _isLoadingDetail = false;
+          });
+          // 선택적으로 사용자에게 오류 메시지 표시
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('그룹 상세 정보를 불러오는데 실패했습니다.')));
+        }
       }
     } catch (e) {
       debugPrint('그룹 상세 정보 로드 중 오류: $e');
@@ -77,6 +91,18 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         setState(() {
           _isLoadingDetail = false;
         });
+      }
+    }
+  }
+
+  // GroupDetail 타입을 명시적으로 지정
+  void _setMemberRoles(GroupDetail detail) {
+    // 그룹장(OWNER) 설정 - 그룹 생성자
+    for (var member in detail.members) {
+      if (member.memberId == _currentGroup.memberId) {
+        member.role = 'OWNER';
+      } else {
+        member.role = 'MEMBER'; // 나머지는 모두 일반 멤버
       }
     }
   }
