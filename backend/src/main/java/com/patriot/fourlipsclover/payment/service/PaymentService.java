@@ -118,7 +118,7 @@ public class PaymentService {
 
 	@Transactional(readOnly = true)
 	public List<PaymentApproveResponse> findById(Long memberId) {
-		List<PaymentApproval> paymentApprovals = paymentApprovalRepository.findByPartnerOrderId(
+		List<PaymentApproval> paymentApprovals = paymentApprovalRepository.findByPartnerUserId(
 				String.valueOf(memberId));
 		return paymentApprovals.stream().map(paymentMapper::toDto).toList();
 	}
