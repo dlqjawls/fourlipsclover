@@ -38,7 +38,8 @@ class PaymentService {
       'totalAmount': '$totalAmount',
     };
 
-    final url = Uri.parse('$baseUrl/ready').replace(queryParameters: queryParams);
+    final url = Uri.parse('$baseUrl/ready').replace(
+        queryParameters: queryParams);
 
     print('[PaymentService] 결제 준비 요청 URL: $url');
 
@@ -50,7 +51,8 @@ class PaymentService {
     if (response.statusCode == 200) {
       final body = jsonDecode(response.body);
 
-      final redirectUrl = body['next_redirect_mobile_url'] ?? body['next_redirect_app_url'];
+      final redirectUrl = body['next_redirect_mobile_url'] ??
+          body['next_redirect_app_url'];
       final tid = body['tid'];
       final orderId = body['orderId'];
 
@@ -84,7 +86,8 @@ class PaymentService {
       'amount': '$amount',
     };
 
-    final url = Uri.parse('$baseUrl/approve').replace(queryParameters: queryParams);
+    final url = Uri.parse('$baseUrl/approve').replace(
+        queryParameters: queryParams);
 
     final response = await http.post(url);
 
@@ -95,6 +98,7 @@ class PaymentService {
       throw Exception('결제 승인 실패: ${response.statusCode}');
     }
   }
+
   // 결제 취소 요청
   static Future<void> requestPaymentCancel({
     required String tid,
@@ -108,7 +112,8 @@ class PaymentService {
       'cancelTaxFreeAmount': '$cancelTaxFreeAmount',
     };
 
-    final url = Uri.parse('$baseUrl/cancel').replace(queryParameters: queryParams);
+    final url = Uri.parse('$baseUrl/cancel').replace(
+        queryParameters: queryParams);
 
     print('[PaymentService] 취소 요청 URL: $url');
 
@@ -120,17 +125,31 @@ class PaymentService {
       throw Exception('결제 취소 실패: ${response.statusCode}');
     }
   }
+
   /// 결제 내역 조회 (GET /api/payment/{memberId})
   static Future<List<PaymentHistory>> fetchPaymentHistory({
     required String memberId,
   }) async {
     final url = Uri.parse('$baseUrl/$memberId');
-    final response = await http.get(url);
+
+    Map<String, String> headers = {
+      'Content-Type': 'application/json; charset=UTF-8',
+      'Accept': 'application/json; charset=UTF-8',
+    };
+
+    final response = await http.get(url, headers: headers);
+
+    print('[결제내역] 요청 URL: $url');
+    print('[결제내역] 응답 코드: ${response.statusCode}');
+    print('[결제내역] 응답 바디: ${response.body}');
+
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
+      print('[결제내역] 받아온 데이터 개수: ${data.length}');
       return data.map((json) => PaymentHistory.fromJson(json)).toList();
     } else {
       throw Exception('결제 내역 조회 실패: ${response.statusCode}');
     }
   }
+
 }

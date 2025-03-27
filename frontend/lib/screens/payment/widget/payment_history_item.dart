@@ -28,7 +28,7 @@ class PaymentHistoryItem extends StatelessWidget {
 
     return ListTile(
       title: Text(
-        '${history.guideName}',
+        '${history.itemName}',
         style: TextStyle(
           color: isCanceled ? Colors.grey : Colors.black,
           decoration: isCanceled ? TextDecoration.lineThrough : null,

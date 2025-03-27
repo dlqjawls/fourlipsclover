@@ -1,37 +1,25 @@
 class PaymentHistory {
-  final String paymentId;     // 고유 결제 ID
-  final String guideName;     // 결제 대상 가이드 이름
-  final int amount;           // 결제 금액
-  final DateTime createdAt;   // 결제 시간
-  final bool isCanceled;      // 결제 취소 여부
+  final String tid; // 결제 고유 번호
+  final String itemName; // 상품 이름
+  final int amount; // 결제 금액
+  final DateTime createdAt;
+  final bool isCanceled;
 
   PaymentHistory({
-    required this.paymentId,
-    required this.guideName,
+    required this.tid,
+    required this.itemName,
     required this.amount,
     required this.createdAt,
-    required this.isCanceled,
+    this.isCanceled = false,
   });
 
-  // JSON → 객체로 변환
   factory PaymentHistory.fromJson(Map<String, dynamic> json) {
     return PaymentHistory(
-      paymentId: json['payment_id'],
-      guideName: json['guide_name'],
-      amount: json['amount'],
+      tid: json['tid'],
+      itemName: json['item_name'],
+      amount: json['amount']['total'],
       createdAt: DateTime.parse(json['created_at']),
-      isCanceled: json['is_canceled'] ?? false,
+      isCanceled: json['status'] == 'CANCELLED', // 예: status가 있으면
     );
-  }
-
-  // 객체 → JSON 변환 (필요 시)
-  Map<String, dynamic> toJson() {
-    return {
-      'payment_id': paymentId,
-      'guide_name': guideName,
-      'amount': amount,
-      'created_at': createdAt.toIso8601String(),
-      'is_canceled': isCanceled,
-    };
   }
 }

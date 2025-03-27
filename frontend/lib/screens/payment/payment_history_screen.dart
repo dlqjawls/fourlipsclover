@@ -45,8 +45,7 @@ class _PaymentHistoryListScreenState extends State<PaymentHistoryListScreen> {
                 onCancel: () async {
                   try {
                     await PaymentService.requestPaymentCancel(
-                      // paymentId를 사용합니다.
-                      tid: paymentList[index].paymentId,
+                      tid: paymentList[index].tid,
                       // 결제 금액은 바로 amount를 사용합니다.
                       cancelAmount: paymentList[index].amount,
                       cancelTaxFreeAmount: 0, // 예시로 0 처리
