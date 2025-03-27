@@ -183,7 +183,8 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
           builder: (_) => PaymentSuccessScreen(
             itemName: '현지인 매칭',
             amount: amount,
-            orderId: orderId,
+            tid: _tid!,
+            //orderId: orderId,
           ),
         ),
       );

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../models/payment_history.dart';
 
 class PaymentInitData {
   final String tid;
@@ -92,6 +93,44 @@ class PaymentService {
 
     if (response.statusCode != 200) {
       throw Exception('결제 승인 실패: ${response.statusCode}');
+    }
+  }
+  // 결제 취소 요청
+  static Future<void> requestPaymentCancel({
+    required String tid,
+    required int cancelAmount,
+    required int cancelTaxFreeAmount,
+  }) async {
+    final queryParams = {
+      'cid': 'TC0ONETIME',
+      'tid': tid,
+      'cancelAmount': '$cancelAmount',
+      'cancelTaxFreeAmount': '$cancelTaxFreeAmount',
+    };
+
+    final url = Uri.parse('$baseUrl/cancel').replace(queryParameters: queryParams);
+
+    print('[PaymentService] 취소 요청 URL: $url');
+
+    final response = await http.post(url);
+
+    print('[PaymentService] 취소 응답: ${response.body}');
+
+    if (response.statusCode != 200) {
+      throw Exception('결제 취소 실패: ${response.statusCode}');
+    }
+  }
+  /// 결제 내역 조회 (GET /api/payment/{memberId})
+  static Future<List<PaymentHistory>> fetchPaymentHistory({
+    required String memberId,
+  }) async {
+    final url = Uri.parse('$baseUrl/$memberId');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => PaymentHistory.fromJson(json)).toList();
+    } else {
+      throw Exception('결제 내역 조회 실패: ${response.statusCode}');
     }
   }
 }

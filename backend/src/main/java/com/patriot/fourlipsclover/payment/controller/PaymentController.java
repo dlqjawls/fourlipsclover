@@ -93,7 +93,18 @@ public class PaymentController {
 	}
 
 	@GetMapping("/{memberId}")
-	public ResponseEntity<List<PaymentApproveResponse>> findByList(@PathVariable Long memberId) {
+	@Operation(
+			summary = "사용자별 결제 내역 조회",
+			description = "회원 ID를 기준으로 해당 사용자의 모든 결제 내역을 조회합니다.",
+			responses = {
+					@ApiResponse(responseCode = "200", description = "결제 내역 조회 성공",
+							content = @Content(schema = @Schema(implementation = PaymentApproveResponse.class))),
+					@ApiResponse(responseCode = "404", description = "결제 내역이 없음"),
+					@ApiResponse(responseCode = "500", description = "서버 오류")
+			}
+	)
+	public ResponseEntity<List<PaymentApproveResponse>> findByList(
+			@Parameter(description = "회원 ID", required = true) @PathVariable Long memberId) {
 		List<PaymentApproveResponse> response = paymentService.findById(memberId);
 		return ResponseEntity.ok(response);
 	}
