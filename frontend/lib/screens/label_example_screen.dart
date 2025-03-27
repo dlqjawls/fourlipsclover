@@ -10,6 +10,7 @@ import '../services/kakao_map_service.dart';
 import 'package:geolocator/geolocator.dart'; // 위치 정보를 위한 패키지
 import '../widgets/route_summary_modal.dart';
 import '../widgets/route_search_panel.dart';
+import 'package:flutter/services.dart'; //SystemOvelayStyle 사용을 위해
 // url_launcher 패키지가 필요합니다 (pubspec.yaml에 추가 필요)
 // import 'package:url_launcher/url_launcher.dart';
 
@@ -797,17 +798,18 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
   // 출발지와 도착지가 모두 설정되었는지 확인하고 자동으로 경로 검색
   void _checkAndSearchRoute() {
     final mapProvider = Provider.of<MapProvider>(context, listen: false);
-    
+
     // 출발지와 도착지가 모두 설정되었는지 확인
-    if (mapProvider.originLabel != null && mapProvider.destinationLabel != null) {
+    if (mapProvider.originLabel != null &&
+        mapProvider.destinationLabel != null) {
       // 이전과 다른 출발지/도착지인 경우에만 검색 실행
       final originId = mapProvider.originLabel!.id;
       final destId = mapProvider.destinationLabel!.id;
-      
+
       if (originId != _lastOriginId || destId != _lastDestinationId) {
         _lastOriginId = originId;
         _lastDestinationId = destId;
-        
+
         // 경로 검색 실행
         Future.microtask(() {
           _searchRoute();
@@ -816,169 +818,189 @@ class _LabelExampleScreenState extends State<LabelExampleScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // 지도 위에 표시할 상단 패널
-    final mapProvider = Provider.of<MapProvider>(context);
-    
-    // 출발지나 도착지가 설정되었는지 확인하고 자동으로 경로 검색
-    if (mapProvider.originLabel != null && mapProvider.destinationLabel != null) {
-      // build 중에 setState를 호출하지 않도록 Future.microtask를 사용
-      Future.microtask(() {
-        _checkAndSearchRoute();
-      });
-    }
-    
-    print("Build 호출됨, _showRoutePanel: $_showRoutePanel");
-    print("mapProvider.originLabel: ${mapProvider.originLabel}");
+@override
+Widget build(BuildContext context) {
+  final mapProvider = Provider.of<MapProvider>(context);
+  final statusBarHeight = MediaQuery.of(context).viewPadding.top;
+  
+  // 출발지나 도착지가 설정되었는지 확인하고 자동으로 경로 검색
+  if (mapProvider.originLabel != null && mapProvider.destinationLabel != null) {
+    Future.microtask(() {
+      _checkAndSearchRoute();
+    });
+  }
+  
+  return Scaffold(
+    // 전체 상태바 설정
+    extendBodyBehindAppBar: true,
+    appBar: _showRoutePanel
+        ? AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            toolbarHeight: 0,
+            automaticallyImplyLeading: false,
+            systemOverlayStyle: SystemUiOverlayStyle.dark,
+          )
+        : AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            toolbarHeight: 0,
+            automaticallyImplyLeading: false,
+            systemOverlayStyle: SystemUiOverlayStyle.light,
+          ),
+    body: Stack(
+      children: [
+        // 전체 화면 지도
+        Positioned.fill(
+          child: KakaoMapNativeView(
+            listenToProvider: true,
+            onMapCreated: () {
+              setState(() {
+                _mapInitialized = true;
+              });
+              _moveToCurrentLocation();
+            },
+          ),
+        ),
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          // 전체 화면 지도
-          Positioned.fill(
-            child: KakaoMapNativeView(
-              listenToProvider: true,
-              onMapCreated: () {
-                setState(() {
-                  _mapInitialized = true;
-                });
-                // 지도가 생성되면 현재 위치로 이동
-                _moveToCurrentLocation();
-              },
+        // 로딩 인디케이터
+        if (mapProvider.loadingState == MapLoadingState.loading)
+          const Center(child: CircularProgressIndicator()),
+
+        // 라벨 추가중 인디케이터
+        if (_isAddingLabels)
+          Center(
+            child: Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 16),
+                  Text('라벨 추가 중...', style: TextStyle(color: Colors.white)),
+                ],
+              ),
             ),
           ),
 
-          // 로딩 인디케이터
-          if (mapProvider.loadingState == MapLoadingState.loading)
-            const Center(child: CircularProgressIndicator()),
-
-          // 라벨 추가중 인디케이터
-          if (_isAddingLabels)
-            Center(
-              child: Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 16),
-                    Text('라벨 추가 중...', style: TextStyle(color: Colors.white)),
-                  ],
-                ),
-              ),
-            ),
-
-          // 상단 패널 - AppBar 위치에 표시되도록 수정
-          if (_showRoutePanel)
-            Positioned(
-              top: 0, // 화면 최상단에 표시
-              left: 0,
-              right: 0,
-              child: SafeArea(
-                child: RouteSearchPanel(
-                  originName: mapProvider.originLabel?.text,
-                  destinationName: mapProvider.destinationLabel?.text,
-                  onOriginTap: () {
-                    // 출발지 선택 화면으로 이동
-                  },
-                  onDestinationTap: () {
-                    // 도착지 선택 화면으로 이동
-                  },
-                  onSwapLocations: () {
-                    // 출발지와 도착지 교체 로직
-                    if (mapProvider.originLabel != null &&
-                        mapProvider.destinationLabel != null) {
-                      final originLabel = mapProvider.originLabel!;
-                      final destLabel = mapProvider.destinationLabel!;
-
-                      mapProvider.setOrigin(
-                        destLabel.latitude,
-                        destLabel.longitude,
-                        name: destLabel.text,
-                      );
-
-                      mapProvider.setDestination(
-                        originLabel.latitude,
-                        originLabel.longitude,
-                        name: originLabel.text,
-                      );
-                      
-                      // 위치가 교체된 후 자동으로 검색 실행
-                      Future.microtask(() {
-                        if (mapProvider.originLabel != null && 
-                            mapProvider.destinationLabel != null) {
-                          _searchRoute();
-                        }
-                      });
-                    }
-                  },
-                  onAddWaypoint: () {
-                    // 경유지 추가 로직
-                  },
-                  onClose: () {
-                    setState(() {
-                      _showRoutePanel = false;
-                    });
-                    // 경로 및 관련 데이터 초기화
-                    mapProvider.resetRouteState();
-                  },
-                  onSearch: null, // 버튼이 없어졌으므로 null로 설정
-                ),
-              ),
-            ),
-
-          // 뒤로가기 버튼 (AppBar를 제거했으므로 별도 추가)
+        // 상단 패널 - 상태 표시줄부터 시작하여 자연스럽게 연결
+        if (_showRoutePanel)
           Positioned(
             top: 0,
             left: 0,
-            child: SafeArea(
-              child:
-                  !_showRoutePanel
-                      ? IconButton(
-                        icon: Icon(Icons.arrow_back, color: AppColors.darkGray),
-                        onPressed: () => Navigator.pop(context),
-                      )
-                      : SizedBox(),
+            right: 0,
+            child: Material(
+              color: Colors.white,
+              elevation: 4,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 상태 표시줄 영역
+                  SizedBox(height: statusBarHeight),
+                  
+                  // 경로 검색 패널 - 내부 마진 제거
+                  RouteSearchPanel(
+                    originName: mapProvider.originLabel?.text,
+                    destinationName: mapProvider.destinationLabel?.text,
+                    onOriginTap: () {
+                      // 출발지 선택 화면으로 이동
+                    },
+                    onDestinationTap: () {
+                      // 도착지 선택 화면으로 이동
+                    },
+                    onSwapLocations: () {
+                      // 출발지와 도착지 교체 로직
+                      if (mapProvider.originLabel != null &&
+                          mapProvider.destinationLabel != null) {
+                        final originLabel = mapProvider.originLabel!;
+                        final destLabel = mapProvider.destinationLabel!;
+
+                        mapProvider.setOrigin(
+                          destLabel.latitude,
+                          destLabel.longitude,
+                          name: destLabel.text,
+                        );
+
+                        mapProvider.setDestination(
+                          originLabel.latitude,
+                          originLabel.longitude,
+                          name: originLabel.text,
+                        );
+                        
+                        Future.microtask(() {
+                          if (mapProvider.originLabel != null && 
+                              mapProvider.destinationLabel != null) {
+                            _searchRoute();
+                          }
+                        });
+                      }
+                    },
+                    onReset: () {
+                      // 출발지, 도착지 초기화 로직
+                      mapProvider.resetRouteState();
+                    },
+                    onClose: () {
+                      setState(() {
+                        _showRoutePanel = false;
+                      });
+                      // 경로 및 관련 데이터 초기화
+                      mapProvider.resetRouteState();
+                    },
+                    onSearch: null,
+                  ),
+                ],
+              ),
             ),
           ),
 
-          // 현재 위치 버튼
+        // 뒤로가기 버튼 (패널이 표시되지 않을 때만 표시)
+        if (!_showRoutePanel)
           Positioned(
-            right: 16,
-            bottom: 400, // 컨트롤 패널 위에 위치하도록 조정
-            child: FloatingActionButton(
-              heroTag: 'current_location',
-              onPressed: _moveToCurrentLocation,
-              backgroundColor: Colors.white,
-              mini: true,
-              child: Icon(Icons.my_location, color: Colors.blue),
+            top: statusBarHeight,
+            left: 0,
+            child: IconButton(
+              icon: Icon(Icons.arrow_back, color: AppColors.darkGray),
+              onPressed: () => Navigator.pop(context),
             ),
           ),
-          Positioned(
-            right: 16,
-            bottom: 450,
-            child: FloatingActionButton(
-              heroTag: 'directions',
-              onPressed: () {
-                print("길찾기 버튼 클릭!"); // 디버그 로그 추가
-                // setState 호출을 Future.microtask로 감싸서 현재 build가 완료된 후 실행되도록 수정
-                Future.microtask(() {
-                  setState(() {
-                    _showRoutePanel = !_showRoutePanel;
-                  });
+
+        // 현재 위치 버튼
+        Positioned(
+          right: 16,
+          bottom: 400,
+          child: FloatingActionButton(
+            heroTag: 'current_location',
+            onPressed: _moveToCurrentLocation,
+            backgroundColor: Colors.white,
+            mini: true,
+            child: Icon(Icons.my_location, color: Colors.blue),
+          ),
+        ),
+        
+        // 길찾기 버튼
+        Positioned(
+          right: 16,
+          bottom: 450,
+          child: FloatingActionButton(
+            heroTag: 'directions',
+            onPressed: () {
+              print("길찾기 버튼 클릭!");
+              Future.microtask(() {
+                setState(() {
+                  _showRoutePanel = !_showRoutePanel;
                 });
-                print("_showRoutePanel: $_showRoutePanel"); // 상태 변경 확인
-              },
-              backgroundColor: Colors.white,
-              mini: true,
-              child: Icon(Icons.directions, color: AppColors.primary),
-            ),
+              });
+              print("_showRoutePanel: $_showRoutePanel");
+            },
+            backgroundColor: Colors.white,
+            mini: true,
+            child: Icon(Icons.directions, color: AppColors.primary),
           ),
+        ),
 
           // 하단 컨트롤 패널
           Positioned(
