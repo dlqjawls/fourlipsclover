@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../models/group/group_model.dart';
 import '../models/group/group_detail_model.dart';
 import '../services/api/group_api.dart';
+import 'package:flutter/widgets.dart';
 
 class GroupProvider with ChangeNotifier {
   final GroupApi _groupApi = GroupApi();
@@ -233,11 +234,14 @@ class GroupProvider with ChangeNotifier {
     }
   }
   
-  // 로딩 상태 설정
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
-  }
+void _setLoading(bool loading) {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (_isLoading != loading) {
+      _isLoading = loading;
+      notifyListeners();
+    }
+  });
+}
   
   // 에러 초기화
   void clearError() {

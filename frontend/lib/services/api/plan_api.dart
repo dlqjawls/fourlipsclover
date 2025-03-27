@@ -235,7 +235,9 @@ class PlanApi {
       throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
     }
 
-    final url = Uri.parse('$baseUrl${getApiPrefix(groupId)}/$planId/schedule/create');
+    final url = Uri.parse(
+      '$baseUrl${getApiPrefix(groupId)}/$planId/schedule/create',
+    );
 
     try {
       final response = await http.post(
@@ -248,7 +250,9 @@ class PlanApi {
       );
 
       if (response.statusCode == 201) {
-        return PlanSchedule.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+        return PlanSchedule.fromJson(
+          jsonDecode(utf8.decode(response.bodyBytes)),
+        );
       } else {
         throw Exception(
           '계획 일정 생성에 실패했습니다: ${response.statusCode}, ${response.body}',
@@ -296,7 +300,11 @@ class PlanApi {
   /// [groupId] 그룹 ID
   /// [planId] 계획 ID
   /// [scheduleId] 일정 ID
-  Future<PlanScheduleDetail> getPlanScheduleDetail(int groupId, int planId, int scheduleId) async {
+  Future<PlanScheduleDetail> getPlanScheduleDetail(
+    int groupId,
+    int planId,
+    int scheduleId,
+  ) async {
     final token = await _getAuthToken();
 
     // 토큰 유효성 검사
@@ -304,7 +312,9 @@ class PlanApi {
       throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
     }
 
-    final url = Uri.parse('$baseUrl${getApiPrefix(groupId)}/$planId/schedule/$scheduleId');
+    final url = Uri.parse(
+      '$baseUrl${getApiPrefix(groupId)}/$planId/schedule/$scheduleId',
+    );
     try {
       final response = await http.get(
         url,
@@ -312,7 +322,9 @@ class PlanApi {
       );
 
       if (response.statusCode == 200) {
-        return PlanScheduleDetail.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+        return PlanScheduleDetail.fromJson(
+          jsonDecode(utf8.decode(response.bodyBytes)),
+        );
       } else {
         throw Exception(
           '계획 일정 상세 조회에 실패했습니다: ${response.statusCode}, ${response.body}',
@@ -342,7 +354,9 @@ class PlanApi {
       throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
     }
 
-    final url = Uri.parse('$baseUrl${getApiPrefix(groupId)}/$planId/schedule/update/$scheduleId');
+    final url = Uri.parse(
+      '$baseUrl${getApiPrefix(groupId)}/$planId/schedule/update/$scheduleId',
+    );
     try {
       final response = await http.put(
         url,
@@ -354,7 +368,9 @@ class PlanApi {
       );
 
       if (response.statusCode == 200) {
-        return PlanScheduleUpdate.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+        return PlanScheduleUpdate.fromJson(
+          jsonDecode(utf8.decode(response.bodyBytes)),
+        );
       } else {
         throw Exception(
           '계획 일정 수정에 실패했습니다: ${response.statusCode}, ${response.body}',
@@ -370,7 +386,11 @@ class PlanApi {
   /// [groupId] 그룹 ID
   /// [planId] 계획 ID
   /// [scheduleId] 일정 ID
-  Future<void> deletePlanSchedule(int groupId, int planId, int scheduleId) async {
+  Future<void> deletePlanSchedule(
+    int groupId,
+    int planId,
+    int scheduleId,
+  ) async {
     final token = await _getAuthToken();
 
     // 토큰 유효성 검사
@@ -378,7 +398,9 @@ class PlanApi {
       throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
     }
 
-    final url = Uri.parse('$baseUrl${getApiPrefix(groupId)}/$planId/schedule/delete/$scheduleId');
+    final url = Uri.parse(
+      '$baseUrl${getApiPrefix(groupId)}/$planId/schedule/delete/$scheduleId',
+    );
     try {
       final response = await http.delete(
         url,

@@ -12,7 +12,8 @@ class GroupCreateDialog extends StatefulWidget {
 
 class _GroupCreateDialogState extends State<GroupCreateDialog> {
   final TextEditingController _groupNameController = TextEditingController();
-  final TextEditingController _groupDescriptionController = TextEditingController();
+  final TextEditingController _groupDescriptionController =
+      TextEditingController();
   bool _isPublic = false;
   bool _isNameEmpty = false;
   bool _isCreating = false;
@@ -57,8 +58,12 @@ class _GroupCreateDialogState extends State<GroupCreateDialog> {
 
     return AlertDialog(
       title: Text(
-        '새 그룹 생성',
-        style: TextStyle(fontFamily: 'Anemone_air', color: AppColors.darkGray),
+        '그룹 생성',
+        style: TextStyle(
+          fontFamily: 'Anemone_air',
+          color: AppColors.darkGray,
+          fontSize: 18,
+        ),
       ),
       content: SingleChildScrollView(
         child: Column(
@@ -96,7 +101,8 @@ class _GroupCreateDialogState extends State<GroupCreateDialog> {
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(
-                    color: isNameMaxLength ? AppColors.red : AppColors.lightGray,
+                    color:
+                        isNameMaxLength ? AppColors.red : AppColors.lightGray,
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
@@ -139,19 +145,28 @@ class _GroupCreateDialogState extends State<GroupCreateDialog> {
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(
-                    color: isDescriptionMaxLength ? AppColors.red : AppColors.lightGray,
+                    color:
+                        isDescriptionMaxLength
+                            ? AppColors.red
+                            : AppColors.lightGray,
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(
-                    color: isDescriptionMaxLength ? AppColors.red : AppColors.primary,
+                    color:
+                        isDescriptionMaxLength
+                            ? AppColors.red
+                            : AppColors.primary,
                     width: 2,
                   ),
                 ),
                 suffixText: '$_descriptionLength/20',
                 suffixStyle: TextStyle(
-                  color: isDescriptionMaxLength ? AppColors.red : AppColors.mediumGray,
+                  color:
+                      isDescriptionMaxLength
+                          ? AppColors.red
+                          : AppColors.mediumGray,
                   fontFamily: 'Anemone_air',
                 ),
               ),
@@ -197,92 +212,107 @@ class _GroupCreateDialogState extends State<GroupCreateDialog> {
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-          onPressed: _isCreating
-              ? null
-              : () async {
-                  String groupName = _groupNameController.text.trim();
-                  if (groupName.isEmpty) {
+          onPressed:
+              _isCreating
+                  ? null
+                  : () async {
+                    String groupName = _groupNameController.text.trim();
+                    if (groupName.isEmpty) {
+                      setState(() {
+                        _isNameEmpty = true;
+                      });
+                      return;
+                    }
+
                     setState(() {
-                      _isNameEmpty = true;
+                      _isCreating = true;
                     });
-                    return;
-                  }
 
-                  setState(() {
-                    _isCreating = true;
-                  });
+                    try {
+                      // GroupProvider를 사용해 그룹 추가 API 호출
+                      final success = await Provider.of<GroupProvider>(
+                        context,
+                        listen: false,
+                      ).addGroup(
+                        name: groupName,
+                        description: _groupDescriptionController.text.trim(),
+                        isPublic: _isPublic,
+                      );
 
-                  try {
-                    // GroupProvider를 사용해 그룹 추가 API 호출
-                    final success = await Provider.of<GroupProvider>(context, listen: false).addGroup(
-                      name: groupName,
-                      description: _groupDescriptionController.text.trim(),
-                      isPublic: _isPublic,
-                    );
+                      if (success) {
+                        // 그룹 목록 새로고침
+                        await Provider.of<GroupProvider>(
+                          context,
+                          listen: false,
+                        ).fetchMyGroups();
 
-                    if (success) {
-                      // 그룹 목록 새로고침
-                      await Provider.of<GroupProvider>(context, listen: false).fetchMyGroups();
-                      
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '그룹이 생성되었습니다.',
-                              style: TextStyle(fontFamily: 'Anemone_air'),
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '그룹이 생성되었습니다.',
+                                style: TextStyle(fontFamily: 'Anemone_air'),
+                              ),
+                              backgroundColor: AppColors.primary,
                             ),
-                            backgroundColor: AppColors.primary,
-                          ),
-                        );
-                        Navigator.of(context).pop();
+                          );
+                          Navigator.of(context).pop();
+                        }
+                      } else {
+                        if (mounted) {
+                          final error =
+                              Provider.of<GroupProvider>(
+                                context,
+                                listen: false,
+                              ).error;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                error ?? '그룹 생성에 실패했습니다.',
+                                style: TextStyle(fontFamily: 'Anemone_air'),
+                              ),
+                              backgroundColor: AppColors.red,
+                            ),
+                          );
+                        }
                       }
-                    } else {
+                    } catch (e) {
                       if (mounted) {
-                        final error = Provider.of<GroupProvider>(context, listen: false).error;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              error ?? '그룹 생성에 실패했습니다.',
+                              '오류가 발생했습니다: $e',
                               style: TextStyle(fontFamily: 'Anemone_air'),
                             ),
                             backgroundColor: AppColors.red,
                           ),
                         );
                       }
+                    } finally {
+                      if (mounted) {
+                        setState(() {
+                          _isCreating = false;
+                        });
+                      }
                     }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            '오류가 발생했습니다: $e',
-                            style: TextStyle(fontFamily: 'Anemone_air'),
-                          ),
-                          backgroundColor: AppColors.red,
-                        ),
-                      );
-                    }
-                  } finally {
-                    if (mounted) {
-                      setState(() {
-                        _isCreating = false;
-                      });
-                    }
-                  }
-                },
-          child: _isCreating
-              ? SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  },
+          child:
+              _isCreating
+                  ? SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                  : Text(
+                    '생성',
+                    style: TextStyle(
+                      fontFamily: 'Anemone_air',
+                      color: Colors.white,
+                    ),
                   ),
-                )
-              : Text(
-                  '생성',
-                  style: TextStyle(fontFamily: 'Anemone_air', color: Colors.white),
-                ),
         ),
       ],
     );

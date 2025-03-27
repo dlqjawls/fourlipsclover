@@ -19,9 +19,9 @@ class PlanCreateRequest {
     return {
       'title': title,
       'description': description,
-      'startDate': startDate.toIso8601String(),
-      'endDate': endDate.toIso8601String(),
-      'members': members,
+      'startDate': startDate.toIso8601String().split('T')[0],
+      'endDate': endDate.toIso8601String().split('T')[0], 
+      'members': members.map((id) => {'memberId': id}).toList(),
       'treasurerId': treasurerId,
     };
   }

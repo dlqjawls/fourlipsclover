@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import '../services/api/plan_api.dart';
 import '../models/plan/plan_model.dart';
 import '../models/plan/plan_list_model.dart';
 import '../models/plan/plan_detail_model.dart';
@@ -7,378 +6,286 @@ import '../models/plan/plan_schedule_model.dart';
 import '../models/plan/plan_create_request.dart';
 import '../models/plan/plan_update_request.dart';
 import '../models/plan/plan_schedule_create_request.dart';
-import '../models/plan/plan_schedule_update_request.dart';
+import '../services/api/plan_api.dart';
+import 'package:flutter/widgets.dart';
 
 class PlanProvider with ChangeNotifier {
   final PlanApi _planApi = PlanApi();
-
-  // 계획 목록 캐시
-  Map<int, List<PlanList>> _planListCache = {}; // 그룹별 계획 목록
-  Map<int, PlanDetail> _planDetailCache = {}; // 계획 상세 정보
-  Map<String, List<PlanSchedule>> _scheduleCache = {}; // planId별 일정 목록
-
-  // 로딩 상태
+  
+  // 계획 목록
+  final Map<int, List<PlanList>> _planLists = {}; // groupId를 키로 사용
+  
+  // 현재 선택된 계획
+  PlanDetail? _selectedPlanDetail;
+  
+  // 계획의 일정 목록
+  final Map<int, List<PlanSchedule>> _planSchedules = {}; // planId를 키로 사용
+  
+  // 로딩 및 에러 상태
   bool _isLoading = false;
+  String? _error;
+  
+  // Getters
+  List<PlanList> getPlansForGroup(int groupId) => _planLists[groupId] ?? [];
+  PlanDetail? get selectedPlanDetail => _selectedPlanDetail;
+  List<PlanSchedule> getSchedulesForPlan(int planId) => _planSchedules[planId] ?? [];
   bool get isLoading => _isLoading;
-
-  // 에러 메시지
-  String? _errorMessage;
-  String? get errorMessage => _errorMessage;
-
-  // 특정 그룹의 여행 계획 목록 가져오기 (API 호출)
-  Future<List<PlanList>> fetchPlansForGroup(int groupId) async {
-    try {
-      _isLoading = true;
-      _errorMessage = null;
-      // 빌드 단계가 아닐 때 상태 업데이트 예약
-      Future.microtask(() => notifyListeners());
-
-      final plans = await _planApi.getPlans(groupId);
-      _planListCache[groupId] = plans;
-      _isLoading = false;
-      // 빌드 단계가 아닐 때 상태 업데이트 예약
-      Future.microtask(() => notifyListeners());
-      return plans;
-    } catch (e) {
-      _isLoading = false;
-      _errorMessage = '계획 목록을 불러오는데 실패했습니다: $e';
-      // 빌드 단계가 아닐 때 상태 업데이트 예약
-      Future.microtask(() => notifyListeners());
-      return [];
-    }
-  }
-
-  // 캐시에서 그룹의 계획 목록 가져오기 (없으면 API 호출)
-  Future<List<PlanList>> getPlansForGroup(int groupId) async {
-    if (_planListCache.containsKey(groupId)) {
-      return _planListCache[groupId]!;
-    } else {
-      return await fetchPlansForGroup(groupId);
-    }
-  }
-
-  // 계획 상세 정보 가져오기 (API 호출)
-  Future<PlanDetail?> fetchPlanDetail(int groupId, int planId) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      final planDetail = await _planApi.getPlanDetail(groupId, planId);
-      _planDetailCache[planId] = planDetail;
-      _isLoading = false;
-      notifyListeners();
-      return planDetail;
-    } catch (e) {
-      _isLoading = false;
-      _errorMessage = '계획 상세 정보를 불러오는데 실패했습니다: $e';
-      notifyListeners();
-      return null;
-    }
-  }
-
-  // 계획 생성하기
-  Future<Plan?> createPlan({
+  String? get error => _error;
+  
+  // 계획 생성
+  Future<Plan> createPlan({
     required int groupId,
-    required String title,
-    required String description,
-    required DateTime startDate,
-    required DateTime endDate,
-    required List<int> members,
-    required int treasurerId,
+    required PlanCreateRequest request,
   }) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
+    _setLoading(true);
     try {
-      final request = PlanCreateRequest(
-        title: title,
-        description: description,
-        startDate: startDate,
-        endDate: endDate,
-        members: members,
-        treasurerId: treasurerId,
-      );
-
-      final createdPlan = await _planApi.createPlan(
+      final newPlan = await _planApi.createPlan(
         groupId: groupId,
         request: request,
       );
-
-      // 캐시 무효화
-      _planListCache.remove(groupId);
-
-      _isLoading = false;
-      notifyListeners();
-      return createdPlan;
+      
+      // 캐시된 계획 목록 갱신을 위해 다시 로드
+      await fetchPlans(groupId);
+      
+      _error = null;
+      return newPlan;
     } catch (e) {
-      _isLoading = false;
-      _errorMessage = '계획 생성에 실패했습니다: $e';
-      notifyListeners();
-      return null;
+      _error = '계획 생성에 실패했습니다: $e';
+      debugPrint(_error);
+      throw Exception(_error);
+    } finally {
+      _setLoading(false);
     }
   }
-
-  // 계획 수정하기
-  Future<Plan?> updatePlan({
+  
+  // 그룹의 계획 목록 조회
+  Future<List<PlanList>> fetchPlans(int groupId) async {
+    _setLoading(true);
+    try {
+      final plans = await _planApi.getPlans(groupId);
+      _planLists[groupId] = plans;
+      _error = null;
+      notifyListeners();
+      return plans;
+    } catch (e) {
+      _error = '계획 목록을 불러오는데 실패했습니다: $e';
+      debugPrint(_error);
+      throw Exception(_error);
+    } finally {
+      _setLoading(false);
+    }
+  }
+  
+  // 특정 날짜의 계획 조회 (캘린더용)
+  Future<List<PlanList>> getPlansForDate(int groupId, DateTime date) async {
+    try {
+      // 아직 해당 그룹의 계획이 캐시되어 있지 않으면 로드
+      if (_planLists[groupId] == null) {
+        await fetchPlans(groupId);
+      }
+      
+      // 이 날짜가 속한 계획 필터링
+      return (_planLists[groupId] ?? []).where((plan) {
+        // 날짜가 계획 시작일부터 종료일 사이인지 확인
+        return !date.isBefore(plan.startDate) && 
+               !date.isAfter(plan.endDate.add(const Duration(days: 1)));
+      }).toList();
+    } catch (e) {
+      _error = '날짜별 계획을 조회하는데 실패했습니다: $e';
+      debugPrint(_error);
+      return [];
+    }
+  }
+  
+  // 계획 상세 정보 조회
+  Future<PlanDetail> fetchPlanDetail(int groupId, int planId) async {
+    _setLoading(true);
+    try {
+      final planDetail = await _planApi.getPlanDetail(groupId, planId);
+      _selectedPlanDetail = planDetail;
+      _error = null;
+      notifyListeners();
+      return planDetail;
+    } catch (e) {
+      _error = '계획 상세 정보를 불러오는데 실패했습니다: $e';
+      debugPrint(_error);
+      throw Exception(_error);
+    } finally {
+      _setLoading(false);
+    }
+  }
+  
+  // 계획 수정
+  Future<Plan> updatePlan({
     required int groupId,
     required int planId,
-    required String title,
-    required String description,
-    required DateTime startDate,
-    required DateTime endDate,
+    required PlanUpdateRequest request,
   }) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
+    _setLoading(true);
     try {
-      final request = PlanUpdateRequest(
-        title: title,
-        description: description,
-        startDate: startDate,
-        endDate: endDate,
-      );
-
       final updatedPlan = await _planApi.updatePlan(
         groupId: groupId,
         planId: planId,
         request: request,
       );
-
-      // 캐시 무효화
-      _planListCache.remove(groupId);
-      _planDetailCache.remove(planId);
-
-      _isLoading = false;
-      notifyListeners();
+      
+      // 캐시된 계획 목록 갱신을 위해 다시 로드
+      await fetchPlans(groupId);
+      
+      // 선택된 계획이 수정된 계획이라면 상세 정보도 갱신
+      if (_selectedPlanDetail?.planId == planId) {
+        await fetchPlanDetail(groupId, planId);
+      }
+      
+      _error = null;
       return updatedPlan;
     } catch (e) {
-      _isLoading = false;
-      _errorMessage = '계획 수정에 실패했습니다: $e';
-      notifyListeners();
-      return null;
+      _error = '계획 수정에 실패했습니다: $e';
+      debugPrint(_error);
+      throw Exception(_error);
+    } finally {
+      _setLoading(false);
     }
   }
-
-  // 계획 삭제하기
-  Future<bool> deletePlan(int groupId, int planId) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
+  
+  // 계획 삭제
+  Future<void> deletePlan(int groupId, int planId) async {
+    _setLoading(true);
     try {
       await _planApi.deletePlan(groupId, planId);
-
-      // 캐시 무효화
-      _planListCache.remove(groupId);
-      _planDetailCache.remove(planId);
-
-      _isLoading = false;
+      
+      // 캐시된 계획 목록에서도 삭제
+      if (_planLists[groupId] != null) {
+        _planLists[groupId]!.removeWhere((plan) => plan.planId == planId);
+      }
+      
+      // 선택된 계획이 삭제된 계획이라면 선택 해제
+      if (_selectedPlanDetail?.planId == planId) {
+        _selectedPlanDetail = null;
+      }
+      
+      _error = null;
       notifyListeners();
-      return true;
     } catch (e) {
-      _isLoading = false;
-      _errorMessage = '계획 삭제에 실패했습니다: $e';
-      notifyListeners();
-      return false;
+      _error = '계획 삭제에 실패했습니다: $e';
+      debugPrint(_error);
+      throw Exception(_error);
+    } finally {
+      _setLoading(false);
     }
   }
 
-  // 계획 일정 목록 가져오기
-  Future<List<PlanSchedule>> fetchSchedulesForPlan(
-    int groupId,
-    int planId,
-  ) async {
-    final cacheKey = '$groupId-$planId';
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
+  // 특정 날짜의 일정 조회 
+Future<List<PlanSchedule>> getSchedulesForDate(int groupId, DateTime date) async {
+  try {
+    // 먼저 해당 날짜에 속하는 계획 목록 가져오기
+    final plansForDate = await getPlansForDate(groupId, date);
+    
+    // 모든 계획의 일정을 담을 리스트
+    List<PlanSchedule> schedulesForDate = [];
+    
+    // 각 계획의 일정 로드 및 필터링
+    for (var plan in plansForDate) {
+      // 아직 일정이 로드되지 않았다면 로드
+      if (_planSchedules[plan.planId] == null) {
+        await fetchPlanSchedules(groupId, plan.planId);
+      }
+      
+      // 이 계획의 일정 가져오기
+      final schedules = _planSchedules[plan.planId] ?? [];
+      
+      // 해당 날짜에 속하는 일정만 필터링
+      final filteredSchedules = schedules.where((schedule) {
+        final scheduleDate = DateTime(
+          schedule.visitAt.year,
+          schedule.visitAt.month,
+          schedule.visitAt.day,
+        );
+        final targetDate = DateTime(
+          date.year,
+          date.month,
+          date.day,
+        );
+        return scheduleDate.isAtSameMomentAs(targetDate);
+      }).toList();
+      
+      schedulesForDate.addAll(filteredSchedules);
+    }
+    
+    // 방문 시간순으로 정렬
+    schedulesForDate.sort((a, b) => a.visitAt.compareTo(b.visitAt));
+    
+    return schedulesForDate;
+  } catch (e) {
+    _error = '날짜별 일정을 조회하는데 실패했습니다: $e';
+    debugPrint(_error);
+    return [];
+  }
+}
+  
+  // 계획의 일정 목록 조회
+  Future<List<PlanSchedule>> fetchPlanSchedules(int groupId, int planId) async {
+    _setLoading(true);
     try {
       final schedules = await _planApi.getPlanSchedules(groupId, planId);
-      _scheduleCache[cacheKey] = schedules;
-      _isLoading = false;
+      _planSchedules[planId] = schedules;
+      _error = null;
       notifyListeners();
       return schedules;
     } catch (e) {
-      _isLoading = false;
-      _errorMessage = '일정 목록을 불러오는데 실패했습니다: $e';
-      notifyListeners();
-      return [];
+      _error = '계획 일정 목록을 불러오는데 실패했습니다: $e';
+      debugPrint(_error);
+      throw Exception(_error);
+    } finally {
+      _setLoading(false);
     }
   }
-
-  // 계획 일정 생성하기
-  Future<PlanSchedule?> createSchedule({
+  
+  // 계획 일정 생성
+  Future<PlanSchedule> createPlanSchedule({
     required int groupId,
     required int planId,
-    required int restaurantId,
-    String? notes,
-    required DateTime visitAt,
+    required PlanScheduleCreateRequest request,
   }) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
+    _setLoading(true);
     try {
-      final request = PlanScheduleCreateRequest(
-        restaurantId: restaurantId,
-        notes: notes,
-        visitAt: visitAt,
-      );
-
-      final createdSchedule = await _planApi.createPlanSchedule(
+      final newSchedule = await _planApi.createPlanSchedule(
         groupId: groupId,
         planId: planId,
         request: request,
       );
-
-      // 캐시 무효화
-      final cacheKey = '$groupId-$planId';
-      _scheduleCache.remove(cacheKey);
-
-      _isLoading = false;
-      notifyListeners();
-      return createdSchedule;
-    } catch (e) {
-      _isLoading = false;
-      _errorMessage = '일정 생성에 실패했습니다: $e';
-      notifyListeners();
-      return null;
-    }
-  }
-
-  // 계획 일정 수정하기
-  Future<bool> updateSchedule({
-    required int groupId,
-    required int planId,
-    required int scheduleId,
-    int? restaurantId,
-    String? notes,
-    required DateTime visitAt,
-  }) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      final request = PlanScheduleUpdateRequest(
-        restaurantId: restaurantId,
-        notes: notes,
-        visitAt: visitAt,
-      );
-
-      await _planApi.updatePlanSchedule(
-        groupId: groupId,
-        planId: planId,
-        scheduleId: scheduleId,
-        request: request,
-      );
-
-      // 캐시 무효화
-      final cacheKey = '$groupId-$planId';
-      _scheduleCache.remove(cacheKey);
-
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _isLoading = false;
-      _errorMessage = '일정 수정에 실패했습니다: $e';
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // 계획 일정 삭제하기
-  Future<bool> deleteSchedule(int groupId, int planId, int scheduleId) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      await _planApi.deletePlanSchedule(groupId, planId, scheduleId);
-
-      // 캐시 무효화
-      final cacheKey = '$groupId-$planId';
-      _scheduleCache.remove(cacheKey);
-
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _isLoading = false;
-      _errorMessage = '일정 삭제에 실패했습니다: $e';
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // 특정 날짜에 여행 계획이 있는지 확인
-  Future<bool> hasPlansOnDate(int groupId, DateTime date) async {
-    final plans = await getPlansForGroup(groupId);
-    return plans.any(
-      (plan) =>
-          (date.isAfter(plan.startDate) ||
-              date.isAtSameMomentAs(plan.startDate)) &&
-          (date.isBefore(plan.endDate) || date.isAtSameMomentAs(plan.endDate)),
-    );
-  }
-
-  // 특정 날짜의 여행 계획 목록 반환
-  Future<List<PlanList>> getPlansForDate(int groupId, DateTime date) async {
-    final plans = await getPlansForGroup(groupId);
-    return plans
-        .where(
-          (plan) =>
-              (date.isAfter(plan.startDate) ||
-                  date.isAtSameMomentAs(plan.startDate)) &&
-              (date.isBefore(plan.endDate) ||
-                  date.isAtSameMomentAs(plan.endDate)),
-        )
-        .toList();
-  }
-
-  // 특정 날짜의 세부 일정 목록 반환
-  Future<List<PlanSchedule>> getSchedulesForDate(
-    int groupId,
-    DateTime date,
-  ) async {
-    final result = <PlanSchedule>[];
-    final plans = await getPlansForDate(groupId, date);
-
-    for (var plan in plans) {
-      final cacheKey = '$groupId-${plan.planId}';
-      List<PlanSchedule> schedules;
-
-      if (_scheduleCache.containsKey(cacheKey)) {
-        schedules = _scheduleCache[cacheKey]!;
+      
+      // 캐시된 일정 목록 갱신
+      if (_planSchedules[planId] != null) {
+        _planSchedules[planId]!.add(newSchedule);
       } else {
-        schedules = await fetchSchedulesForPlan(groupId, plan.planId);
+        await fetchPlanSchedules(groupId, planId);
       }
-
-      if (schedules.isNotEmpty) {
-        result.addAll(
-          schedules.where(
-            (schedule) =>
-                schedule.visitAt.year == date.year &&
-                schedule.visitAt.month == date.month &&
-                schedule.visitAt.day == date.day,
-          ),
-        );
-      }
+      
+      _error = null;
+      notifyListeners();
+      return newSchedule;
+    } catch (e) {
+      _error = '일정 생성에 실패했습니다: $e';
+      debugPrint(_error);
+      throw Exception(_error);
+    } finally {
+      _setLoading(false);
     }
-
-    return result;
   }
-
-  // 캐시 초기화
-  void clearCache() {
-    _planListCache.clear();
-    _planDetailCache.clear();
-    _scheduleCache.clear();
+  
+void _setLoading(bool loading) {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (_isLoading != loading) {
+      _isLoading = loading;
+      notifyListeners();
+    }
+  });
+}
+  
+  // 에러 초기화
+  void clearError() {
+    _error = null;
     notifyListeners();
   }
 }
