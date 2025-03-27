@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:provider/provider.dart';
-import '../../../models/plan_model.dart';
+import '../../../models/plan/plan_list_model.dart';
 import '../../../providers/plan_provider.dart';
 import '../../../config/theme.dart';
 
 class GroupCalendar extends StatefulWidget {
-  // StatelessWidget에서 StatefulWidget으로 변경
   final DateTime focusedDay;
   final DateTime? selectedDay;
   final int groupId;
   final Function(DateTime, DateTime) onDaySelected;
-  final List<Plan> Function(DateTime) eventLoader;
+  final List<PlanList> Function(DateTime) eventLoader;
   final Function(DateTime) onFocusedDayChanged;
 
   const GroupCalendar({
@@ -32,19 +31,71 @@ class _GroupCalendarState extends State<GroupCalendar> {
   // 달력 보기 모드 (월간만 유지)
   CalendarFormat _calendarFormat = CalendarFormat.month;
   late DateTime _focusedDay;
+  
+  // 날짜별 이벤트 캐시
+  Map<DateTime, List<PlanList>> _eventsCache = {};
+  bool _isLoadingEvents = false;
 
   @override
   void initState() {
     super.initState();
     _focusedDay = widget.focusedDay;
+    _loadEvents();
+  }
+  
+  // 표시되는 월의 이벤트 미리 로드
+  Future<void> _loadEvents() async {
+    if (_isLoadingEvents) return;
+    
+    setState(() {
+      _isLoadingEvents = true;
+    });
+    
+    final firstDay = DateTime(_focusedDay.year, _focusedDay.month, 1);
+    final lastDay = DateTime(_focusedDay.year, _focusedDay.month + 1, 0);
+    
+    for (int i = 0; i <= lastDay.day - firstDay.day; i++) {
+      final day = DateTime(_focusedDay.year, _focusedDay.month, i + 1);
+      final normalized = DateTime(day.year, day.month, day.day);
+      
+      try {
+        final events = await Provider.of<PlanProvider>(context, listen: false)
+            .getPlansForDate(widget.groupId, day);
+        
+        if (mounted) {
+          setState(() {
+            _eventsCache[normalized] = events;
+          });
+        }
+      } catch (e) {
+        debugPrint('이벤트 로드 중 오류 발생: $e');
+      }
+    }
+    
+    if (mounted) {
+      setState(() {
+        _isLoadingEvents = false;
+      });
+    }
+  }
+  
+  @override
+  void didUpdateWidget(GroupCalendar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.groupId != widget.groupId) {
+      _eventsCache.clear();
+      _loadEvents();
+    }
+  }
+
+  // 동기식 이벤트 로더 메서드
+  List<PlanList> _getEventsForDay(DateTime day) {
+    final normalizedDay = DateTime(day.year, day.month, day.day);
+    return _eventsCache[normalizedDay] ?? [];
   }
 
   @override
   Widget build(BuildContext context) {
-    // 모든 여행 계획 가져오기
-    final planProvider = Provider.of<PlanProvider>(context);
-    final plans = planProvider.getPlansForGroup(widget.groupId);
-
     return Column(
       children: [
         // 달력 헤더 액션 버튼 추가
@@ -66,6 +117,8 @@ class _GroupCalendarState extends State<GroupCalendar> {
                       _focusedDay = today;
                     });
                     widget.onFocusedDayChanged(today);
+                    _eventsCache.clear();
+                    _loadEvents();
                   },
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(
@@ -99,87 +152,97 @@ class _GroupCalendarState extends State<GroupCalendar> {
         ),
 
         // 달력 위젯
-        TableCalendar(
-          firstDay: DateTime.utc(2023, 1, 1),
-          lastDay: DateTime.utc(2030, 12, 31),
-          focusedDay: _focusedDay,
-          // 여기를 null로 해서 선택된 날짜 표시 안함
-          selectedDayPredicate: (day) => false,
-          calendarFormat: _calendarFormat, // 달력 보기 모드 설정
-          locale: 'ko_KR',
-          daysOfWeekHeight: 24,
-          rowHeight: 45,
-          headerStyle: HeaderStyle(
-            titleCentered: true,
-            formatButtonVisible: false,
-            titleTextStyle: TextStyle(
-              fontFamily: 'Anemone_air',
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.darkGray,
-            ),
-          ),
-          calendarStyle: CalendarStyle(
-            // 오늘 날짜 스타일
-            todayDecoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              shape: BoxShape.circle,
-            ),
-            markersMaxCount: 0, // 점 마커 숨기기
-          ),
-          daysOfWeekStyle: DaysOfWeekStyle(
-            weekdayStyle: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: AppColors.darkGray,
-            ),
-            weekendStyle: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.red,
-            ),
-          ),
-          eventLoader: widget.eventLoader,
-          onDaySelected: widget.onDaySelected,
-          onHeaderTapped: (focusedDay) {
-            _showCompactMonthYearPicker(context, focusedDay);
-          },
-          onPageChanged: (focusedDay) {
-            setState(() {
-              _focusedDay = focusedDay;
-            });
-            widget.onFocusedDayChanged(focusedDay);
-          },
-
-          // 날짜 셀 커스터마이징
-          calendarBuilders: CalendarBuilders(
-            defaultBuilder: (context, day, focusedDay) {
-              // 여행 계획에 속하는지 확인
-              Widget? planCell = _buildCellWithPlanCheck(
-                context,
-                day,
-                plans,
-                false,
-                false,
-              );
-              if (planCell != null) {
-                return planCell;
-              }
-
-              // 계획에 속하지 않는 경우 기본 셀 직접 구현
-              return Center(
-                child: Text(
-                  '${day.day}',
-                  style: const TextStyle(color: Colors.black),
+        _isLoadingEvents && _eventsCache.isEmpty
+            ? const Center(child: CircularProgressIndicator())
+            : TableCalendar(
+                firstDay: DateTime.utc(2023, 1, 1),
+                lastDay: DateTime.utc(2030, 12, 31),
+                focusedDay: _focusedDay,
+                // 여기를 null로 해서 선택된 날짜 표시 안함
+                selectedDayPredicate: (day) => false,
+                calendarFormat: _calendarFormat, // 달력 보기 모드 설정
+                locale: 'ko_KR',
+                daysOfWeekHeight: 24,
+                rowHeight: 45,
+                headerStyle: HeaderStyle(
+                  titleCentered: true,
+                  formatButtonVisible: false,
+                  titleTextStyle: TextStyle(
+                    fontFamily: 'Anemone_air',
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkGray,
+                  ),
                 ),
-              );
-            },
-            todayBuilder: (context, day, focusedDay) {
-              // 오늘 날짜이면서 여행 계획에 속하는지 확인
-              return _buildCellWithPlanCheck(context, day, plans, true, false);
-            },
-          ),
-        ),
+                calendarStyle: CalendarStyle(
+                  // 오늘 날짜 스타일
+                  todayDecoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    shape: BoxShape.circle,
+                  ),
+                  markersMaxCount: 0, // 점 마커 숨기기
+                ),
+                daysOfWeekStyle: DaysOfWeekStyle(
+                  weekdayStyle: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkGray,
+                  ),
+                  weekendStyle: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                ),
+                eventLoader: _getEventsForDay,
+                onDaySelected: widget.onDaySelected,
+                onHeaderTapped: (focusedDay) {
+                  _showCompactMonthYearPicker(context, focusedDay);
+                },
+                onPageChanged: (focusedDay) {
+                  setState(() {
+                    _focusedDay = focusedDay;
+                  });
+                  widget.onFocusedDayChanged(focusedDay);
+                  _eventsCache.clear();
+                  _loadEvents();
+                },
+
+                // 날짜 셀 커스터마이징
+                calendarBuilders: CalendarBuilders(
+                  defaultBuilder: (context, day, focusedDay) {
+                    // 여행 계획에 속하는지 확인
+                    Widget? planCell = _buildCellWithPlanCheck(
+                      context,
+                      day,
+                      _getEventsForDay(day),
+                      false,
+                      false,
+                    );
+                    if (planCell != null) {
+                      return planCell;
+                    }
+
+                    // 계획에 속하지 않는 경우 기본 셀 직접 구현
+                    return Center(
+                      child: Text(
+                        '${day.day}',
+                        style: const TextStyle(color: Colors.black),
+                      ),
+                    );
+                  },
+                  todayBuilder: (context, day, focusedDay) {
+                    // 오늘 날짜이면서 여행 계획에 속하는지 확인
+                    return _buildCellWithPlanCheck(
+                      context, 
+                      day, 
+                      _getEventsForDay(day),
+                      true, 
+                      false
+                    );
+                  },
+                ),
+              ),
       ],
     );
   }
@@ -188,12 +251,12 @@ class _GroupCalendarState extends State<GroupCalendar> {
   Widget _buildCellWithPlanCheck(
     BuildContext context,
     DateTime day,
-    List<Plan> plans,
+    List<PlanList> plans,
     bool isToday,
     bool isSelected,
   ) {
     // 이 날짜가 어떤 계획에 속하는지 확인
-    Plan? planForDay;
+    PlanList? planForDay;
     bool isStartDay = false;
     bool isEndDay = false;
 
@@ -295,34 +358,34 @@ class _GroupCalendarState extends State<GroupCalendar> {
   void _showCompactMonthYearPicker(BuildContext context, DateTime currentDate) {
     showDialog(
       context: context,
-      builder:
-          (context) => Dialog(
-            insetPadding: const EdgeInsets.symmetric(
-              horizontal: 80,
-              vertical: 200,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: CompactDatePicker(
-              initialDate: currentDate,
-              firstDate: DateTime(2023),
-              lastDate: DateTime(2030),
-              onDateSelected: (newDate) {
-                setState(() {
-                  _focusedDay = newDate;
-                });
-                widget.onFocusedDayChanged(newDate);
-                Navigator.of(context).pop();
-              },
-            ),
-          ),
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(
+          horizontal: 80,
+          vertical: 200,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: CompactDatePicker(
+          initialDate: currentDate,
+          firstDate: DateTime(2023),
+          lastDate: DateTime(2030),
+          onDateSelected: (newDate) {
+            setState(() {
+              _focusedDay = newDate;
+            });
+            widget.onFocusedDayChanged(newDate);
+            _eventsCache.clear();
+            _loadEvents();
+            Navigator.of(context).pop();
+          },
+        ),
+      ),
     );
   }
 }
 
 // CompactDatePicker 클래스는 변경 없음
-
 class CompactDatePicker extends StatefulWidget {
   final DateTime initialDate;
   final DateTime firstDate;

@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 class Group {
   final int groupId;
   final int memberId;

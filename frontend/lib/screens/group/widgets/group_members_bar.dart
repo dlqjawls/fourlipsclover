@@ -83,7 +83,7 @@ class GroupMembersBar extends StatelessWidget {
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     children: [
-                      // 그룹장, 총무, 일반 멤버 순으로 정렬하여 표시
+                      // 그룹장, 일만 멤버 표시시
                       // 그룹장 먼저 표시
                       ...members
                           .where((m) => m.role == '그룹장' || m.role == 'OWNER')
@@ -93,25 +93,16 @@ class GroupMembersBar extends StatelessWidget {
                               child: _buildMemberAvatar(member),
                             ),
                           ),
-                      // 총무 표시
-                      ...members
-                          .where((m) => m.role == '총무' || m.role == 'MANAGER')
-                          .map(
-                            (member) => Padding(
-                              padding: const EdgeInsets.only(right: 12.0),
-                              child: _buildMemberAvatar(member),
-                            ),
-                          ),
                       // 일반 멤버 표시
                       ...members
-                          .where((m) => m.role != '그룹장' && m.role != 'OWNER' && m.role != '총무' && m.role != 'MANAGER')
+                          .where((m) => m.role != '그룹장' && m.role != 'OWNER')
                           .map(
                             (member) => Padding(
                               padding: const EdgeInsets.only(right: 12.0),
                               child: _buildMemberAvatar(member),
                             ),
                           ),
-                          
+
                       // 공간 추가하여 초대 버튼과 겹치지 않게
                       const SizedBox(width: 8),
                     ],
@@ -176,15 +167,11 @@ class GroupMembersBar extends StatelessWidget {
         roleColor = AppColors.primaryDarkest;
         roleText = '그룹장';
         break;
-      case '총무':
-      case 'MANAGER':
-        roleColor = AppColors.orange;
-        roleText = '총무';
-        break;
       default:
         roleColor = AppColors.primary;
+        roleText = ''; // 일반 멤버는 라벨 없음
     }
-    
+
     // 현재 로그인한 사용자인지 확인
     bool isCurrentUser = member.memberId == currentUserId;
 
@@ -205,12 +192,14 @@ class GroupMembersBar extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(23),
                 child:
-                    member.profileImage != null && member.profileImage!.isNotEmpty
-                        ? Image.network(member.profileImage!, fit: BoxFit.cover)
+                    member.profileUrl != null && member.profileUrl!.isNotEmpty
+                        ? Image.network(member.profileUrl!, fit: BoxFit.cover)
                         : CircleAvatar(
                           backgroundColor: AppColors.primaryLight,
                           child: Text(
-                            member.nickname.isNotEmpty ? member.nickname[0] : '?',
+                            member.nickname.isNotEmpty
+                                ? member.nickname[0]
+                                : '?',
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -259,7 +248,10 @@ class GroupMembersBar extends StatelessWidget {
               fontFamily: 'Anemone_air',
               fontSize: 11,
               color: AppColors.darkGray,
-              fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal, // 현재 사용자 강조
+              fontWeight:
+                  isCurrentUser
+                      ? FontWeight.bold
+                      : FontWeight.normal, // 현재 사용자 강조
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

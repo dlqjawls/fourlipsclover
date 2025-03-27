@@ -2,14 +2,14 @@ class Member {
   final int memberId;
   final String email;
   final String nickname;
-  final String? profileImage;
-  final String role; // '그룹장', '총무', '멤버' 등의 역할 정보 추가
+  final String? profileUrl; // 백엔드 필드명에 맞춤
+  String role; // role은 백엔드에서 오지 않지만 프론트엔드에서 계산
 
   Member({
     required this.memberId,
     required this.email,
     required this.nickname,
-    this.profileImage,
+    this.profileUrl,
     this.role = '멤버', // 기본값 설정
   });
 
@@ -18,8 +18,8 @@ class Member {
       memberId: json['memberId'],
       email: json['email'],
       nickname: json['nickname'],
-      profileImage: json['profileImage'],
-      role: json['role'] ?? '멤버', // 백엔드에서 role 정보가 없을 경우 기본값
+      profileUrl: json['profileUrl'],
+      // role은 백엔드에서 오지 않으므로 기본값 '멤버' 사용
     );
   }
 
@@ -28,8 +28,8 @@ class Member {
       'memberId': memberId,
       'email': email,
       'nickname': nickname,
-      'profileImage': profileImage,
-      'role': role,
+      'profileUrl': profileUrl,
+      // role은 백엔드로 보내지 않음
     };
   }
 }

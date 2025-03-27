@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/group/group_model.dart';
 import '../../models/group/group_detail_model.dart';
 import '../../models/group/group_invitation_model.dart';
+import '../../models/group/group_join_request_model.dart';
 
 /// 그룹 API 클래스
 /// 백엔드 서버와의 HTTP 통신을 담당합니다.
@@ -300,35 +301,62 @@ class GroupApi {
     }
   }
 
-  /// 그룹 삭제하기
-Future<void> deleteGroup(int groupId) async {
-  final token = await _getAuthToken();
+  /// 그룹 가입 요청 목록 조회하기
+  /// [groupId] 그룹 ID
+  Future<List<GroupJoinRequest>> getJoinRequestList(int groupId) async {
+    final token = await _getAuthToken();
 
-  // 토큰 유효성 검사
-  if (!_validateToken(token)) {
-    throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
-  }
+    // 토큰 유효성 검사
+    if (!_validateToken(token)) {
+      throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+    }
 
-  debugPrint('그룹 삭제 API 호출: groupId=$groupId');
-  final url = Uri.parse('$baseUrl$apiPrefix/$groupId');
-  
-  try {
-    final response = await http.delete(
+    final url = Uri.parse('$baseUrl$apiPrefix/join-requests-list/$groupId');
+    final response = await http.get(
       url,
       headers: {'Authorization': 'Bearer $token'},
     );
 
-    debugPrint('그룹 삭제 API 응답: ${response.statusCode}, 본문: ${response.body}');
-
-    // 응답 코드 범위를 넓혀서 성공 조건 완화
-    if (response.statusCode < 200 || response.statusCode >= 300) {
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+      return data.map((json) => GroupJoinRequest.fromJson(json)).toList();
+    } else {
       throw Exception(
-        '그룹 삭제에 실패했습니다: ${response.statusCode}, ${response.body}',
+        '가입 요청 목록 조회에 실패했습니다: ${response.statusCode}, ${response.body}',
       );
     }
-  } catch (e) {
-    debugPrint('그룹 삭제 API 예외 발생: $e');
-    rethrow;
   }
-}
+
+  /// 그룹 삭제하기
+  /// [groupId] 그룹 ID
+  Future<void> deleteGroup(int groupId) async {
+    final token = await _getAuthToken();
+
+    // 토큰 유효성 검사
+    if (!_validateToken(token)) {
+      throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+    }
+
+    debugPrint('그룹 삭제 API 호출: groupId=$groupId');
+    final url = Uri.parse('$baseUrl$apiPrefix/$groupId');
+    
+    try {
+      final response = await http.delete(
+        url,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      debugPrint('그룹 삭제 API 응답: ${response.statusCode}, 본문: ${response.body}');
+
+      // 응답 코드 범위를 넓혀서 성공 조건 완화
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception(
+          '그룹 삭제에 실패했습니다: ${response.statusCode}, ${response.body}',
+        );
+      }
+    } catch (e) {
+      debugPrint('그룹 삭제 API 예외 발생: $e');
+      rethrow;
+    }
+  }
 }

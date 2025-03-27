@@ -45,6 +45,24 @@ class RestaurantResponse {
       y: json['y'],
     );
   }
+  
+  // toJson 메서드 추가
+  Map<String, dynamic> toJson() {
+    return {
+      'restaurantId': restaurantId,
+      'kakaoPlaceId': kakaoPlaceId,
+      'placeName': placeName,
+      'addressName': addressName,
+      'roadAddressName': roadAddressName,
+      'category': category,
+      'categoryName': categoryName,
+      'phone': phone,
+      'placeUrl': placeUrl,
+      'x': x,
+      'y': y,
+      'distance': distance,
+    };
+  }
 }
 
 /// 리뷰 작성자 정보 모델
@@ -68,6 +86,16 @@ class ReviewMemberResponse {
       nickname: json['nickname'],
       email: json['email'],
     );
+  }
+  
+  // toJson 메서드 추가
+  Map<String, dynamic> toJson() {
+    return {
+      'memberId': memberId,
+      'name': name,
+      'nickname': nickname,
+      'email': email,
+    };
   }
 }
 
@@ -102,6 +130,19 @@ class ReviewRestaurantResponse {
       categoryName: json['categoryName'],
     );
   }
+  
+  // toJson 메서드 추가
+  Map<String, dynamic> toJson() {
+    return {
+      'restaurantId': restaurantId,
+      'kakaoPlaceId': kakaoPlaceId,
+      'placeName': placeName,
+      'addressName': addressName,
+      'roadAddressName': roadAddressName,
+      'category': category,
+      'categoryName': categoryName,
+    };
+  }
 }
 
 /// 리뷰 응답 모델
@@ -134,6 +175,19 @@ class ReviewResponse {
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
       updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
     );
+  }
+  
+  // toJson 메서드 추가
+  Map<String, dynamic> toJson() {
+    return {
+      'reviewId': reviewId,
+      'reviewer': reviewer?.toJson(),
+      'restaurant': restaurant?.toJson(),
+      'content': content,
+      'visitedAt': visitedAt?.toIso8601String(),
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+    };
   }
 
   // 방문 날짜를 포맷팅
@@ -206,5 +260,13 @@ class ReviewDeleteResponse {
       message: json['message'] ?? '',
       reviewId: json['reviewId'],
     );
+  }
+  
+  // toJson 메서드 추가
+  Map<String, dynamic> toJson() {
+    return {
+      'message': message,
+      'reviewId': reviewId,
+    };
   }
 }
