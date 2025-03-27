@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/config/theme.dart';
 import 'package:frontend/screens/matching/matchingcreate/matching_hashtag.dart';
 import 'package:frontend/screens/matching/matching_detail.dart';
-import 'package:frontend/screens/matching/matching_local_list.dart';
+import 'package:frontend/screens/matching/matchinglocal/matching_local_list.dart';
 
 class MatchData {
   final int matchId;
