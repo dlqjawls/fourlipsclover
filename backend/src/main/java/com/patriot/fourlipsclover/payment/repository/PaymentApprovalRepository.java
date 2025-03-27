@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface PaymentApprovalRepository extends JpaRepository<PaymentApproval, Long> {
 
-
-	List<PaymentApproval> findByPartnerOrderId(String partnerOrderId);
+	List<PaymentApproval> findByPartnerUserId(String partnerUserId);
 }
 
