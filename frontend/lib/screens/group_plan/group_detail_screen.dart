@@ -11,7 +11,7 @@ import '../../config/theme.dart';
 import 'group_widgets/group_calendar.dart';
 import 'plan_widgets/empty_plan_view.dart';
 import 'plan_widgets/plan_list_view.dart';
-import 'plan_widgets/plan_create_dialog.dart';
+import 'plan_widgets/plan_create_bottom_sheet.dart';
 import 'group_widgets/calendar_event_bottom_sheet.dart';
 import 'group_widgets/group_members_bar.dart';
 import 'group_widgets/group_edit_dialog.dart';
@@ -115,9 +115,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
     final planProvider = Provider.of<PlanProvider>(context, listen: false);
     try {
-      final plans = await planProvider.fetchPlans(
-        _currentGroup.groupId,
-      );
+      final plans = await planProvider.fetchPlans(_currentGroup.groupId);
 
       if (mounted) {
         setState(() {
@@ -382,7 +380,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                   // 계획이 있을 때만 버튼 표시
                   if (plans.isNotEmpty)
                     GestureDetector(
-                      onTap: () => _showAddPlanDialog(),
+                      onTap: () => _showAddPlanBottomSheet(),
                       child: Container(
                         width: 36,
                         height: 36,
@@ -411,7 +409,9 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             Expanded(
               child:
                   plans.isEmpty
-                      ? EmptyPlanView(onAddPlan: () => _showAddPlanDialog())
+                      ? EmptyPlanView(
+                        onAddPlan: () => _showAddPlanBottomSheet(),
+                      )
                       : PlanListView(
                         plans: plans.map(_convertPlanListToPlan).toList(),
                         onPlanSelected: (plan) {
@@ -473,13 +473,21 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   }
 
   // 여행 계획 추가 다이얼로그 표시
-  void _showAddPlanDialog() {
-    showDialog(
+  void _showAddPlanBottomSheet() {
+    showModalBottomSheet(
       context: context,
-      builder: (context) => PlanCreateDialog(groupId: _currentGroup.groupId),
-    ).then((_) {
-      // 다이얼로그가 닫힌 후 계획 목록 다시 로드
-      _loadPlans();
+      isScrollControlled: true, // 키보드가 올라왔을 때 바텀시트가 올라가도록 설정
+      backgroundColor: Colors.transparent, // 투명 배경 설정
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder:
+          (context) => PlanCreateBottomSheet(groupId: _currentGroup.groupId),
+    ).then((result) {
+      // 바텀시트가 닫힌 후 결과에 따라 계획 목록 다시 로드
+      if (result == true) {
+        _loadPlans();
+      }
     });
   }
 

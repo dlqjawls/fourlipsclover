@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../models/plan/plan_model.dart';
+import '../../../widgets/custom_switch.dart';
 import 'plan_card.dart';
 
 class PlanListView extends StatefulWidget {
@@ -30,11 +31,12 @@ class _PlanListViewState extends State<PlanListView> {
       ..sort((a, b) => a.startDate.compareTo(b.startDate));
 
     // 필터링된 플랜 목록
-    final filteredPlans = sortedPlans.where((plan) {
-      final bool isCompleted = plan.endDate.isBefore(now);
-      // 완료된 여행은 _showCompleted가 true일 때만 표시
-      return _showCompleted || !isCompleted;
-    }).toList();
+    final filteredPlans =
+        sortedPlans.where((plan) {
+          final bool isCompleted = plan.endDate.isBefore(now);
+          // 완료된 여행은 _showCompleted가 true일 때만 표시
+          return _showCompleted || !isCompleted;
+        }).toList();
 
     return Column(
       children: [
@@ -46,12 +48,10 @@ class _PlanListViewState extends State<PlanListView> {
             children: [
               Text(
                 '완료된 여행 표시',
-                style: TextStyle(
-                  fontFamily: 'Anemone_air',
-                  fontSize: 14,
-                ),
+                style: const TextStyle(fontFamily: 'Anemone_air', fontSize: 14),
               ),
-              Switch(
+              const SizedBox(width: 8), // 텍스트와 스위치 사이 간격 추가
+              CustomSwitch(
                 value: _showCompleted,
                 onChanged: (value) {
                   setState(() {
@@ -65,33 +65,35 @@ class _PlanListViewState extends State<PlanListView> {
 
         // 여행 목록 그리드
         Expanded(
-          child: filteredPlans.isEmpty
-              ? Center(
-                  child: Text(
-                    '표시할 여행 계획이 없습니다.',
-                    style: TextStyle(
-                      fontFamily: 'Anemone_air',
-                      fontSize: 16,
+          child:
+              filteredPlans.isEmpty
+                  ? Center(
+                    child: Text(
+                      '표시할 여행 계획이 없습니다.',
+                      style: const TextStyle(
+                        fontFamily: 'Anemone_air',
+                        fontSize: 16,
+                      ),
                     ),
+                  )
+                  : GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2, // 한 줄에 두 개의 카드
+                          crossAxisSpacing: 16, // 가로 간격
+                          mainAxisSpacing: 16, // 세로 간격
+                          childAspectRatio: 1.0,
+                        ),
+                    itemCount: filteredPlans.length,
+                    itemBuilder: (context, index) {
+                      final plan = filteredPlans[index];
+                      return PlanCard(
+                        plan: plan,
+                        onTap: () => widget.onPlanSelected(plan),
+                      );
+                    },
                   ),
-                )
-              : GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2, // 한 줄에 두 개의 카드
-                    crossAxisSpacing: 16, // 가로 간격
-                    mainAxisSpacing: 16, // 세로 간격
-                    childAspectRatio: 1.0,
-                  ),
-                  itemCount: filteredPlans.length,
-                  itemBuilder: (context, index) {
-                    final plan = filteredPlans[index];
-                    return PlanCard(
-                      plan: plan,
-                      onTap: () => widget.onPlanSelected(plan),
-                    );
-                  },
-                ),
         ),
       ],
     );
