@@ -24,7 +24,8 @@ public class ReviewMapper {
 
 	private ReviewMemberResponse toReviewer(Member member) {
 		return ReviewMemberResponse.builder().email(member.getEmail())
-				.memberId(member.getMemberId()).nickname(member.getNickname())
+				.memberId(member.getMemberId()).nickname(member.getNickname()).profileImageUrl(
+						member.getProfileUrl())
 				.build();
 	}
 
