@@ -3,6 +3,7 @@ package com.patriot.fourlipsclover.image.service;
 import com.patriot.fourlipsclover.restaurant.entity.Review;
 import com.patriot.fourlipsclover.restaurant.entity.ReviewImage;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewImageRepository;
+import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.errors.ErrorResponseException;
@@ -11,6 +12,7 @@ import io.minio.errors.InternalException;
 import io.minio.errors.InvalidResponseException;
 import io.minio.errors.ServerException;
 import io.minio.errors.XmlParserException;
+import io.minio.http.Method;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.InvalidKeyException;
@@ -19,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -82,7 +85,30 @@ public class ReviewImageService {
 		List<String> imageUrls = new ArrayList<>();
 		List<ReviewImage> reviewImages = reviewImageRepository.findByReviewReviewId(reviewId);
 		for (ReviewImage image : reviewImages) {
-			imageUrls.add(image.getImageUrl());
+			// MinioClient의 getUrl() 메서드 사용
+			String url = null;
+			try {
+				url = minioClient.getPresignedObjectUrl(
+						GetPresignedObjectUrlArgs.builder()
+								.bucket(bucketName)
+								.object(image.getImageUrl())
+								.method(Method.GET)
+								.expiry(7, TimeUnit.DAYS) // URL 유효기간 설정 (필요에 따라 조정)
+								.build()
+				);
+			} catch (ErrorResponseException | InsufficientDataException | InternalException |
+					 InvalidKeyException | InvalidResponseException | IOException |
+					 NoSuchAlgorithmException | XmlParserException | ServerException e) {
+				throw new RuntimeException(e);
+			}
+
+			// 서명된 URL에서 쿼리 파라미터 제거 (필요한 경우)
+			int queryIndex = url.indexOf('?');
+			if (queryIndex > 0) {
+				url = url.substring(0, queryIndex);
+			}
+
+			imageUrls.add(url);
 		}
 		return imageUrls;
 	}
