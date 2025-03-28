@@ -1,26 +1,37 @@
 package com.patriot.fourlipsclover.mypage.controller;
 
+import com.patriot.fourlipsclover.member.service.MemberService;
+import com.patriot.fourlipsclover.mypage.dto.response.MypageResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequiredArgsConstructor
 @Tag(name = "마이페이지", description = "마이페이지 관련 API")
 public class MypageController {
 
+	private final MemberService memberService;
+
 	@Operation(summary = "마이페이지 더미 데이터 조회", description = "마이페이지에 표시될 더미 데이터를 제공합니다.")
 	@GetMapping("/api/mypage/dummy")
-	public Map<String, Object> getMypageDummy() {
+	public Map<String, Object> getMypageDummy(
+			@Parameter(name = "memberId", description = "회원 ID", required = true, example = "23424111")
+			@RequestParam Long memberId
+	) {
 		Map<String, Object> response = new HashMap<>();
-
-		response.put("userId", "1231414142");
-		response.put("nickname", "이범진(닉네임)");
-		response.put("name", "이범진");
+		MypageResponse mypageData = memberService.getMypageData(memberId);
+		response.put("userId", mypageData.getMemberId());
+		response.put("nickname", mypageData.getNickname());
+		response.put("name", mypageData.getNickname());
 		response.put("badgeName", "현지인");
 		response.put("profileUrl", "http://fourlipsclover.duckdns.org:9000/mypage/download.jpeg");
 
