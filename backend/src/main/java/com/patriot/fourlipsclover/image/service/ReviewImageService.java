@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,8 +33,9 @@ import org.springframework.web.multipart.MultipartFile;
 public class ReviewImageService {
 
 	private final MinioClient minioClient;
-	private final String bucketName;
 	private final ReviewImageRepository reviewImageRepository;
+	@Value("${minio.bucketName.reviewImage}")
+	private String bucketName;
 
 	@Transactional
 	public List<String> uploadFiles(Review review, List<MultipartFile> images) {
