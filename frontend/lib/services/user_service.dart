@@ -4,6 +4,7 @@ import '../models/user_model.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/user_provider.dart';
+import 'package:flutter/foundation.dart';
 
 class UserService {
   final UserProvider userProvider;
@@ -15,27 +16,40 @@ class UserService {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwtToken');
       final baseUrl = dotenv.env['API_BASE_URL'];
+      final userIdStr = prefs.getString('userId');
+
+      debugPrint('토큰: $token'); // 디버깅
+      debugPrint('userId 문자열: $userIdStr'); // 디버깅
+
+      if (userIdStr == null) {
+        throw Exception('사용자 ID를 찾을 수 없습니다.');
+      }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/api/mypage/dummy'),
+        Uri.parse(
+          '$baseUrl/api/mypage/dummy?memberId=$userIdStr',
+        ), // int 변환 없이 문자열 그대로 사용
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           'Authorization': '$token',
         },
       );
 
+      debugPrint('응답 상태 코드: ${response.statusCode}'); // 디버깅
+
       if (response.statusCode == 200) {
         final data = utf8.decode(response.bodyBytes);
         final jsonData = json.decode(data);
-        final userProfile = UserProfile.fromJson(jsonData);
+        debugPrint('응답 데이터: $jsonData'); // 디버깅
 
+        final userProfile = UserProfile.fromJson(jsonData);
         userProvider.setUserProfile(userProfile);
         return userProfile;
       } else {
         throw Exception('서버 응답 오류: ${response.statusCode}');
       }
     } catch (e) {
-      print('getUserProfile 에러: $e');
+      debugPrint('getUserProfile 에러: $e');
       rethrow;
     }
   }

@@ -11,13 +11,12 @@ class Payment {
 
   factory Payment.fromJson(Map<String, dynamic> json) {
     return Payment(
-      storeName: json['storeName'],
-      menu: json['menu'],
-      paymentAmount: json['paymentAmount'],
+      storeName: json['storeName'] ?? '',
+      menu: json['menu'] ?? '',
+      paymentAmount: json['paymentAmount'] ?? 0,
     );
   }
 
-  // Payment toJson 메서드 추가
   Map<String, dynamic> toJson() {
     return {
       'storeName': storeName,
@@ -39,7 +38,7 @@ class UserProfile {
   final int groupCount;
   final int reviewCount;
   final int luckGauge;
-  final String? currentJourney;
+  final String currentJourney;
 
   UserProfile({
     required this.userId,
@@ -53,30 +52,31 @@ class UserProfile {
     required this.groupCount,
     required this.reviewCount,
     required this.luckGauge,
-    this.currentJourney,
+    required this.currentJourney,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
-      userId: json['userId'] ?? '',
-      name: json['name'],
-      nickname: json['nickname'],
-      profileUrl: json['profileUrl'],
+      userId: json['userId'].toString(),
+      name: json['name'] ?? '',
+      nickname: json['nickname'] ?? '',
+      profileUrl: json['profileUrl'] ?? '',
       recentPayments:
-          (json['recentPayments'] as List)
-              .map((payment) => Payment.fromJson(payment))
+          (json['recentPayments'] as List<dynamic>? ?? [])
+              .map(
+                (payment) => Payment.fromJson(payment as Map<String, dynamic>),
+              )
               .toList(),
-      badgeName: json['badgeName'],
-      localAuth: json['localAuth'],
-      albumCount: json['albumCount'],
-      groupCount: json['groupCount'],
-      reviewCount: json['reviewCount'],
-      luckGauge: json['luckGauge'],
-      currentJourney: json['currentJourney'],
+      badgeName: json['badgeName'] ?? '',
+      localAuth: json['localAuth'] ?? false,
+      albumCount: json['albumCount'] ?? 0,
+      groupCount: json['groupCount'] ?? 0,
+      reviewCount: json['reviewCount'] ?? 0,
+      luckGauge: json['luckGauge'] ?? 0,
+      currentJourney: json['currentJourney'] ?? '',
     );
   }
 
-  // UserProfile toJson 메서드 추가
   Map<String, dynamic> toJson() {
     return {
       'userId': userId,
