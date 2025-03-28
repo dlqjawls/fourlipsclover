@@ -168,97 +168,100 @@ class _GroupCalendarState extends State<GroupCalendar> {
         ),
 
         // 달력 위젯
-        _isLoadingEvents && _eventsCache.isEmpty
-            ? const Center(child: CircularProgressIndicator())
-            : TableCalendar(
-              firstDay: DateTime.utc(2023, 1, 1),
-              lastDay: DateTime.utc(2030, 12, 31),
-              focusedDay: _focusedDay,
-              // 여기를 null로 해서 선택된 날짜 표시 안함
-              selectedDayPredicate: (day) => false,
-              calendarFormat: _calendarFormat, // 달력 보기 모드 설정
-              locale: 'ko_KR',
-              daysOfWeekHeight: 24,
-              rowHeight: 45,
-              headerStyle: HeaderStyle(
-                titleCentered: true,
-                formatButtonVisible: false,
-                titleTextStyle: TextStyle(
-                  fontFamily: 'Anemone_air',
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkGray,
-                ),
-              ),
-              calendarStyle: CalendarStyle(
-                // 오늘 날짜 스타일
-                todayDecoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  shape: BoxShape.circle,
-                ),
-                markersMaxCount: 0, // 점 마커 숨기기
-              ),
-              daysOfWeekStyle: DaysOfWeekStyle(
-                weekdayStyle: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkGray,
-                ),
-                weekendStyle: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-              ),
-              eventLoader: _getEventsForDay,
-              onDaySelected: widget.onDaySelected,
-              onHeaderTapped: (focusedDay) {
-                _showCompactMonthYearPicker(context, focusedDay);
-              },
-              onPageChanged: (focusedDay) {
-                setState(() {
-                  _focusedDay = focusedDay;
-                });
-                widget.onFocusedDayChanged(focusedDay);
-                _eventsCache.clear();
-                _loadEvents();
-              },
-
-              // 날짜 셀 커스터마이징
-              calendarBuilders: CalendarBuilders(
-                defaultBuilder: (context, day, focusedDay) {
-                  // 여행 계획에 속하는지 확인
-                  Widget? planCell = _buildCellWithPlanCheck(
-                    context,
-                    day,
-                    _getEventsForDay(day),
-                    false,
-                    false,
-                  );
-                  if (planCell != null) {
-                    return planCell;
-                  }
-
-                  // 계획에 속하지 않는 경우 기본 셀 직접 구현
-                  return Center(
-                    child: Text(
-                      '${day.day}',
-                      style: const TextStyle(color: Colors.black),
+        Expanded(
+          child:
+              _isLoadingEvents && _eventsCache.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : TableCalendar(
+                    firstDay: DateTime.utc(2023, 1, 1),
+                    lastDay: DateTime.utc(2030, 12, 31),
+                    focusedDay: _focusedDay,
+                    // 여기를 null로 해서 선택된 날짜 표시 안함
+                    selectedDayPredicate: (day) => false,
+                    calendarFormat: _calendarFormat, // 달력 보기 모드 설정
+                    locale: 'ko_KR',
+                    daysOfWeekHeight: 24,
+                    rowHeight: 45,
+                    headerStyle: HeaderStyle(
+                      titleCentered: true,
+                      formatButtonVisible: false,
+                      titleTextStyle: TextStyle(
+                        fontFamily: 'Anemone_air',
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkGray,
+                      ),
                     ),
-                  );
-                },
-                todayBuilder: (context, day, focusedDay) {
-                  // 오늘 날짜이면서 여행 계획에 속하는지 확인
-                  return _buildCellWithPlanCheck(
-                    context,
-                    day,
-                    _getEventsForDay(day),
-                    true,
-                    false,
-                  );
-                },
-              ),
-            ),
+                    calendarStyle: CalendarStyle(
+                      // 오늘 날짜 스타일
+                      todayDecoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        shape: BoxShape.circle,
+                      ),
+                      markersMaxCount: 0, // 점 마커 숨기기
+                    ),
+                    daysOfWeekStyle: DaysOfWeekStyle(
+                      weekdayStyle: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkGray,
+                      ),
+                      weekendStyle: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
+                    eventLoader: _getEventsForDay,
+                    onDaySelected: widget.onDaySelected,
+                    onHeaderTapped: (focusedDay) {
+                      _showCompactMonthYearPicker(context, focusedDay);
+                    },
+                    onPageChanged: (focusedDay) {
+                      setState(() {
+                        _focusedDay = focusedDay;
+                      });
+                      widget.onFocusedDayChanged(focusedDay);
+                      _eventsCache.clear();
+                      _loadEvents();
+                    },
+
+                    // 날짜 셀 커스터마이징
+                    calendarBuilders: CalendarBuilders(
+                      defaultBuilder: (context, day, focusedDay) {
+                        // 여행 계획에 속하는지 확인
+                        Widget? planCell = _buildCellWithPlanCheck(
+                          context,
+                          day,
+                          _getEventsForDay(day),
+                          false,
+                          false,
+                        );
+                        if (planCell != null) {
+                          return planCell;
+                        }
+
+                        // 계획에 속하지 않는 경우 기본 셀 직접 구현
+                        return Center(
+                          child: Text(
+                            '${day.day}',
+                            style: const TextStyle(color: Colors.black),
+                          ),
+                        );
+                      },
+                      todayBuilder: (context, day, focusedDay) {
+                        // 오늘 날짜이면서 여행 계획에 속하는지 확인
+                        return _buildCellWithPlanCheck(
+                          context,
+                          day,
+                          _getEventsForDay(day),
+                          true,
+                          false,
+                        );
+                      },
+                    ),
+                  ),
+        ),
       ],
     );
   }
