@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 
 class AuthService {
   // 카카오 로그인 처리
@@ -111,7 +112,14 @@ class AuthService {
 
       if (jwtToken != null && jwtToken.isNotEmpty) {
         await prefs.setString('jwtToken', jwtToken);
+
+        // JWT 토큰 디코딩 및 memberId 저장
+        final Map<String, dynamic> decodedToken = JwtDecoder.decode(jwtToken);
+        final String memberId = decodedToken['sub'];
+        await prefs.setString('userId', memberId);
+
         debugPrint('JWT 토큰 저장 완료. 토큰 길이: ${jwtToken.length}');
+        debugPrint('memberId 저장 완료: $memberId');
       } else {
         debugPrint('경고: 저장하려는 JWT 토큰이 null이거나 비어 있습니다.');
       }
@@ -145,6 +153,7 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('isLoggedIn');
       await prefs.remove('jwtToken');
+      await prefs.remove('userId');
       debugPrint('로그인 상태 초기화 완료');
     } catch (e) {
       debugPrint('로그인 상태 초기화 중 오류 발생: $e');
