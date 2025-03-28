@@ -472,7 +472,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
   }
 
-  // 여행 계획 추가 다이얼로그 표시
+  // 여행 계획 추가 바텀시트트
   void _showAddPlanBottomSheet() {
     showModalBottomSheet(
       context: context,

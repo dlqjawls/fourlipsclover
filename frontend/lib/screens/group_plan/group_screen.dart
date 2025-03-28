@@ -4,7 +4,7 @@ import '../../config/theme.dart';
 import '../../providers/group_provider.dart';
 import 'group_widgets/empty_group_view.dart';
 import 'group_widgets/group_list_view.dart';
-import 'group_widgets/group_create_dialog.dart';
+import 'group_widgets/group_create_bottom_sheet.dart';
 
 class GroupScreen extends StatefulWidget {
   const GroupScreen({Key? key}) : super(key: key);
@@ -29,7 +29,7 @@ class _GroupScreenState extends State<GroupScreen> {
   // 그룹 목록 가져오기
   Future<void> _fetchGroups() async {
     if (!mounted) return;
-    
+
     setState(() {
       _isLoading = true;
       _isError = false;
@@ -39,7 +39,7 @@ class _GroupScreenState extends State<GroupScreen> {
       await Provider.of<GroupProvider>(context, listen: false).fetchMyGroups();
     } catch (e) {
       if (!mounted) return;
-      
+
       setState(() {
         _isError = true;
       });
@@ -96,11 +96,7 @@ class _GroupScreenState extends State<GroupScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.error_outline,
-                      color: AppColors.red,
-                      size: 48,
-                    ),
+                    Icon(Icons.error_outline, color: AppColors.red, size: 48),
                     SizedBox(height: 16),
                     Text(
                       '그룹 목록을 불러오는데 실패했습니다.',
@@ -129,16 +125,23 @@ class _GroupScreenState extends State<GroupScreen> {
               Consumer<GroupProvider>(
                 builder: (context, groupProvider, child) {
                   final groups = groupProvider.groups;
-                  
+                  print("Consumer<GroupProvider> 빌드 - 그룹 개수: ${groups.length}");
+
                   return groups.isEmpty
                       ? EmptyGroupView(
-                          onCreateGroup: () => _showGroupCreateDialog(context),
-                        )
+                        onCreateGroup: () {
+                          print("EmptyGroupView - 그룹 생성 버튼 클릭");
+                          _showGroupCreateBottomSheet(context);
+                        },
+                      )
                       : GroupListView(
-                          groups: groups,
-                          groupProvider: groupProvider,
-                          onCreateGroup: () => _showGroupCreateDialog(context),
-                        );
+                        groups: groups,
+                        groupProvider: groupProvider,
+                        onCreateGroup: () {
+                          print("GroupListView - 그룹 생성 버튼 클릭");
+                          _showGroupCreateBottomSheet(context);
+                        },
+                      );
                 },
               ),
           ],
@@ -147,13 +150,36 @@ class _GroupScreenState extends State<GroupScreen> {
     );
   }
 
-  // 그룹 생성 다이얼로그
-  void _showGroupCreateDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return GroupCreateDialog();
-      },
-    );
+  // 그룹 생성 바텀 시트
+  void _showGroupCreateBottomSheet(BuildContext context) {
+    print("_showGroupCreateBottomSheet 함수 시작");
+
+    try {
+      print("showModalBottomSheet 호출 전");
+      showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            builder: (BuildContext bottomSheetContext) {
+              print("바텀시트 builder 호출됨");
+              return const GroupCreateBottomSheet();
+            },
+          )
+          .then((result) {
+            print("바텀시트 닫힘 - 결과: $result");
+            if (result == true) {
+              _fetchGroups();
+            }
+          })
+          .catchError((error) {
+            print("바텀시트 오류 발생: $error");
+          });
+      print("showModalBottomSheet 호출 후");
+    } catch (e) {
+      print("_showGroupCreateBottomSheet 예외 발생: $e");
+    }
   }
 }
