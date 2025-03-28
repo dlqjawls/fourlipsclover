@@ -1,20 +1,21 @@
-// screens/group/group_detail_screen.dart
+// screens/group/group_detail_screen.dartloading
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../models/group/group_model.dart';
 import '../../models/group/group_detail_model.dart';
-import '../../models/plan_model.dart';
+import '../../models/plan/plan_list_model.dart';
 import '../../providers/plan_provider.dart';
 import '../../providers/group_provider.dart';
 import '../../config/theme.dart';
-import 'widgets/group_calendar.dart';
-import 'widgets/empty_plan_view.dart';
-import 'widgets/plan_list_view.dart';
-import 'widgets/plan_create_dialog.dart';
-import 'widgets/calendar_event_bottom_sheet.dart';
-import 'widgets/group_members_bar.dart';
-import 'widgets/group_edit_dialog.dart';
+import 'group_widgets/group_calendar.dart';
+import 'plan_widgets/empty_plan_view.dart';
+import 'plan_widgets/plan_list_view.dart';
+import 'plan_widgets/plan_create_bottom_sheet.dart';
+import 'group_widgets/calendar_event_bottom_sheet.dart';
+import 'group_widgets/group_members_bar.dart';
+import 'group_widgets/group_edit_dialog.dart';
+import '../../models/plan/plan_model.dart';
 
 class GroupDetailScreen extends StatefulWidget {
   final Group group;
@@ -35,14 +36,19 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   GroupDetail? _groupDetail;
   bool _isLoadingDetail = false;
 
+  // 그룹의 여행 계획 목록
+  List<PlanList>? _plans;
+  bool _isLoadingPlans = false;
+
   @override
   void initState() {
     super.initState();
     _currentGroup = widget.group;
 
-    // 빌드가 완료된 후 그룹 상세 정보 로드
+    // 빌드가 완료된 후 그룹 상세 정보 및 계획 로드
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadGroupDetail();
+      _loadPlans();
     });
   }
 
@@ -53,14 +59,77 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     });
 
     final groupProvider = Provider.of<GroupProvider>(context, listen: false);
-    final detail = await groupProvider.fetchGroupDetail(_currentGroup.groupId);
+    try {
+      final detail = await groupProvider.fetchGroupDetail(
+        _currentGroup.groupId,
+      );
 
-    if (mounted) {
-      // 위젯이 아직 마운트 상태인지 확인
-      setState(() {
-        _groupDetail = detail;
-        _isLoadingDetail = false;
-      });
+      if (mounted && detail != null) {
+        // detail이 null이 아닌지 확인
+        // 역할 설정 로직
+        _setMemberRoles(detail);
+
+        setState(() {
+          _groupDetail = detail;
+          _isLoadingDetail = false;
+        });
+      } else {
+        // detail이 null인 경우 처리
+        if (mounted) {
+          setState(() {
+            _isLoadingDetail = false;
+          });
+          // 선택적으로 사용자에게 오류 메시지 표시
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('그룹 상세 정보를 불러오는데 실패했습니다.')));
+        }
+      }
+    } catch (e) {
+      debugPrint('그룹 상세 정보 로드 중 오류: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingDetail = false;
+        });
+      }
+    }
+  }
+
+  // GroupDetail 타입을 명시적으로 지정
+  void _setMemberRoles(GroupDetail detail) {
+    // 그룹장(OWNER) 설정 - 그룹 생성자
+    for (var member in detail.members) {
+      if (member.memberId == _currentGroup.memberId) {
+        member.role = 'OWNER';
+      } else {
+        member.role = 'MEMBER'; // 나머지는 모두 일반 멤버
+      }
+    }
+  }
+
+  // 여행 계획 목록 로드
+  Future<void> _loadPlans() async {
+    setState(() {
+      _isLoadingPlans = true;
+    });
+
+    final planProvider = Provider.of<PlanProvider>(context, listen: false);
+    try {
+      final plans = await planProvider.fetchPlans(_currentGroup.groupId);
+
+      if (mounted) {
+        setState(() {
+          _plans = plans;
+          _isLoadingPlans = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('계획 목록 로드 중 오류: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingPlans = false;
+        });
+      }
     }
   }
 
@@ -68,7 +137,6 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   Widget build(BuildContext context) {
     final planProvider = Provider.of<PlanProvider>(context);
     final groupProvider = Provider.of<GroupProvider>(context);
-    final plans = planProvider.getPlansForGroup(_currentGroup.groupId);
 
     return Scaffold(
       appBar: AppBar(
@@ -204,7 +272,12 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                   ),
 
                   // 선택된 탭에 따른 컨텐츠
-                  Expanded(child: _buildSelectedView(plans)),
+                  Expanded(
+                    child:
+                        _isLoadingPlans && _plans == null
+                            ? const Center(child: CircularProgressIndicator())
+                            : _buildSelectedView(_plans ?? []),
+                  ),
                 ],
               ),
       floatingActionButton: null,
@@ -255,8 +328,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
   }
 
-  // 선택된 탭에 따른 컨텐츠 빌드 (변경 없음)
-  Widget _buildSelectedView(List<Plan> plans) {
+  // 선택된 탭에 따른 컨텐츠 빌드
+  Widget _buildSelectedView(List<PlanList> plans) {
     switch (_selectedIndex) {
       case 0: // 캘린더
         return Padding(
@@ -273,11 +346,10 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
               _showCalendarEventBottomSheet(selectedDay);
             },
+            // 이벤트 로더 수정: FutureBuilder와 함께 캐싱을 활용하는 방식으로 변경됨
             eventLoader: (day) {
-              return Provider.of<PlanProvider>(
-                context,
-                listen: false,
-              ).getPlansForDate(_currentGroup.groupId, day);
+              // GroupCalendar 내부에서 처리되므로 여기서는 빈 배열 반환
+              return [];
             },
             onFocusedDayChanged: (focusedDay) {
               setState(() {
@@ -308,7 +380,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                   // 계획이 있을 때만 버튼 표시
                   if (plans.isNotEmpty)
                     GestureDetector(
-                      onTap: () => _showAddPlanDialog(),
+                      onTap: () => _showAddPlanBottomSheet(),
                       child: Container(
                         width: 36,
                         height: 36,
@@ -337,9 +409,11 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             Expanded(
               child:
                   plans.isEmpty
-                      ? EmptyPlanView(onAddPlan: () => _showAddPlanDialog())
+                      ? EmptyPlanView(
+                        onAddPlan: () => _showAddPlanBottomSheet(),
+                      )
                       : PlanListView(
-                        plans: plans,
+                        plans: plans.map(_convertPlanListToPlan).toList(),
                         onPlanSelected: (plan) {
                           // 여행 상세 화면으로 이동
                         },
@@ -384,7 +458,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     }
   }
 
-  // 캘린더 이벤트 바텀시트 표시 (변경 없음)
+  // 캘린더 이벤트 바텀시트 표시
   void _showCalendarEventBottomSheet(DateTime date) {
     showModalBottomSheet(
       context: context,
@@ -398,15 +472,26 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
   }
 
-  // 여행 계획 추가 다이얼로그 표시 (변경 없음)
-  void _showAddPlanDialog() {
-    showDialog(
+  // 여행 계획 추가 다이얼로그 표시
+  void _showAddPlanBottomSheet() {
+    showModalBottomSheet(
       context: context,
-      builder: (context) => PlanCreateDialog(groupId: _currentGroup.groupId),
-    );
+      isScrollControlled: true, // 키보드가 올라왔을 때 바텀시트가 올라가도록 설정
+      backgroundColor: Colors.transparent, // 투명 배경 설정
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder:
+          (context) => PlanCreateBottomSheet(groupId: _currentGroup.groupId),
+    ).then((result) {
+      // 바텀시트가 닫힌 후 결과에 따라 계획 목록 다시 로드
+      if (result == true) {
+        _loadPlans();
+      }
+    });
   }
 
-  // 그룹 정보 수정 다이얼로그 표시 (새로 추가)
+  // 그룹 정보 수정 다이얼로그 표시
   void _showEditGroupDialog() {
     showDialog(
       context: context,
@@ -478,7 +563,6 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   }
 
   // 현재 로그인한 사용자의 ID 가져오기
-  // 참고: 실제로는 로그인 상태나 사용자 Provider에서 가져와야 합니다.
   int _getMyUserId() {
     // TODO: 실제 로그인한 사용자 ID를 반환하는 로직으로 대체
     // 현재는 그룹 멤버 중 첫번째 멤버가 현재 사용자라고 가정
@@ -499,5 +583,20 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
 
     return isOwner;
+  }
+
+  Plan _convertPlanListToPlan(PlanList planList) {
+    return Plan(
+      planId: planList.planId,
+      groupId: planList.groupId,
+      treasurerId: planList.treasurerId,
+      title: planList.title,
+      description: planList.description,
+      startDate: planList.startDate,
+      endDate: planList.endDate,
+      createdAt: planList.createdAt,
+      updatedAt: null,
+      memberIds: [], // 필요한 경우 API를 통해 멤버 정보 가져오기
+    );
   }
 }

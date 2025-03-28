@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import '../models/restaurant_models.dart';
+import '../models/restaurant_model.dart';
 // import '../constants/api_constants.dart';
 
 /// 카테고리별 레스토랑 목록을 담는 클래스
