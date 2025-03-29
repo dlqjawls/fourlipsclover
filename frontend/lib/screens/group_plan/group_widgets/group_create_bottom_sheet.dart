@@ -195,9 +195,9 @@ class _GroupCreateBottomSheetState extends State<GroupCreateBottomSheet> {
 
                   const SizedBox(height: 20),
 
-                  // 그룹 설명 라벨
+                  // 그룹 소개 라벨
                   Text(
-                    '그룹 설명',
+                    '그룹 소개',
                     style: TextStyle(
                       fontFamily: 'Anemone_air',
                       fontSize: 14,
@@ -206,12 +206,12 @@ class _GroupCreateBottomSheetState extends State<GroupCreateBottomSheet> {
                   ),
                   const SizedBox(height: 8),
 
-                  // 그룹 설명 입력 필드
+                  // 그룹 소개 입력 필드
                   TextField(
                     controller: _groupDescriptionController,
                     style: const TextStyle(fontFamily: 'Anemone_air'),
                     decoration: InputDecoration(
-                      hintText: '그룹을 짧게 설명해주세요',
+                      hintText: '그룹을 짧게 소개해주세요',
                       hintStyle: TextStyle(
                         fontFamily: 'Anemone_air',
                         color: AppColors.mediumGray,

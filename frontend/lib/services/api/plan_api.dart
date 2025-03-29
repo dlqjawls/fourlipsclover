@@ -136,6 +136,9 @@ class PlanApi {
         headers: {'Authorization': 'Bearer $token'},
       );
 
+      // 응답 본문 출력
+      debugPrint('API 응답!!!!: ${response.body}');
+
       if (response.statusCode == 200) {
         return PlanDetail.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
       } else {

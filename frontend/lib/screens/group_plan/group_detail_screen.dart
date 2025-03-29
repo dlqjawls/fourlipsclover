@@ -16,6 +16,7 @@ import 'group_widgets/calendar_event_bottom_sheet.dart';
 import 'group_widgets/group_members_bar.dart';
 import 'group_widgets/group_edit_dialog.dart';
 import '../../models/plan/plan_model.dart';
+import '../../providers/user_provider.dart';
 
 class GroupDetailScreen extends StatefulWidget {
   final Group group;
@@ -131,6 +132,59 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         });
       }
     }
+  }
+
+  // 총무 이름 맵 생성 메서드
+  Map<int, String> _getTreasurerNames(List<PlanList> plans) {
+    final Map<int, String> result = {};
+    final planProvider = Provider.of<PlanProvider>(context, listen: false);
+
+    for (var plan in plans) {
+      // 여기서는 실제 데이터를 가져오는 메서드 호출
+      // 예시: 총무 이름을 가져오는 API 호출 또는 로컬 데이터 사용
+      String treasurerName = '총무'; // 기본값
+
+      // 멤버 목록에서 총무 ID에 해당하는 이름 찾기
+      if (_groupDetail != null) {
+        for (var member in _groupDetail!.members) {
+          if (member.memberId == plan.treasurerId) {
+            treasurerName = member.nickname;
+            break;
+          }
+        }
+      }
+
+      result[plan.planId] = treasurerName;
+    }
+
+    return result;
+  }
+
+  // 멤버 수 맵 생성 메서드
+  Map<int, int> _getMemberCounts(List<PlanList> plans) {
+    final Map<int, int> result = {};
+    final planProvider = Provider.of<PlanProvider>(context, listen: false);
+
+    for (var plan in plans) {
+      // 여기서는 실제 데이터를 가져오는 메서드 호출
+      // 멤버 수를 계산하는 로직 - API 호출 또는 로컬 데이터 사용
+      int memberCount = 0;
+
+      // 예: 플랜 상세 정보로부터 멤버 수 계산
+      // 실제 구현은 데이터 소스에 따라 달라질 수 있음
+      try {
+        // 예시) planProvider를 통해 계획의 멤버 수를 가져옴
+        memberCount = planProvider.getPlanMemberCount(plan.planId);
+      } catch (e) {
+        debugPrint('멤버 수 계산 중 오류: $e');
+        // 기본값으로 1 설정 (최소한 총무는 있으므로)
+        memberCount = 1;
+      }
+
+      result[plan.planId] = memberCount;
+    }
+
+    return result;
   }
 
   @override
@@ -417,6 +471,9 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                         onPlanSelected: (plan) {
                           // 여행 상세 화면으로 이동
                         },
+                        // treasurerNames와 memberCounts 추가
+                        treasurerNames: _getTreasurerNames(plans),
+                        memberCounts: _getMemberCounts(plans),
                       ),
             ),
           ],
@@ -562,14 +619,24 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     }
   }
 
-  // 현재 로그인한 사용자의 ID 가져오기
+  // _getMyUserId 메서드 수정
   int _getMyUserId() {
-    // TODO: 실제 로그인한 사용자 ID를 반환하는 로직으로 대체
-    // 현재는 그룹 멤버 중 첫번째 멤버가 현재 사용자라고 가정
-    if (_groupDetail != null && _groupDetail!.members.isNotEmpty) {
-      return _groupDetail!.members.first.memberId;
+    // UserProvider에서 현재 로그인한 사용자의 정보 가져오기
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+    if (userProvider.userProfile != null) {
+      // UserProfile에서 userId를 정수로 변환하여 반환
+      try {
+        // userId 문자열을 정수로 변환
+        return int.parse(userProvider.userProfile!.userId);
+      } catch (e) {
+        debugPrint('userId를 정수로 변환하는 중 오류: $e');
+      }
     }
-    return 1; // 기본값
+
+    // UserProvider에서 값을 가져올 수 없거나 변환할 수 없는 경우,
+    // _currentGroup.memberId 값을 반환 (그룹 생성자가 현재 로그인한 사용자일 가능성이 높음)
+    return _currentGroup.memberId;
   }
 
   bool isGroupOwner() {
@@ -596,7 +663,6 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
       endDate: planList.endDate,
       createdAt: planList.createdAt,
       updatedAt: null,
-      memberIds: [], // 필요한 경우 API를 통해 멤버 정보 가져오기
     );
   }
 }

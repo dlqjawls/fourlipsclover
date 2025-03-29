@@ -147,8 +147,8 @@ class GroupCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               group.description.isNotEmpty
-                                  ? '설명: ${group.description}'
-                                  : '그룹 설명 없음',
+                                  ? '소개: ${group.description}'
+                                  : '그룹 소개 없음',
                               style: TextStyle(
                                 fontFamily: 'Anemone_air',
                                 fontSize: 12,
