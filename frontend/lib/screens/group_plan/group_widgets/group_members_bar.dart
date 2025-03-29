@@ -187,7 +187,10 @@ class GroupMembersBar extends StatelessWidget {
               height: 46,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: roleColor, width: 2),
+                border: Border.all(
+                  color: isCurrentUser ? AppColors.primaryDarkest : roleColor,
+                  width: 2,
+                ),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(23),
@@ -237,12 +240,12 @@ class GroupMembersBar extends StatelessWidget {
           ],
         ),
 
-        // 이름
+        // 이름 - "나"로 표시하지 않고 항상 닉네임 표시
         const SizedBox(height: 4),
         SizedBox(
           width: 46,
           child: Text(
-            isCurrentUser ? '나' : member.nickname, // 현재 사용자는 '나'로 표시
+            member.nickname, // 모든 멤버의 실제 닉네임 표시
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Anemone_air',
@@ -251,7 +254,7 @@ class GroupMembersBar extends StatelessWidget {
               fontWeight:
                   isCurrentUser
                       ? FontWeight.bold
-                      : FontWeight.normal, // 현재 사용자 강조
+                      : FontWeight.normal, // 현재 사용자는 여전히 굵게 표시
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

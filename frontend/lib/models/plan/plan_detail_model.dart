@@ -1,4 +1,7 @@
-import '../group/member_model.dart';
+// plan_detail_model.dart 파일
+
+import 'package:flutter/foundation.dart';
+import '../group/member_model.dart'; // Member 클래스가 정의된 파일 임포트
 
 class PlanDetail {
   final int planId;
@@ -9,7 +12,8 @@ class PlanDetail {
   final DateTime startDate;
   final DateTime endDate;
   final DateTime createdAt;
-  final List<Member> members;
+  final DateTime? updatedAt;
+  final List<Member> members; // Member 객체 리스트 추가
 
   PlanDetail({
     required this.planId,
@@ -20,22 +24,36 @@ class PlanDetail {
     required this.startDate,
     required this.endDate,
     required this.createdAt,
-    required this.members,
+    this.updatedAt,
+    required this.members, // 생성자에 members 파라미터 추가
   });
 
   factory PlanDetail.fromJson(Map<String, dynamic> json) {
+    // members 필드 파싱
+    List<Member> membersList = [];
+    if (json['members'] != null) {
+      membersList = (json['members'] as List)
+          .map((member) => Member.fromJson(member))
+          .toList();
+      
+      // role 설정 (총무 또는 회원)
+      final treasurerId = json['treasurerId'];
+      for (var member in membersList) {
+        member.role = member.memberId == treasurerId ? '총무' : '회원';
+      }
+    }
+
     return PlanDetail(
       planId: json['planId'],
       groupId: json['groupId'],
       treasurerId: json['treasurerId'],
       title: json['title'],
-      description: json['description'] ?? '',
+      description: json['description'],
       startDate: DateTime.parse(json['startDate']),
       endDate: DateTime.parse(json['endDate']),
       createdAt: DateTime.parse(json['createdAt']),
-      members: (json['members'] as List<dynamic>?)
-          ?.map((memberJson) => Member.fromJson(memberJson))
-          .toList() ?? [],
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      members: membersList, // 파싱된 멤버 리스트 전달
     );
   }
 
@@ -49,7 +67,35 @@ class PlanDetail {
       'startDate': startDate.toIso8601String(),
       'endDate': endDate.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
-      'members': members.map((member) => member.toJson()).toList(),
+      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+      'members': members.map((m) => m.toJson()).toList(), // 멤버 객체를 JSON으로 변환
     };
+  }
+
+  // 수정된 계획 상세 정보 반환
+  PlanDetail copyWith({
+    int? planId,
+    int? groupId,
+    int? treasurerId,
+    String? title,
+    String? description,
+    DateTime? startDate,
+    DateTime? endDate,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    List<Member>? members,
+  }) {
+    return PlanDetail(
+      planId: planId ?? this.planId,
+      groupId: groupId ?? this.groupId,
+      treasurerId: treasurerId ?? this.treasurerId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      members: members ?? this.members,
+    );
   }
 }
