@@ -131,11 +131,17 @@ class GroupCard extends StatelessWidget {
 
                       // 그룹 설명 정보 (세 번째로 표시)
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.info_outline,
-                            size: 14,
-                            color: AppColors.darkGray,
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              top: 2,
+                            ), // 아이콘을 텍스트 기준선에 맞춤
+                            child: Icon(
+                              Icons.info_outline,
+                              size: 14,
+                              color: AppColors.darkGray,
+                            ),
                           ),
                           const SizedBox(width: 4),
                           Expanded(
@@ -148,7 +154,7 @@ class GroupCard extends StatelessWidget {
                                 fontSize: 12,
                                 color: AppColors.darkGray,
                               ),
-                              maxLines: 1,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),

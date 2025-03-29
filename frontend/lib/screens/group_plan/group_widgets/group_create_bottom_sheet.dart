@@ -248,7 +248,6 @@ class _GroupCreateBottomSheetState extends State<GroupCreateBottomSheet> {
                         fontFamily: 'Anemone_air',
                       ),
                     ),
-                    maxLines: 3,
                     inputFormatters: [LengthLimitingTextInputFormatter(20)],
                   ),
 
