@@ -1,4 +1,4 @@
-// screens/group/group_detail_screen.dartloading
+// screens/group/group_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -11,12 +11,35 @@ import '../../config/theme.dart';
 import 'group_widgets/group_calendar.dart';
 import 'plan_widgets/empty_plan_view.dart';
 import 'plan_widgets/plan_list_view.dart';
-import 'plan_widgets/plan_create_bottom_sheet.dart';
-import 'group_widgets/calendar_event_bottom_sheet.dart';
+import 'bottomsheet/plan_create_bottom_sheet.dart';
+import 'bottomsheet/calendar_event_bottom_sheet.dart';
 import 'group_widgets/group_members_bar.dart';
 import 'group_widgets/group_edit_dialog.dart';
 import '../../models/plan/plan_model.dart';
 import '../../providers/user_provider.dart';
+import './plan_detail_screen.dart';
+import '../../widgets/clover_loading_spinner.dart'; // 로딩 스피너 import 추가
+
+// screens/group/group_detail_screen.dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:table_calendar/table_calendar.dart';
+import '../../models/group/group_model.dart';
+import '../../models/group/group_detail_model.dart';
+import '../../models/plan/plan_list_model.dart';
+import '../../providers/plan_provider.dart';
+import '../../providers/group_provider.dart';
+import '../../config/theme.dart';
+import 'group_widgets/group_calendar.dart';
+import 'plan_widgets/empty_plan_view.dart';
+import 'plan_widgets/plan_list_view.dart';
+import 'bottomsheet/plan_create_bottom_sheet.dart';
+import 'bottomsheet/calendar_event_bottom_sheet.dart';
+import 'group_widgets/group_members_bar.dart';
+import 'group_widgets/group_edit_dialog.dart';
+import '../../models/plan/plan_model.dart';
+import '../../providers/user_provider.dart';
+import '../../widgets/clover_loading_spinner.dart'; // 로딩 스피너 import 추가
 
 class GroupDetailScreen extends StatefulWidget {
   final Group group;
@@ -192,6 +215,13 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     final planProvider = Provider.of<PlanProvider>(context);
     final groupProvider = Provider.of<GroupProvider>(context);
 
+    // Provider의 로딩 상태나 내부 로딩 상태 중 어느 하나라도 로딩 중이면 전체 로딩 표시
+    final bool isLoading =
+        groupProvider.isLoading ||
+        planProvider.isLoading ||
+        _isLoadingDetail ||
+        _isLoadingPlans;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -241,104 +271,100 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             ),
         ],
       ),
-      body:
-          groupProvider.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Column(
-                children: [
-                  // 그룹 멤버 바 추가
-                  _isLoadingDetail || _groupDetail == null
-                      ? SizedBox(
-                        height: 86,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.primary,
-                          ),
+      body: LoadingOverlay(
+        isLoading: isLoading,
+        overlayColor: Colors.white.withOpacity(0.7), // 0.7 opacity 유지
+        minDisplayTime: const Duration(milliseconds: 1200), // 최소 1.2초 표시
+        child: Column(
+          children: [
+            // 그룹 멤버 바 (수정된 부분)
+            if (_groupDetail == null)
+              SizedBox(height: 86) // 데이터가 없을 때는 빈 공간만
+            else
+              GroupMembersBar(
+                members: _groupDetail!.members,
+                currentUserId: _getMyUserId(),
+                onAddMember: () async {
+                  // 초대 링크 생성 및 공유 기능
+                  final groupProvider = Provider.of<GroupProvider>(
+                    context,
+                    listen: false,
+                  );
+
+                  // 로딩 표시
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('초대 링크 생성 중...')),
+                  );
+
+                  // 초대 링크 생성
+                  final inviteUrl = await groupProvider.generateInviteLink(
+                    _currentGroup.groupId,
+                  );
+
+                  if (inviteUrl != null) {
+                    // TODO: 생성된 초대 링크를 공유하는 기능 구현
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('초대 링크가 생성되었습니다: $inviteUrl'),
+                        action: SnackBarAction(
+                          label: '복사',
+                          onPressed: () {
+                            // TODO: 클립보드에 복사하는 기능 구현
+                          },
                         ),
-                      )
-                      : GroupMembersBar(
-                        members: _groupDetail!.members,
-                        currentUserId: _getMyUserId(), // 사용자 ID 가져오기
-                        onAddMember: () async {
-                          // 초대 링크 생성 및 공유 기능
-                          final groupProvider = Provider.of<GroupProvider>(
-                            context,
-                            listen: false,
-                          );
-
-                          // 로딩 표시
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('초대 링크 생성 중...')),
-                          );
-
-                          // 초대 링크 생성
-                          final inviteUrl = await groupProvider
-                              .generateInviteLink(_currentGroup.groupId);
-
-                          if (inviteUrl != null) {
-                            // TODO: 생성된 초대 링크를 공유하는 기능 구현
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('초대 링크가 생성되었습니다: $inviteUrl'),
-                                action: SnackBarAction(
-                                  label: '복사',
-                                  onPressed: () {
-                                    // TODO: 클립보드에 복사하는 기능 구현
-                                  },
-                                ),
-                              ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  '초대 링크 생성 실패: ${groupProvider.error}',
-                                ),
-                              ),
-                            );
-                          }
-                        },
                       ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('초대 링크 생성 실패: ${groupProvider.error}'),
+                      ),
+                    );
+                  }
+                },
+              ),
 
-                  // 상단 탭 버튼
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 10.0,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        _buildTabButton('캘린더', 0, Icons.calendar_today),
-                        _buildTabButton('여행계획', 1, Icons.list_alt),
-                        _buildTabButton('공동앨범', 2, Icons.photo_library),
-                      ],
-                    ),
-                  ),
-
-                  // 선택된 탭에 따른 컨텐츠
-                  Expanded(
-                    child:
-                        _isLoadingPlans && _plans == null
-                            ? const Center(child: CircularProgressIndicator())
-                            : _buildSelectedView(_plans ?? []),
+            // 상단 탭 버튼
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 10.0,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-      floatingActionButton: null,
+              child: Row(
+                children: [
+                  _buildTabButton('캘린더', 0, Icons.calendar_today),
+                  _buildTabButton('여행계획', 1, Icons.list_alt),
+                  _buildTabButton('공동앨범', 2, Icons.photo_library),
+                ],
+              ),
+            ),
+
+            // 선택된 탭에 따른 컨텐츠
+            Expanded(
+              child:
+                  _plans == null
+                      ? Container() // 로딩 중에는 빈 컨테이너 (LoadingOverlay에서 처리)
+                      : _buildSelectedView(_plans ?? []),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  // 탭 버튼 위젯 (변경 없음)
+  // 이하 코드는 그대로 유지
+
+  // 탭 버튼 위젯
   Widget _buildTabButton(String title, int index, IconData icon) {
     bool isSelected = _selectedIndex == index;
 
@@ -384,6 +410,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
   // 선택된 탭에 따른 컨텐츠 빌드
   Widget _buildSelectedView(List<PlanList> plans) {
+    // 기존 코드 유지
     switch (_selectedIndex) {
       case 0: // 캘린더
         return Padding(
@@ -400,9 +427,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
               _showCalendarEventBottomSheet(selectedDay);
             },
-            // 이벤트 로더 수정: FutureBuilder와 함께 캐싱을 활용하는 방식으로 변경됨
             eventLoader: (day) {
-              // GroupCalendar 내부에서 처리되므로 여기서는 빈 배열 반환
               return [];
             },
             onFocusedDayChanged: (focusedDay) {
@@ -469,7 +494,6 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                       : PlanListView(
                         plans: plans.map(_convertPlanListToPlan).toList(),
                         onPlanSelected: (plan) {
-                          // 여행 상세 화면으로 이동
                           Navigator.pushNamed(
                             context,
                             '/plan_detail',
@@ -479,7 +503,6 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                             },
                           );
                         },
-                        // treasurerNames와 memberCounts 추가
                         treasurerNames: _getTreasurerNames(plans),
                         memberCounts: _getMemberCounts(plans),
                       ),
@@ -537,12 +560,12 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
   }
 
-  // 여행 계획 추가 바텀시트트
+  // 여행 계획 추가 바텀시트
   void _showAddPlanBottomSheet() {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // 키보드가 올라왔을 때 바텀시트가 올라가도록 설정
-      backgroundColor: Colors.transparent, // 투명 배경 설정
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -627,23 +650,19 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     }
   }
 
-  // _getMyUserId 메서드 수정
+  // _getMyUserId 메서드
   int _getMyUserId() {
     // UserProvider에서 현재 로그인한 사용자의 정보 가져오기
     final userProvider = Provider.of<UserProvider>(context, listen: false);
 
     if (userProvider.userProfile != null) {
-      // UserProfile에서 userId를 정수로 변환하여 반환
       try {
-        // userId 문자열을 정수로 변환
         return int.parse(userProvider.userProfile!.userId);
       } catch (e) {
         debugPrint('userId를 정수로 변환하는 중 오류: $e');
       }
     }
 
-    // UserProvider에서 값을 가져올 수 없거나 변환할 수 없는 경우,
-    // _currentGroup.memberId 값을 반환 (그룹 생성자가 현재 로그인한 사용자일 가능성이 높음)
     return _currentGroup.memberId;
   }
 

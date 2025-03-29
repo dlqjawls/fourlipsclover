@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../config/theme.dart';
 import 'dart:math' as math;
-import './notice_create_bottom_sheet.dart'; // 바텀시트 파일 임포트
+import '../bottomsheet/notice_create_bottom_sheet.dart'; // 바텀시트 파일 임포트
 import '../../../models/notice_item.dart';
-
-// 공지사항 항목 모델은 notice_create_bottom_sheet.dart로 이동
+import '../../../providers/plan_provider.dart'; // Provider 추가
+import 'package:provider/provider.dart'; // Provider 추가
 
 class PlanNoticeBoard extends StatefulWidget {
   final int planId;
@@ -19,7 +19,6 @@ class PlanNoticeBoard extends StatefulWidget {
 
 class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
   List<NoticeItem> _notices = []; // 실제로는 API에서 가져올 예정
-  bool _isLoading = false;
   final List<Color> _availableColors = [
     Colors.yellow.shade100, // 연한 노랑
     Colors.pink.shade100, // 연한 분홍
@@ -35,62 +34,70 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
   }
 
   Future<void> _loadNotices() async {
-    setState(() {
-      _isLoading = true;
-    });
+    // 로딩 상태를 시작하기 위해 Provider 업데이트
+    // PlanProvider 또는 별도의 LoadingProvider를 사용할 수 있습니다
+    final planProvider = Provider.of<PlanProvider>(context, listen: false);
+    planProvider.setLoading(true);
 
-    // 여기서 실제로는 API 호출로 데이터를 가져올 예정
-    // 임시 데이터
-    await Future.delayed(const Duration(milliseconds: 500));
+    try {
+      // 여기서 실제로는 API 호출로 데이터를 가져올 예정
+      // 임시 데이터
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // 공지사항 목록 - 중요 항목을 먼저 정렬, 최대 6개로 제한
+      final List<NoticeItem> noticeList = [
+        NoticeItem(
+          id: '1',
+          content: '숙소 체크인: 12월 17일 15:00 - 제주 시티호텔, 사전 예약 완료',
+          color: Colors.yellow.shade100,
+          isImportant: true,
+          createdAt: DateTime.now().subtract(const Duration(days: 2)),
+        ),
+        NoticeItem(
+          id: '3',
+          content: '렌트카: 모닝 2대, 공항 픽업 (입국장 1층에서 만나요)',
+          color: Colors.green.shade100,
+          isImportant: true,
+          createdAt: DateTime.now(),
+        ),
+        NoticeItem(
+          id: '4',
+          content: '여행 경비: 1인당 30만원 예상, 총무에게 20만원씩 모을 예정',
+          color: Colors.pink.shade100,
+          isImportant: true,
+          createdAt: DateTime.now().subtract(const Duration(hours: 12)),
+        ),
+        NoticeItem(
+          id: '2',
+          content: '12월 18일 해녀체험 예약했어요! 오전 10시까지 모이기',
+          color: Colors.blue.shade100,
+          isImportant: false,
+          createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        ),
+        NoticeItem(
+          id: '5',
+          content: '준비물: 수영복, 선크림, 모자, 우산, 여분 옷',
+          color: Colors.orange.shade100,
+          isImportant: false,
+          createdAt: DateTime.now().subtract(const Duration(days: 3)),
+        ),
+      ];
 
-    // 공지사항 목록 - 중요 항목을 먼저 정렬, 최대 6개로 제한
-    final List<NoticeItem> noticeList = [
-      NoticeItem(
-        id: '1',
-        content: '숙소 체크인: 12월 17일 15:00 - 제주 시티호텔, 사전 예약 완료',
-        color: Colors.yellow.shade100,
-        isImportant: true,
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-      NoticeItem(
-        id: '3',
-        content: '렌트카: 모닝 2대, 공항 픽업 (입국장 1층에서 만나요)',
-        color: Colors.green.shade100,
-        isImportant: true,
-        createdAt: DateTime.now(),
-      ),
-      NoticeItem(
-        id: '4',
-        content: '여행 경비: 1인당 30만원 예상, 총무에게 20만원씩 모을 예정',
-        color: Colors.pink.shade100,
-        isImportant: true,
-        createdAt: DateTime.now().subtract(const Duration(hours: 12)),
-      ),
-      NoticeItem(
-        id: '2',
-        content: '12월 18일 해녀체험 예약했어요! 오전 10시까지 모이기',
-        color: Colors.blue.shade100,
-        isImportant: false,
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      NoticeItem(
-        id: '5',
-        content: '준비물: 수영복, 선크림, 모자, 우산, 여분 옷',
-        color: Colors.orange.shade100,
-        isImportant: false,
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-      ),
-    ];
+      // 공지사항 수가 6개를 초과하면 6개로 제한
+      if (noticeList.length > 6) {
+        noticeList.length = 6;
+      }
 
-    // 공지사항 수가 6개를 초과하면 6개로 제한
-    if (noticeList.length > 6) {
-      noticeList.length = 6;
+      setState(() {
+        _notices = noticeList;
+      });
+    } catch (e) {
+      // 에러 처리
+      debugPrint('공지사항 로드 중 오류: $e');
+    } finally {
+      // 로딩 상태 종료
+      planProvider.setLoading(false);
     }
-
-    setState(() {
-      _notices = noticeList;
-      _isLoading = false;
-    });
   }
 
   // 공지사항 추가
@@ -136,6 +143,76 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
         });
       },
       maxNoticeCount: 6,
+    );
+  }
+
+  // 공지사항 삭제 확인 다이얼로그
+  Future<void> _showDeleteConfirmDialog(NoticeItem notice) async {
+    // 위치를 계산하기 위한 RenderBox 가져오기
+    final RenderBox? overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+
+    // 삭제 확인 다이얼로그 표시
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.3),
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 40,
+            vertical: 24,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  '공지사항 삭제',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '이 공지사항을 삭제하시겠습니까?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // 취소 버튼
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop(); // 다이얼로그 닫기
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey.shade700,
+                      ),
+                      child: const Text('취소'),
+                    ),
+                    // 삭제 버튼
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop(); // 다이얼로그 닫기
+                        _deleteNotice(notice.id); // 공지사항 삭제
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade400,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('삭제'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -187,9 +264,8 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
               ),
               child: Stack(
                 children: [
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _notices.isEmpty
+                  // 로딩 스피너 제거 - 전체 LoadingOverlay에서 처리
+                  _notices.isEmpty
                       ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -458,7 +534,7 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
               top: 2,
               right: 2,
               child: InkWell(
-                onTap: () => _deleteNotice(notice.id),
+                onTap: () => _showDeleteConfirmDialog(notice), // 삭제 확인 다이얼로그 표시
                 child: Icon(Icons.close, size: 14, color: Colors.grey.shade700),
               ),
             ),

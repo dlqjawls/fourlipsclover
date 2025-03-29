@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../../config/theme.dart';
+import '../../../providers/plan_provider.dart';
 
 // 결제 항목 모델 (임시)
 class PaymentItem {
@@ -43,7 +45,6 @@ class PlanSettlementView extends StatefulWidget {
 
 class _PlanSettlementViewState extends State<PlanSettlementView> {
   List<PaymentItem> _payments = []; // 결제 항목 목록
-  bool _isLoading = false;
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
   int? _selectedPayerId; // 결제자 ID
@@ -68,57 +69,65 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
   Future<void> _loadPayments() async {
     if (!mounted) return; // 위젯이 이미 dispose된 경우 중단
 
-    setState(() {
-      _isLoading = true;
-    });
+    // Provider를 통해 로딩 상태 관리
+    final planProvider = Provider.of<PlanProvider>(context, listen: false);
+    planProvider.setLoading(true);
 
-    // 임시 데이터 생성 (실제로는 API에서 가져와야 함)
-    await Future.delayed(const Duration(milliseconds: 800));
+    try {
+      // 임시 데이터 생성 (실제로는 API에서 가져와야 함)
+      await Future.delayed(const Duration(milliseconds: 800));
 
-    // mounted 체크 추가
-    if (!mounted) return;
+      // mounted 체크 추가
+      if (!mounted) return;
 
-    setState(() {
-      _payments = [
-        PaymentItem(
-          id: '1',
-          title: '렌트카 대여료',
-          amount: 150000,
-          payerNickname: '영희',
-          payerId: 2,
-          paymentDate: DateTime.now().subtract(const Duration(days: 2)),
-          participantIds: [1, 2, 3, 4],
-        ),
-        PaymentItem(
-          id: '2',
-          title: '숙소 예약금',
-          amount: 120000,
-          payerNickname: '철수',
-          payerId: 1,
-          paymentDate: DateTime.now().subtract(const Duration(days: 5)),
-          participantIds: [1, 2, 3, 4],
-        ),
-        PaymentItem(
-          id: '3',
-          title: '성산일출봉 입장료',
-          amount: 24000,
-          payerNickname: '민수',
-          payerId: 3,
-          paymentDate: DateTime.now().subtract(const Duration(days: 1)),
-          participantIds: [1, 3, 4],
-        ),
-        PaymentItem(
-          id: '4',
-          title: '저녁 식사',
-          amount: 88000,
-          payerNickname: '영희',
-          payerId: 2,
-          paymentDate: DateTime.now().subtract(const Duration(hours: 5)),
-          participantIds: [1, 2, 3, 4],
-        ),
-      ];
-      _isLoading = false;
-    });
+      setState(() {
+        _payments = [
+          PaymentItem(
+            id: '1',
+            title: '렌트카 대여료',
+            amount: 150000,
+            payerNickname: '영희',
+            payerId: 2,
+            paymentDate: DateTime.now().subtract(const Duration(days: 2)),
+            participantIds: [1, 2, 3, 4],
+          ),
+          PaymentItem(
+            id: '2',
+            title: '숙소 예약금',
+            amount: 120000,
+            payerNickname: '철수',
+            payerId: 1,
+            paymentDate: DateTime.now().subtract(const Duration(days: 5)),
+            participantIds: [1, 2, 3, 4],
+          ),
+          PaymentItem(
+            id: '3',
+            title: '성산일출봉 입장료',
+            amount: 24000,
+            payerNickname: '민수',
+            payerId: 3,
+            paymentDate: DateTime.now().subtract(const Duration(days: 1)),
+            participantIds: [1, 3, 4],
+          ),
+          PaymentItem(
+            id: '4',
+            title: '저녁 식사',
+            amount: 88000,
+            payerNickname: '영희',
+            payerId: 2,
+            paymentDate: DateTime.now().subtract(const Duration(hours: 5)),
+            participantIds: [1, 2, 3, 4],
+          ),
+        ];
+      });
+    } catch (e) {
+      debugPrint('결제 내역 로드 중 오류: $e');
+    } finally {
+      // 로딩 상태 종료
+      if (mounted) {
+        planProvider.setLoading(false);
+      }
+    }
   }
 
   // 결제 항목 추가 다이얼로그 표시
@@ -398,13 +407,12 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
             ),
           ),
 
-          // 정산 내역 영수증
           Expanded(
-            child:
-                _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _payments.isEmpty
-                    ? Center(
+            child: Column(
+              children: [
+                if (_payments.isEmpty)
+                  Expanded(
+                    child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -431,8 +439,11 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
                           ),
                         ],
                       ),
-                    )
-                    : SingleChildScrollView(
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: SingleChildScrollView(
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
@@ -768,6 +779,9 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
                         ],
                       ),
                     ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),

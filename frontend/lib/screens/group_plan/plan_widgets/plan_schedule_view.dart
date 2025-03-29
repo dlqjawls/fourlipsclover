@@ -23,7 +23,6 @@ class PlanScheduleView extends StatefulWidget {
 class _PlanScheduleViewState extends State<PlanScheduleView> {
   List<PlanSchedule> _schedules = [];
   DateTime _selectedDate = DateTime.now();
-  bool _isLoading = false;
   final List<DateTime> _travelDates = [];
 
   @override
@@ -56,13 +55,11 @@ class _PlanScheduleViewState extends State<PlanScheduleView> {
 
   // 일정 데이터 로드
   Future<void> _loadSchedules() async {
-    setState(() {
-      _isLoading = true;
-    });
+    // 로딩 상태 시작 (Provider 사용)
+    final planProvider = Provider.of<PlanProvider>(context, listen: false);
+    planProvider.setLoading(true);
 
     try {
-      final planProvider = Provider.of<PlanProvider>(context, listen: false);
-      
       // 계획의 모든 일정 로드
       final schedules = await planProvider.fetchPlanSchedules(
         widget.groupId,
@@ -72,18 +69,19 @@ class _PlanScheduleViewState extends State<PlanScheduleView> {
       if (mounted) {
         setState(() {
           _schedules = schedules;
-          _isLoading = false;
         });
       }
     } catch (e) {
       debugPrint('일정 데이터 로드 중 오류: $e');
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('일정을 불러오는데 실패했습니다: $e')),
         );
+      }
+    } finally {
+      // 로딩 상태 종료
+      if (mounted) {
+        planProvider.setLoading(false);
       }
     }
   }
@@ -276,47 +274,45 @@ class _PlanScheduleViewState extends State<PlanScheduleView> {
             ),
           ),
           
-          // 일정 목록
+          // 일정 목록 (로딩 스피너 제거)
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : selectedDateSchedules.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.event_note,
-                              size: 48,
-                              color: Colors.grey.shade400,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              '이 날의 일정이 없습니다',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '새로운 일정을 추가해보세요!',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade500,
-                              ),
-                            ),
-                          ],
+            child: selectedDateSchedules.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.event_note,
+                          size: 48,
+                          color: Colors.grey.shade400,
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: selectedDateSchedules.length,
-                        itemBuilder: (context, index) {
-                          final schedule = selectedDateSchedules[index];
-                          return _buildScheduleItem(schedule, index, selectedDateSchedules);
-                        },
-                      ),
+                        const SizedBox(height: 16),
+                        Text(
+                          '이 날의 일정이 없습니다',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '새로운 일정을 추가해보세요!',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: selectedDateSchedules.length,
+                    itemBuilder: (context, index) {
+                      final schedule = selectedDateSchedules[index];
+                      return _buildScheduleItem(schedule, index, selectedDateSchedules);
+                    },
+                  ),
           ),
         ],
       ),
