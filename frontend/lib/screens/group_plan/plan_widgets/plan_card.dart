@@ -23,12 +23,29 @@ class PlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 오늘 날짜
+    // 오늘 날짜 (시간 제외하고 날짜만)
     final now = DateTime.now();
+    final todayDate = DateTime(now.year, now.month, now.day);
+
+    // 여행 날짜도 시간 제외하고 날짜만
+    final planStartDate = DateTime(
+      plan.startDate.year,
+      plan.startDate.month,
+      plan.startDate.day,
+    );
+    final planEndDate = DateTime(
+      plan.endDate.year,
+      plan.endDate.month,
+      plan.endDate.day,
+    );
 
     // 여행 상태 확인 (완료/진행 중/예정)
-    final bool isCompleted = plan.endDate.isBefore(now);
-    final bool isOngoing = !isCompleted && plan.startDate.isBefore(now);
+    // 오늘이 종료일인 경우는 아직 진행 중인 여행으로 간주
+    final bool isCompleted = planEndDate.isBefore(todayDate);
+    final bool isOngoing =
+        !isCompleted &&
+        (planStartDate.isBefore(todayDate) ||
+            planStartDate.isAtSameMomentAs(todayDate));
 
     // 상태에 따른 색상 및 아이콘 결정
     Color statusColor;
@@ -135,9 +152,9 @@ class PlanCard extends StatelessWidget {
                       width: double.infinity, // 너비를 전체로 설정
                       child: Center(
                         child: _buildDdayBadge(
-                          plan.startDate,
-                          plan.endDate,
-                          now,
+                          planStartDate,
+                          planEndDate,
+                          todayDate,
                         ),
                       ),
                     ),
@@ -387,26 +404,25 @@ class PlanCard extends StatelessWidget {
   }
 
   // D-day 또는 D+day 배지 생성 (크기 축소)
-  Widget _buildDdayBadge(DateTime startDate, DateTime endDate, DateTime now) {
+  Widget _buildDdayBadge(DateTime startDate, DateTime endDate, DateTime today) {
     String text;
     Color color;
 
-    if (now.isBefore(startDate)) {
+    if (today.isBefore(startDate)) {
       // 여행 시작 전: D-day
-      final difference = startDate.difference(now);
-      final daysUntil =
-          difference.inDays + (difference.inHours % 24 > 0 ? 1 : 0);
+      final difference = startDate.difference(today);
+      final daysUntil = difference.inDays;
 
       // 0일이 남았을 경우 D-1로 표시 (당일로 간주)
       final displayDays = daysUntil == 0 ? 1 : daysUntil;
       text = 'D-$displayDays';
       color = AppColors.primary; // primary 색상으로 변경
-    } else if (now.isAfter(endDate)) {
+    } else if (today.isAfter(endDate)) {
       // 여행 종료 후: 표시 안함
       return const SizedBox.shrink();
     } else {
       // 여행 중: D+day
-      final daysInto = now.difference(startDate).inDays;
+      final daysInto = today.difference(startDate).inDays;
       text = 'D+$daysInto';
       color = AppColors.primaryDark;
     }

@@ -28,8 +28,9 @@ class _PlanListViewState extends State<PlanListView> {
 
   @override
   Widget build(BuildContext context) {
-    // 오늘 날짜
+    // 오늘 날짜 (시간 제외하고 날짜만)
     final now = DateTime.now();
+    final todayDate = DateTime(now.year, now.month, now.day);
 
     // 날짜 기준으로 정렬: 예정된 여행이 먼저 나오도록
     final sortedPlans = List<Plan>.from(widget.plans)
@@ -38,7 +39,17 @@ class _PlanListViewState extends State<PlanListView> {
     // 필터링된 플랜 목록
     final filteredPlans =
         sortedPlans.where((plan) {
-          final bool isCompleted = plan.endDate.isBefore(now);
+          // 여행의 종료일 (시간 제외하고 날짜만)
+          final planEndDate = DateTime(
+            plan.endDate.year,
+            plan.endDate.month,
+            plan.endDate.day,
+          );
+
+          // 완료된 여행은 종료일이 오늘보다 이전인 경우만 해당
+          // 오늘이 종료일인 경우는 아직 진행 중인 여행으로 간주
+          final bool isCompleted = planEndDate.isBefore(todayDate);
+
           // 완료된 여행은 _showCompleted가 true일 때만 표시
           return _showCompleted || !isCompleted;
         }).toList();
@@ -111,7 +122,17 @@ class _PlanListViewState extends State<PlanListView> {
 
                       return PlanCard(
                         plan: plan,
-                        onTap: () => widget.onPlanSelected(plan),
+                        onTap: () {
+                          // 계획 상세 화면으로 이동
+                          Navigator.pushNamed(
+                            context,
+                            '/plan_detail',
+                            arguments: {
+                              'plan': plan,
+                              'groupId': plan.groupId, // 계획이 속한 그룹 ID
+                            },
+                          );
+                        },
                         treasurerName: treasurerName,
                         memberCount: memberCount,
                       );

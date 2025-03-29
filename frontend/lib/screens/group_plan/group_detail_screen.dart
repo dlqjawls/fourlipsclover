@@ -470,6 +470,14 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                         plans: plans.map(_convertPlanListToPlan).toList(),
                         onPlanSelected: (plan) {
                           // 여행 상세 화면으로 이동
+                          Navigator.pushNamed(
+                            context,
+                            '/plan_detail',
+                            arguments: {
+                              'plan': plan,
+                              'groupId': _currentGroup.groupId,
+                            },
+                          );
                         },
                         // treasurerNames와 memberCounts 추가
                         treasurerNames: _getTreasurerNames(plans),
