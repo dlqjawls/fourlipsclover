@@ -15,7 +15,7 @@ import lombok.Setter;
 public class City {
     @Id
     @Column(name = "city_id")
-    private int cityId;
+    private Long cityId;
 
     @Column(name = "name")
     private String name;
