@@ -18,6 +18,7 @@ public class Restaurant {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "restaurant_id")
     private Integer restaurantId;
 
     @Column(name = "kakao_place_id")
@@ -49,4 +50,13 @@ public class Restaurant {
 
     @Column(precision = 10)
     private Double y;
+
+    @ManyToOne
+    @JoinColumn(name = "food_category_id")
+    private FoodCategory foodCategory;
+
+    @ManyToOne
+    @JoinColumn(name = "city_id")
+    private City city;
+
 }
