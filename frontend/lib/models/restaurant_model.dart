@@ -45,8 +45,6 @@ class RestaurantResponse {
       y: json['y'],
     );
   }
-  
-  // toJson 메서드 추가
   Map<String, dynamic> toJson() {
     return {
       'restaurantId': restaurantId,
@@ -71,12 +69,14 @@ class ReviewMemberResponse {
   final String? name;
   final String? nickname;
   final String? email;
+  final String? profileImageUrl;
 
   ReviewMemberResponse({
     required this.memberId,
     this.name,
     this.nickname,
     this.email,
+    this.profileImageUrl,
   });
 
   factory ReviewMemberResponse.fromJson(Map<String, dynamic> json) {
@@ -85,17 +85,8 @@ class ReviewMemberResponse {
       name: json['name'],
       nickname: json['nickname'],
       email: json['email'],
+      profileImageUrl: json['profileImageUrl'],
     );
-  }
-  
-  // toJson 메서드 추가
-  Map<String, dynamic> toJson() {
-    return {
-      'memberId': memberId,
-      'name': name,
-      'nickname': nickname,
-      'email': email,
-    };
   }
 }
 
@@ -130,19 +121,6 @@ class ReviewRestaurantResponse {
       categoryName: json['categoryName'],
     );
   }
-  
-  // toJson 메서드 추가
-  Map<String, dynamic> toJson() {
-    return {
-      'restaurantId': restaurantId,
-      'kakaoPlaceId': kakaoPlaceId,
-      'placeName': placeName,
-      'addressName': addressName,
-      'roadAddressName': roadAddressName,
-      'category': category,
-      'categoryName': categoryName,
-    };
-  }
 }
 
 /// 리뷰 응답 모델
@@ -154,6 +132,9 @@ class ReviewResponse {
   final DateTime? visitedAt;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final List<String> reviewImageUrls;
+  final int likedCount;
+  final int dislikedCount;
 
   ReviewResponse({
     this.reviewId,
@@ -163,45 +144,42 @@ class ReviewResponse {
     this.visitedAt,
     this.createdAt,
     this.updatedAt,
+    required this.reviewImageUrls,
+    required this.likedCount,
+    required this.dislikedCount,
   });
 
   factory ReviewResponse.fromJson(Map<String, dynamic> json) {
     return ReviewResponse(
       reviewId: json['reviewId'],
-      reviewer: json['reviewer'] != null ? ReviewMemberResponse.fromJson(json['reviewer']) : null,
-      restaurant: json['restaurant'] != null ? ReviewRestaurantResponse.fromJson(json['restaurant']) : null,
+      reviewer: json['reviewer'] != null
+          ? ReviewMemberResponse.fromJson(json['reviewer'])
+          : null,
+      restaurant: json['restaurant'] != null
+          ? ReviewRestaurantResponse.fromJson(json['restaurant'])
+          : null,
       content: json['content'],
-      visitedAt: json['visitedAt'] != null ? DateTime.parse(json['visitedAt']) : null,
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      visitedAt: json['visitedAt'] != null
+          ? DateTime.parse(json['visitedAt'])
+          : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'])
+          : null,
+      reviewImageUrls: List<String>.from(json['reviewImageUrls'] ?? []),
+      likedCount: json['likedCount'] ?? 0,
+      dislikedCount: json['dislikedCount'] ?? 0,
     );
   }
-  
-  // toJson 메서드 추가
-  Map<String, dynamic> toJson() {
-    return {
-      'reviewId': reviewId,
-      'reviewer': reviewer?.toJson(),
-      'restaurant': restaurant?.toJson(),
-      'content': content,
-      'visitedAt': visitedAt?.toIso8601String(),
-      'createdAt': createdAt?.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
-    };
-  }
 
-  // 방문 날짜를 포맷팅
-  String get formattedVisitedAt {
-    if (visitedAt == null) return '';
-    return DateFormat('yyyy.MM.dd').format(visitedAt!);
-  }
-
-  // 생성 날짜를 포맷팅
-  String get formattedCreatedAt {
-    if (createdAt == null) return '';
-    return DateFormat('yyyy.MM.dd HH:mm').format(createdAt!);
-  }
+  String get formattedVisitedAt =>
+      visitedAt == null ? '' : DateFormat('yyyy.MM.dd').format(visitedAt!);
+  String get formattedCreatedAt =>
+      createdAt == null ? '' : DateFormat('yyyy.MM.dd HH:mm').format(createdAt!);
 }
+
 
 /// 리뷰 생성 요청 모델
 class ReviewCreate {
@@ -260,13 +238,5 @@ class ReviewDeleteResponse {
       message: json['message'] ?? '',
       reviewId: json['reviewId'],
     );
-  }
-  
-  // toJson 메서드 추가
-  Map<String, dynamic> toJson() {
-    return {
-      'message': message,
-      'reviewId': reviewId,
-    };
   }
 }

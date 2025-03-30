@@ -6,6 +6,7 @@ import '../../../utils/text_style_extensions.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/nearby_restaurant_service.dart';
 import '../../../models/restaurant_model.dart';
+import '../../review/restaurant_detail.dart';
 
 class LocalFavorites extends StatefulWidget {
   const LocalFavorites({Key? key}) : super(key: key);
@@ -22,7 +23,7 @@ class _LocalFavoritesState extends State<LocalFavorites> {
   @override
   void initState() {
     super.initState();
-    
+
     // 빌드 사이클 완료 후에 실행하도록 스케줄링
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) { // mounted 체크 추가
@@ -33,14 +34,14 @@ class _LocalFavoritesState extends State<LocalFavorites> {
 
   Future<void> _initializeLocation() async {
     if (!mounted) return; // mounted 체크 추가
-    
+
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
       if (authProvider.currentPosition == null) {
         // 빌드 과정에서는 상태 변경 알림 없이 위치 정보만 가져오기
         await authProvider.getCurrentLocation(context, notify: false);
-        
+
         // 위치 정보를 가져온 후 별도로 상태 업데이트
         if (mounted) {
           authProvider.notifyListeners();
@@ -60,7 +61,7 @@ class _LocalFavoritesState extends State<LocalFavorites> {
 
   Future<void> _loadNearbyRestaurants() async {
     if (!mounted) return; // mounted 체크 추가
-    
+
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -125,10 +126,10 @@ class _LocalFavoritesState extends State<LocalFavorites> {
 
   Future<void> _refreshLocation() async {
     if (!mounted) return; // mounted 체크 추가
-    
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.getCurrentLocation(context);
-    
+
     if (mounted) { // mounted 체크 추가
       _loadNearbyRestaurants();
     }
@@ -386,6 +387,14 @@ class RestaurantCard extends StatelessWidget {
       onTap: () {
         // TODO: 식당 상세 페이지로 이동
         print('식당 클릭: $name (ID: $kakaoPlaceId)');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RestaurantDetailScreen(
+              restaurantId: kakaoPlaceId,
+            ),
+          ),
+        );
       },
       child: Container(
         decoration: BoxDecoration(
