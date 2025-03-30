@@ -105,4 +105,18 @@ public class TagService {
 		}
 		return response;
 	}
+
+	@Transactional(readOnly = true)
+	public List<RestaurantTagResponse> findRestaurantTagByMemberId(long memberId) {
+		List<MemberReviewTag> memberTags = memberReviewTagRepository.findByMemberId(memberId);
+		List<RestaurantTagResponse> tagList = new ArrayList<>();
+		for (MemberReviewTag data : memberTags) {
+			RestaurantTagResponse restaurantTagResponse = new RestaurantTagResponse();
+			restaurantTagResponse.setRestaurantTagId(data.getMemberReviewTagId());
+			restaurantTagResponse.setTagName(data.getTag().getName());
+			restaurantTagResponse.setCategory(data.getTag().getCategory());
+			tagList.add(restaurantTagResponse);
+		}
+		return tagList;
+	}
 }

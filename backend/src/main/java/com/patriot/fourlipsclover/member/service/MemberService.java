@@ -7,14 +7,12 @@ import com.patriot.fourlipsclover.auth.jwt.JwtTokenProvider;
 import com.patriot.fourlipsclover.auth.service.KakaoAuthService;
 import com.patriot.fourlipsclover.exception.UserInfoParsingException;
 import com.patriot.fourlipsclover.member.entity.Member;
-import com.patriot.fourlipsclover.member.entity.MemberReviewTag;
 import com.patriot.fourlipsclover.member.mapper.MemberMapper;
 import com.patriot.fourlipsclover.member.repository.MemberRepository;
 import com.patriot.fourlipsclover.mypage.dto.response.MypageResponse;
 import com.patriot.fourlipsclover.mypage.service.MypageImageService;
 import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
-import com.patriot.fourlipsclover.tag.repository.MemberReviewTagRepository;
-import java.util.ArrayList;
+import com.patriot.fourlipsclover.tag.service.TagService;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +29,7 @@ public class MemberService {
 	private final JwtTokenProvider jwtTokenProvider;
 	private final MemberMapper memberMapper;
 	private final MypageImageService mypageImageService;
-	private final MemberReviewTagRepository memberReviewTagRepository;
+	private final TagService tagService;
 
 	public JwtResponse processKakaoLoginAndGetToken(String accessToken) {
 		String userInfo = kakaoAuthService.getUserInfo(accessToken);
@@ -81,15 +79,7 @@ public class MemberService {
 	public MypageResponse getMypageData(long memberId) {
 		Member member = memberRepository.findByMemberId(memberId);
 		MypageResponse response = memberMapper.toDto(member);
-		List<MemberReviewTag> memberTags = memberReviewTagRepository.findByMemberId(memberId);
-		List<RestaurantTagResponse> tagList = new ArrayList<>();
-		for (MemberReviewTag data : memberTags) {
-			RestaurantTagResponse restaurantTagResponse = new RestaurantTagResponse();
-			restaurantTagResponse.setRestaurantTagId(data.getMemberReviewTagId());
-			restaurantTagResponse.setTagName(data.getTag().getName());
-			restaurantTagResponse.setCategory(data.getTag().getCategory());
-			tagList.add(restaurantTagResponse);
-		}
+		List<RestaurantTagResponse> tagList = tagService.findRestaurantTagByMemberId(memberId);
 		response.setTags(tagList);
 		return response;
 	}
