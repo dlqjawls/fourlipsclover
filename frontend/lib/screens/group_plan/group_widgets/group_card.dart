@@ -6,12 +6,17 @@ class GroupCard extends StatelessWidget {
   final Group group;
   final bool isSelected;
   final VoidCallback onTap;
+  // 추가로 받을 데이터
+  final int? memberCount;
+  final String? ownerName; // 그룹장 이름 (옵션)
 
   const GroupCard({
     Key? key,
     required this.group,
     required this.isSelected,
     required this.onTap,
+    this.memberCount,
+    this.ownerName,
   }) : super(key: key);
 
   @override
@@ -76,20 +81,85 @@ class GroupCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 그룹 설명
-                      Text(
-                        group.description,
-                        style: TextStyle(
-                          fontFamily: 'Anemone_air',
-                          fontSize: 14,
-                          color: AppColors.darkGray,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      // 인원수 정보 (첫 번째로 표시)
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.people,
+                            size: 14,
+                            color: AppColors.darkGray,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            memberCount != null
+                                ? '인원: $memberCount명'
+                                : '인원: 1명',
+                            style: TextStyle(
+                              fontFamily: 'Anemone_air',
+                              fontSize: 12,
+                              color: AppColors.darkGray,
+                            ),
+                          ),
+                        ],
                       ),
-                      const Spacer(),
 
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 10),
+
+                      // 그룹장 정보 (두 번째로 표시)
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.person,
+                            size: 14,
+                            color: AppColors.darkGray,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            ownerName != null ? '그룹장: $ownerName' : '그룹장',
+                            style: TextStyle(
+                              fontFamily: 'Anemone_air',
+                              fontSize: 12,
+                              color: AppColors.darkGray,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // 그룹 설명 정보 (세 번째로 표시)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              top: 2,
+                            ), // 아이콘을 텍스트 기준선에 맞춤
+                            child: Icon(
+                              Icons.info_outline,
+                              size: 14,
+                              color: AppColors.darkGray,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              group.description.isNotEmpty
+                                  ? '소개: ${group.description}'
+                                  : '그룹 소개 없음',
+                              style: TextStyle(
+                                fontFamily: 'Anemone_air',
+                                fontSize: 12,
+                                color: AppColors.darkGray,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -99,10 +169,5 @@ class GroupCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  // 날짜 포맷팅
-  String _formatDate(DateTime date) {
-    return '${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
   }
 }

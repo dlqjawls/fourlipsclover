@@ -1,4 +1,4 @@
-package com.patriot.fourlipsclover.restaurant.dto.response;
+package com.patriot.fourlipsclover.mypage.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,11 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ReviewMemberResponse {
+public class MyPageProfileResponse {
 
-	private Long memberId;
-	private String name;
-	private String nickname;
-	private String email;
 	private String profileImageUrl;
 }

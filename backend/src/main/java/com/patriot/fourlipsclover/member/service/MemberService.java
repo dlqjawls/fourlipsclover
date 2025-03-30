@@ -10,10 +10,12 @@ import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.mapper.MemberMapper;
 import com.patriot.fourlipsclover.member.repository.MemberRepository;
 import com.patriot.fourlipsclover.mypage.dto.response.MypageResponse;
+import com.patriot.fourlipsclover.mypage.service.MypageImageService;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +25,7 @@ public class MemberService {
 	private final KakaoAuthService kakaoAuthService;
 	private final JwtTokenProvider jwtTokenProvider;
 	private final MemberMapper memberMapper;
+	private final MypageImageService mypageImageService;
 
 	public JwtResponse processKakaoLoginAndGetToken(String accessToken) {
 		String userInfo = kakaoAuthService.getUserInfo(accessToken);
@@ -68,8 +71,11 @@ public class MemberService {
 		return new JwtResponse(jwtToken);
 	}
 
+	@Transactional
 	public MypageResponse getMypageData(long memberId) {
 		Member member = memberRepository.findByMemberId(memberId);
+		String profileImageFileName = member.getProfileUrl();
+		member.setProfileUrl(mypageImageService.getProfileImageUrl(profileImageFileName));
 		return memberMapper.toDto(member);
 	}
 }

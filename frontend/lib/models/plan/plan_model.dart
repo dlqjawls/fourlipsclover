@@ -8,7 +8,7 @@ class Plan {
   final DateTime endDate;
   final DateTime createdAt;
   final DateTime? updatedAt;
-  final List<int> memberIds;
+  // memberIds 필드 제거
 
   Plan({
     required this.planId,
@@ -20,7 +20,6 @@ class Plan {
     required this.endDate,
     required this.createdAt,
     this.updatedAt,
-    required this.memberIds,
   });
 
   factory Plan.fromJson(Map<String, dynamic> json) {
@@ -34,9 +33,6 @@ class Plan {
       endDate: DateTime.parse(json['endDate']),
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
-      memberIds: json['memberIds'] != null 
-          ? List<int>.from(json['memberIds']) 
-          : [],
     );
   }
 
@@ -51,7 +47,6 @@ class Plan {
       'endDate': endDate.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
-      'memberIds': memberIds,
     };
   }
 
@@ -66,7 +61,6 @@ class Plan {
     DateTime? endDate,
     DateTime? createdAt,
     DateTime? updatedAt,
-    List<int>? memberIds,
   }) {
     return Plan(
       planId: planId ?? this.planId,
@@ -78,7 +72,6 @@ class Plan {
       endDate: endDate ?? this.endDate,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      memberIds: memberIds ?? this.memberIds,
     );
   }
 }

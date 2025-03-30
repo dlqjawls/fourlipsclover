@@ -6,9 +6,9 @@ import '../../../providers/user_provider.dart';
 import '../../../providers/group_provider.dart';
 import '../../../models/group/member_model.dart';
 import '../../../config/theme.dart';
-import './plan_date_selection.dart';
-import './train_seat_member_selection.dart';
-import './plan_info_input.dart';
+import 'plan_date_selection.dart';
+import 'train_seat_member_selection.dart';
+import 'plan_info_input.dart';
 
 class PlanCreateBottomSheet extends StatefulWidget {
   final int groupId;
@@ -140,17 +140,19 @@ class _PlanCreateBottomSheetState extends State<PlanCreateBottomSheet> {
     final userProvider = Provider.of<UserProvider>(context);
     final currentUserId = userProvider.userProfile?.userId;
     final screenHeight = MediaQuery.of(context).size.height;
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
+    // 키보드가 올라왔을 때 시트 높이를 증가시키지만, 더 적절한 값으로 조정
+    final sheetHeight =
+        keyboardHeight > 0
+            ? screenHeight *
+                0.9 // 키보드가 표시될 때 더 적절한 높이
+            : screenHeight * 0.75; // 원래 높이
 
     return Container(
-      padding: EdgeInsets.only(
-        top: 8,
-        left: 0,
-        right: 0,
-        // 키보드가 올라왔을 때 BottomSheet가 가려지지 않도록 패딩 추가
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      // 화면 높이의 75%로 제한
-      constraints: BoxConstraints(maxHeight: screenHeight * 0.75),
+      padding: const EdgeInsets.only(top: 8, left: 0, right: 0),
+      // 최대 높이만 설정하고 bottom padding은 제거
+      constraints: BoxConstraints(maxHeight: sheetHeight),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.only(
@@ -193,7 +195,7 @@ class _PlanCreateBottomSheetState extends State<PlanCreateBottomSheet> {
 
           const SizedBox(height: 16),
 
-          // 내용 영역
+          // 내용 영역 - SingleChildScrollView 제거
           Expanded(
             child:
                 _isLoading
@@ -280,29 +282,45 @@ class _PlanCreateBottomSheetState extends State<PlanCreateBottomSheet> {
 
   // 현재 단계에 따른 내용 위젯 반환
   Widget _buildCurrentStepContent() {
-    switch (_currentStep) {
-      case 0:
-        return PlanDateSelection(
-          startDate: _startDate,
-          endDate: _endDate,
-          focusedDay: _focusedDay,
-          onDatesSelected: _handleDatesSelected,
-        );
-      case 1:
-        return _buildMemberSelectionStep();
-      case 2:
-        return _startDate != null && _endDate != null
-            ? PlanInfoInput(
-              startDate: _startDate!,
-              endDate: _endDate!,
-              selectedMemberCount: _selectedMemberIds.length,
-              titleController: _titleController,
-              descriptionController: _descriptionController,
-              isTitleEmpty: _isTitleEmpty,
-            )
-            : const Center(child: Text('날짜를 먼저 선택해주세요'));
-      default:
-        return const SizedBox.shrink();
+    try {
+      switch (_currentStep) {
+        case 0:
+          // 날짜 선택 페이지 - 스크롤 없음
+          return PlanDateSelection(
+            startDate: _startDate,
+            endDate: _endDate,
+            focusedDay: _focusedDay,
+            onDatesSelected: _handleDatesSelected,
+          );
+        case 1:
+          // 멤버 선택 페이지 - 스크롤 없음
+          return _buildMemberSelectionStep();
+        case 2:
+          // 정보 입력 페이지 - 이미 SingleChildScrollView를 내부에 포함하고 있음
+          return _startDate != null && _endDate != null
+              ? PlanInfoInput(
+                startDate: _startDate!,
+                endDate: _endDate!,
+                selectedMemberCount: _selectedMemberIds.length,
+                titleController: _titleController,
+                descriptionController: _descriptionController,
+                isTitleEmpty: _isTitleEmpty,
+              )
+              : const Center(child: Text('날짜를 먼저 선택해주세요'));
+        default:
+          return const SizedBox.shrink();
+      }
+    } catch (e, stackTrace) {
+      debugPrint('_buildCurrentStepContent 오류: $e');
+      debugPrint('스택 트레이스: $stackTrace');
+
+      // 오류 발생 시 기본 UI 반환
+      return Center(
+        child: Text(
+          '화면을 불러오는 데 실패했습니다: $e',
+          style: TextStyle(color: Colors.red),
+        ),
+      );
     }
   }
 

@@ -7,10 +7,11 @@ import 'package:frontend/screens/user/user_screen.dart';
 import 'package:frontend/screens/user/user_edit.dart';
 import 'package:frontend/screens/user/user_profile.dart';
 import 'package:frontend/screens/group_plan/group_detail_screen.dart';
+import 'package:frontend/screens/group_plan/plan_detail_screen.dart'; // 추가된 부분
 import 'package:frontend/models/group/group_model.dart';
+import 'package:frontend/models/plan/plan_model.dart'; // 추가된 부분
 import 'package:frontend/widgets/full_map_screen.dart';
 import 'package:frontend/screens/payment/kakao_pay_screen.dart';
-import 'package:flutter/material.dart';
 import '../screens/payment/kakao_pay_official_screen.dart';
 
 class AppRoutes {
@@ -32,6 +33,14 @@ class AppRoutes {
           ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
       final group = arguments['group'] as Group;
       return GroupDetailScreen(group: group);
+    },
+
+    '/plan_detail': (context) {
+      final arguments =
+          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      final plan = arguments['plan'] as Plan;
+      final groupId = arguments['groupId'] as int;
+      return PlanDetailScreen(plan: plan, groupId: groupId);
     },
 
     '/full_map': (context) {
