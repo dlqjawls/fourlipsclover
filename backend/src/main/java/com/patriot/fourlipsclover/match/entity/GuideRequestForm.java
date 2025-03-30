@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -45,6 +46,12 @@ public class GuideRequestForm {
     // 요청사항
     @Column(name = "requirements", nullable = false)
     private String requirements;
+
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startDate;
+
+    @Column(name = "end_date", nullable = false)
+    private LocalDate endDate;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
