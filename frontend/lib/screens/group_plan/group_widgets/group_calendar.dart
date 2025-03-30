@@ -53,11 +53,14 @@ class _GroupCalendarState extends State<GroupCalendar> {
   // 특정 월의 이벤트를 로드하는 메서드
   Future<void> _loadEventsForMonth(DateTime month) async {
     if (!mounted) return;
-    if (_isLoadingEvents && month.month == _focusedDay.month && month.year == _focusedDay.year) return;
+    if (_isLoadingEvents &&
+        month.month == _focusedDay.month &&
+        month.year == _focusedDay.year)
+      return;
 
     try {
       final planProvider = Provider.of<PlanProvider>(context, listen: false);
-      
+
       // 로딩 상태 확인 - 현재 보고 있는 달만 로딩 상태 표시
       if (month.month == _focusedDay.month && month.year == _focusedDay.year) {
         setState(() {
@@ -161,7 +164,7 @@ class _GroupCalendarState extends State<GroupCalendar> {
                       _isChangingMonth = true; // 월 변경 중 상태 설정
                     });
                     widget.onFocusedDayChanged(today);
-                    
+
                     // 지연 후 데이터 로드 (애니메이션 완료 후)
                     Future.delayed(Duration(milliseconds: 300), () {
                       if (mounted) {
@@ -260,7 +263,7 @@ class _GroupCalendarState extends State<GroupCalendar> {
                         _isChangingMonth = true; // 월 변경 중임을 표시
                       });
                       widget.onFocusedDayChanged(focusedDay);
-                      
+
                       // 월 변경 애니메이션이 끝난 후 데이터 로드 (UI 렉 방지)
                       Future.delayed(Duration(milliseconds: 300), () {
                         if (mounted) {
@@ -313,7 +316,7 @@ class _GroupCalendarState extends State<GroupCalendar> {
     );
   }
 
-  // 날짜가 여행 계획에 속하는지 확인하고 셀 생성
+  // _buildCellWithPlanCheck 메서드 수정:
   Widget _buildCellWithPlanCheck(
     BuildContext context,
     DateTime day,
@@ -323,28 +326,42 @@ class _GroupCalendarState extends State<GroupCalendar> {
   ) {
     // 오늘 날짜
     final now = DateTime.now();
-    
+    final todayDate = DateTime(now.year, now.month, now.day); // 오늘 날짜 정규화
+
     // 이 날짜가 어떤 계획에 속하는지 확인
     PlanList? planForDay;
     bool isStartDay = false;
     bool isEndDay = false;
     bool isCompletedTrip = false; // 완료된 여행 여부
-    
+
     // 날짜가 여러 계획에 속할 수 있으므로, 우선순위를 정해 처리
     // 1. 진행 중인 여행 > 2. 예정된 여행 > 3. 완료된 여행
     PlanList? ongoingPlan;
     PlanList? upcomingPlan;
     PlanList? completedPlan;
-    
+
     for (var plan in plans) {
-      // 여행 상태 확인
-      final bool isPlanCompleted = plan.endDate.isBefore(now);
-      
+      // 여행의 시작일과 종료일 정규화 (시간 제외)
+      final planStartDate = DateTime(
+        plan.startDate.year,
+        plan.startDate.month,
+        plan.startDate.day,
+      );
+      final planEndDate = DateTime(
+        plan.endDate.year,
+        plan.endDate.month,
+        plan.endDate.day,
+      );
+
+      // 여행 상태 확인 - 종료일이 오늘보다 이전인 경우만 완료된 여행으로 처리
+      // 오늘이 종료일인 경우는 여전히 진행 중인 여행으로 간주
+      final bool isPlanCompleted = planEndDate.isBefore(todayDate);
+
       // 이 날짜가 여행에 속하는지 확인
       bool belongsToTrip = false;
       bool isStart = false;
       bool isEnd = false;
-      
+
       if (isSameDay(day, plan.startDate)) {
         belongsToTrip = true;
         isStart = true;
@@ -354,14 +371,18 @@ class _GroupCalendarState extends State<GroupCalendar> {
       } else if (day.isAfter(plan.startDate) && day.isBefore(plan.endDate)) {
         belongsToTrip = true;
       }
-      
+
       if (belongsToTrip) {
         if (isPlanCompleted) {
           completedPlan = plan;
           if (isStart) isStartDay = true;
           if (isEnd) isEndDay = true;
-        } else if (plan.startDate.isBefore(now) && plan.endDate.isAfter(now)) {
+        } else if ((planStartDate.isBefore(todayDate) ||
+                isSameDay(planStartDate, todayDate)) &&
+            (planEndDate.isAfter(todayDate) ||
+                isSameDay(planEndDate, todayDate))) {
           // 진행 중인 여행 - 최우선
+          // 오늘이 시작일이거나 종료일인 경우도 포함
           ongoingPlan = plan;
           if (isStart) isStartDay = true;
           if (isEnd) isEndDay = true;
@@ -374,7 +395,7 @@ class _GroupCalendarState extends State<GroupCalendar> {
         }
       }
     }
-    
+
     // 우선순위에 따라 표시할 여행 선택
     if (ongoingPlan != null) {
       planForDay = ongoingPlan;
@@ -415,14 +436,14 @@ class _GroupCalendarState extends State<GroupCalendar> {
 
     // 계획에 속하면 범위 표시 셀 반환
     // 완료된 여행은 회색, 진행 중이거나 예정된 여행은 primary 색상으로 표시
-    Color fillColor = isCompletedTrip 
-        ? Colors.grey.withOpacity(0.2) 
-        : AppColors.primary.withOpacity(0.2);
-        
-    Color borderColor = isCompletedTrip
-        ? Colors.grey.withOpacity(0.5)
-        : AppColors.primary;
-    
+    Color fillColor =
+        isCompletedTrip
+            ? Colors.grey.withOpacity(0.2)
+            : AppColors.primary.withOpacity(0.2);
+
+    Color borderColor =
+        isCompletedTrip ? Colors.grey.withOpacity(0.5) : AppColors.primary;
+
     return _buildRangeCell(
       day,
       fillColor,
@@ -433,7 +454,7 @@ class _GroupCalendarState extends State<GroupCalendar> {
     );
   }
 
-  // 범위 셀 생성 함수 - 스트로크 추가 및 색상 파라미터 분리
+  // 범위 셀 생성 함수 - 글씨 강조 스타일 수정
   Widget _buildRangeCell(
     DateTime day,
     Color fillColor,
@@ -448,9 +469,15 @@ class _GroupCalendarState extends State<GroupCalendar> {
         color: fillColor,
         // 테두리 추가 - 시작일과 종료일에 맞게 선택적으로 적용
         border: Border(
-          left: isStart ? BorderSide(color: borderColor, width: 1.5) : BorderSide.none,
+          left:
+              isStart
+                  ? BorderSide(color: borderColor, width: 1.5)
+                  : BorderSide.none,
           top: BorderSide(color: borderColor, width: 1.5),
-          right: isEnd ? BorderSide(color: borderColor, width: 1.5) : BorderSide.none,
+          right:
+              isEnd
+                  ? BorderSide(color: borderColor, width: 1.5)
+                  : BorderSide.none,
           bottom: BorderSide(color: borderColor, width: 1.5),
         ),
         // 시작일 왼쪽만 둥글게, 종료일 오른쪽만 둥글게
@@ -472,7 +499,8 @@ class _GroupCalendarState extends State<GroupCalendar> {
               '${day.day}',
               style: TextStyle(
                 color: isToday ? Colors.white : Colors.black,
-                fontWeight: (isStart || isEnd) ? FontWeight.bold : FontWeight.normal,
+                // 글씨체 강조 제거 - 모든 날짜 동일한 폰트 두께 사용
+                fontWeight: FontWeight.normal,
               ),
             ),
           ),
@@ -503,7 +531,7 @@ class _GroupCalendarState extends State<GroupCalendar> {
                   _isChangingMonth = true;
                 });
                 widget.onFocusedDayChanged(newDate);
-                
+
                 // 지연 후 데이터 로드
                 Future.delayed(Duration(milliseconds: 300), () {
                   if (mounted) {
@@ -514,7 +542,7 @@ class _GroupCalendarState extends State<GroupCalendar> {
                     });
                   }
                 });
-                
+
                 Navigator.of(context).pop();
               },
             ),

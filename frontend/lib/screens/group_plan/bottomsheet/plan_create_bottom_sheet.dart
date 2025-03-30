@@ -6,9 +6,9 @@ import '../../../providers/user_provider.dart';
 import '../../../providers/group_provider.dart';
 import '../../../models/group/member_model.dart';
 import '../../../config/theme.dart';
-import './plan_date_selection.dart';
-import './train_seat_member_selection.dart';
-import './plan_info_input.dart';
+import 'plan_date_selection.dart';
+import 'train_seat_member_selection.dart';
+import 'plan_info_input.dart';
 
 class PlanCreateBottomSheet extends StatefulWidget {
   final int groupId;

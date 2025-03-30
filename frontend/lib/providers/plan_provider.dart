@@ -407,4 +407,9 @@ class PlanProvider with ChangeNotifier {
     debugPrint('일치하는 계획을 찾을 수 없어 0 반환');
     return 0;
   }
+
+    // 로딩 상태 직접 설정 (공통화)
+  void setLoading(bool loading) {
+    _setLoading(loading);
+  }
 }
