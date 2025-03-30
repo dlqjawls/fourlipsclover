@@ -48,6 +48,7 @@ public class Match {
     private GuideRequestForm guideRequestForm;
 
     // 현지인 승인대기, 승인, 거절(Pending, Confirmed, Rejected)
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private ApprovalStatus status;
 
