@@ -1,6 +1,5 @@
 package com.patriot.fourlipsclover.match.service;
 
-import com.patriot.fourlipsclover.chat.service.ChatService;
 import com.patriot.fourlipsclover.exception.*;
 import com.patriot.fourlipsclover.group.repository.GroupRepository;
 import com.patriot.fourlipsclover.match.dto.request.LocalsProposalRequest;
@@ -40,7 +39,6 @@ public class MatchService {
     private final PaymentApprovalRepository paymentApprovalRepository;
     private final LocalsProposalRepository localsProposalRepository;
     private final RestaurantJpaRepository restaurantJpaRepository;
-    private final ChatService chatService;
 
     public void validateMatchRequest(MatchCreateRequest request, long memberId) {
         boolean isMember = memberRepository.existsById(memberId);

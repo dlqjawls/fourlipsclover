@@ -1,6 +1,5 @@
 package com.patriot.fourlipsclover.match.controller;
 
-import com.patriot.fourlipsclover.chat.service.ChatService;
 import com.patriot.fourlipsclover.config.CustomUserDetails;
 import com.patriot.fourlipsclover.match.dto.request.LocalsProposalRequest;
 import com.patriot.fourlipsclover.match.dto.request.MatchCreateRequest;
@@ -10,7 +9,6 @@ import com.patriot.fourlipsclover.match.service.MatchService;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentApproveResponse;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentReadyResponse;
 import com.patriot.fourlipsclover.payment.service.PaymentService;
-import com.patriot.fourlipsclover.plan.service.PlanService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -25,8 +23,6 @@ import java.util.List;
 public class MatchController {
 
     private final MatchService matchService;
-    private final ChatService chatService;
-    private final PlanService planService;
     private final PaymentService paymentService;
 
     // 공통 인증 정보 추출 메서드
