@@ -74,8 +74,6 @@ public class MemberService {
 	@Transactional
 	public MypageResponse getMypageData(long memberId) {
 		Member member = memberRepository.findByMemberId(memberId);
-		String profileImageFileName = member.getProfileUrl();
-		member.setProfileUrl(mypageImageService.getProfileImageUrl(profileImageFileName));
 		return memberMapper.toDto(member);
 	}
 }
