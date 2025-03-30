@@ -44,27 +44,44 @@ class _CloverProfileSectionState extends State<CloverProfileSection> {
                 ],
               ),
               const SizedBox(height: 16),
-              Container(
-                width: 180,
-                height: 180,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.lightGray,
-                ),
-                child: Center(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Image.asset(
-                        'assets/images/logo.png',
-                        width: 600,
-                        height: 600,
-                        fit: BoxFit.contain,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+             Container(
+  width: 180,
+  height: 180,
+  decoration: BoxDecoration(
+    shape: BoxShape.circle,
+    color: AppColors.lightGray,
+  ),
+  child: ClipOval(
+    child: Image.network(
+      widget.profile.profileUrl,
+      width: 180,
+      height: 180,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Image.asset(
+          'assets/images/logo.png',
+          width: 180,
+          height: 180,
+          fit: BoxFit.contain,
+        );
+      },
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) {
+          return child;
+        }
+        return Center(
+          child: CircularProgressIndicator(
+            value: loadingProgress.expectedTotalBytes != null
+                ? loadingProgress.cumulativeBytesLoaded /
+                    loadingProgress.expectedTotalBytes!
+                : null,
+            color: AppColors.primary,
+          ),
+        );
+      },
+    ),
+  ),
+),
               const SizedBox(height: 16),
               Text(
                 widget.profile.nickname,
