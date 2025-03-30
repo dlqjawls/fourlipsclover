@@ -5,18 +5,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patriot.fourlipsclover.member.entity.MemberReviewTag;
 import com.patriot.fourlipsclover.restaurant.entity.RestaurantTag;
 import com.patriot.fourlipsclover.restaurant.entity.Review;
+import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
 import com.patriot.fourlipsclover.tag.dto.response.TagInfo;
 import com.patriot.fourlipsclover.tag.dto.response.TagResponse;
 import com.patriot.fourlipsclover.tag.entity.Tag;
 import com.patriot.fourlipsclover.tag.repository.MemberReviewTagRepository;
 import com.patriot.fourlipsclover.tag.repository.RestaurantTagRepository;
 import com.patriot.fourlipsclover.tag.repository.TagRepository;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Service
@@ -85,5 +89,20 @@ public class TagService {
 
 		}
 
+	}
+
+	@Transactional(readOnly = true)
+	public List<RestaurantTagResponse> findRestaurantTagByRestaurantId(String kakaoPlaceId) {
+		List<RestaurantTag> restaurantTags = restaurantTagRepository.findRestaurantTagsByKakaoPlaceId(
+				kakaoPlaceId);
+		List<RestaurantTagResponse> response = new ArrayList<>();
+		for (RestaurantTag data : restaurantTags) {
+			RestaurantTagResponse responseDto = new RestaurantTagResponse();
+			responseDto.setCategory(data.getTag().getCategory());
+			responseDto.setTagName(data.getTag().getName());
+			responseDto.setRestaurantTagId(data.getRestaurantTagId());
+			response.add(responseDto);
+		}
+		return response;
 	}
 }
