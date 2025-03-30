@@ -1,8 +1,12 @@
+import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/restaurant_model.dart';
 import '../models/review_model.dart';
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
+
 // import '../constants/api_constants.dart';
 
 class ReviewService {
@@ -10,8 +14,8 @@ class ReviewService {
   static String get baseUrl => dotenv.env['API_BASE_URL'] ?? '';
   static const String apiPrefix = '/api/restaurant';
 
-  /// ✅ 더미 데이터 포함 여부 (`fetchReviews`만 true, 나머지는 false)
-  static bool useDummyDataForReviews = true; // `fetchReviews()`만 더미 데이터 포함
+  /// ✅ 더미 데이터 포함 여부 (fetchReviews만 true, 나머지는 false)
+  static bool useDummyDataForReviews = true; // fetchReviews()만 더미 데이터 포함
   static bool useDummyDataForOtherApis = false; // 나머지 API는 실제 데이터만 사용
 
   /// ✅ 리뷰 목록 조회 (API + 더미 데이터 포함)
@@ -41,7 +45,7 @@ class ReviewService {
       print("❌ API 요청 실패: $e");
     }
 
-    // ✅ 더미 데이터 추가 (`fetchReviews`만 사용)
+    // ✅ 더미 데이터 추가 (fetchReviews만 사용)
     if (useDummyDataForReviews) {
       allReviews.addAll(_generateDummyReviews(restaurantId));
     }
@@ -55,7 +59,7 @@ class ReviewService {
       Review(
         id: '1001',
         restaurantId: restaurantId,
-        userId: 'assets/images/review_image.jpg',
+        memberId: 123456789,
         username: '맛집탐험가',
         title: '순대국밥 정말 맛있어요!',
         content: '국물이 진하고 면발이 쫄깃해요. 강력 추천합니다!',
@@ -72,8 +76,9 @@ class ReviewService {
       // ✅ 광주 하남촌 리뷰 추가
       Review(
         id: '1003',
-        restaurantId: '1605310387', // 광주 하남촌 kakaoPlaceId
-        userId: 'dummy_user_3',
+        restaurantId: '1605310387',
+        // 광주 하남촌 kakaoPlaceId
+        memberId: 123456789,
         username: '한식러버',
         title: '하남촌 순대국밥 최고!',
         content: '국물이 얼큰하고 깊은 맛이 납니다. 한식 좋아하시면 강추!',
@@ -102,7 +107,8 @@ class ReviewService {
 
       if (response.statusCode == 200) {
         final List<dynamic> responseData = jsonDecode(response.body);
-        return responseData.map<ReviewResponse>((json) => ReviewResponse.fromJson(json)).toList();
+        return responseData.map<ReviewResponse>((json) =>
+            ReviewResponse.fromJson(json)).toList();
       } else {
         throw Exception('Failed to get review list: ${response.statusCode}');
       }
@@ -117,49 +123,64 @@ class ReviewService {
     required String kakaoPlaceId,
     required String content,
     required DateTime visitedAt,
+    File? imageFile,
+    required String accessToken, // 🔥 AppProvider에서 받아온 토큰
   }) async {
-    if (useDummyDataForOtherApis) {
-      return ReviewResponse(
-        reviewId: DateTime.now().millisecondsSinceEpoch % 10000,
-        content: content,
-        reviewer: ReviewMemberResponse(
-          memberId: memberId,
-          nickname: '현재 사용자',
-          email: 'user@example.com',
-        ),
-        visitedAt: visitedAt,
-        createdAt: DateTime.now(),
-      );
+    final url = Uri.parse('$baseUrl$apiPrefix/reviews');
+    final request = http.MultipartRequest('POST', url);
+
+    // ✅ Authorization 헤더
+    request.headers['Authorization'] = 'Bearer $accessToken';
+
+    final jsonMap = {
+      "memberId": memberId,
+      "kakaoPlaceId": kakaoPlaceId,
+      "content": content,
+      "visitedAt": visitedAt.toIso8601String(),
+    };
+    final jsonString = jsonEncode(jsonMap);
+    final jsonBytes = utf8.encode(jsonString);
+
+    request.files.add(http.MultipartFile.fromBytes(
+      'data',
+      jsonBytes,
+      contentType: MediaType('application', 'json'),
+      filename: 'data.json',
+    ));
+
+    if (imageFile != null) {
+      final mimeType = lookupMimeType(imageFile.path) ?? 'image/jpeg';
+      final mimeParts = mimeType.split('/');
+      request.files.add(await http.MultipartFile.fromPath(
+        'images',
+        imageFile.path,
+        contentType: MediaType(mimeParts[0], mimeParts[1]),
+      ));
     }
 
-    try {
-      final url = Uri.parse('$baseUrl$apiPrefix/reviews');
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          "memberId": memberId,
-          "kakaoPlaceId": kakaoPlaceId,
-          "content": content,
-          "visitedAt": visitedAt.toIso8601String(),
-        }),
-      );
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
 
-      if (response.statusCode == 200) {
-        return ReviewResponse.fromJson(jsonDecode(response.body));
-      } else {
-        throw Exception('Failed to create review: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Error creating review: $e');
+    print('🔎 응답코드: ${response.statusCode}');
+    print('📦 응답본문: ${response.body}');
+
+    if (response.statusCode == 200) {
+      return ReviewResponse.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('리뷰 등록 실패: ${response.statusCode} ${response.body}');
     }
   }
+
+
+
+
 
   /// ✅ 리뷰 수정 (API 데이터만 사용)
   static Future<ReviewResponse> updateReview({
     required int reviewId,
     required String content,
     required DateTime visitedAt,
+    required String accessToken,
   }) async {
     if (useDummyDataForOtherApis) {
       return ReviewResponse(
@@ -173,6 +194,9 @@ class ReviewService {
         visitedAt: visitedAt,
         createdAt: DateTime.now().subtract(const Duration(days: 2)),
         updatedAt: DateTime.now(),
+        reviewImageUrls: [],
+        likedCount: 0,
+        dislikedCount: 0,
       );
     }
 
@@ -180,7 +204,8 @@ class ReviewService {
       final url = Uri.parse('$baseUrl$apiPrefix/reviews/$reviewId');
       final response = await http.put(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',},
         body: jsonEncode({
           "content": content,
           "visitedAt": visitedAt.toIso8601String(),
@@ -197,23 +222,49 @@ class ReviewService {
     }
   }
 
-  /// ✅ 리뷰 삭제 (API 데이터만 사용)
-  static Future<bool> deleteReview(int reviewId) async {
-    if (useDummyDataForOtherApis) {
-      return true;
-    }
+  /// ✅ 리뷰 삭제
+  static Future<bool> deleteReview({
+    required int reviewId,
+    required String accessToken,
+  }) async {
+    final url = Uri.parse('$baseUrl$apiPrefix/reviews/$reviewId');
+    final response = await http.delete(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+      },
+    );
 
-    try {
-      final url = Uri.parse('$baseUrl$apiPrefix/reviews/$reviewId');
-      final response = await http.delete(url);
+    return response.statusCode == 200;
+  }
 
-      if (response.statusCode == 200) {
-        return true;
-      } else {
-        return false;
-      }
-    } catch (e) {
-      return false;
+  /// ✅ 리뷰 좋아요 싫어요
+  static Future<String> toggleLikeStatus({
+    required int reviewId,
+    required int memberId,
+    required String likeStatus, // "LIKE" 또는 "DISLIKE"
+    required String accessToken,
+  }) async {
+    final url = Uri.parse('$baseUrl$apiPrefix/reviews/$reviewId/like');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      },
+      body: jsonEncode({
+        "memberId": memberId,
+        "likeStatus": likeStatus,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data["message"] ?? "처리 완료";
+    } else {
+      throw Exception('좋아요/싫어요 처리 실패: ${response.statusCode}');
     }
   }
+
+
 }

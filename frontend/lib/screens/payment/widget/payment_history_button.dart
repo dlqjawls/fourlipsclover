@@ -3,8 +3,9 @@ import '../../../config/theme.dart';
 
 class PaymentHistoryButton extends StatelessWidget {
   final VoidCallback onTap;
+  final String label;
 
-  const PaymentHistoryButton({super.key, required this.onTap});
+  const PaymentHistoryButton({super.key, required this.onTap, this.label ='결제 내역 보기',});
 
   @override
   Widget build(BuildContext context) {
@@ -23,12 +24,12 @@ class PaymentHistoryButton extends StatelessWidget {
           splashColor: AppColors.primaryDark.withOpacity(0.2),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.receipt_long, color: Colors.white, size: 20),
-              SizedBox(width: 8),
+            children: [
+              const Icon(Icons.receipt_long, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
               Text(
-                '결제 내역 보기',
-                style: TextStyle(
+                label,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,

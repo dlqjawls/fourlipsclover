@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../models/review_model.dart';
 import '../review/review_write.dart';
 import 'widgets/review_options_modal.dart';
 import 'widgets/delete_confirmation_modal.dart';
+import '../../services/review_service.dart'; // ✅ 좋아요 기능을 위해 추가
+import 'package:shared_preferences/shared_preferences.dart'; // ✅ 토큰 가져오기 위해 필요
 
 class ReviewDetail extends StatefulWidget {
   final Review review;
@@ -17,14 +20,49 @@ class ReviewDetail extends StatefulWidget {
 class _ReviewDetailState extends State<ReviewDetail> {
   late Review _review;
   Offset? tapPosition;
+  String? accessToken;
+  int memberId = 0; // ✅ 실제 로그인한 사용자 ID
 
   @override
   void initState() {
     super.initState();
     _review = widget.review;
+    _loadAuthInfo();
   }
 
-  /// ✅ 리뷰 수정 후 UI 갱신
+  Future<void> _loadAuthInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      accessToken = prefs.getString("jwtToken");
+      memberId = prefs.getInt("memberId") ?? 0;
+    });
+  }
+
+  Future<void> _toggleLike(String likeStatus) async {
+    try {
+      final message = await ReviewService.toggleLikeStatus(
+        reviewId: int.parse(_review.id),
+        memberId: memberId,
+        likeStatus: likeStatus,
+        accessToken: accessToken!,
+      );
+      print("✅ 서버 응답: $message");
+
+      // 수동으로 좋아요/싫어요 수 반영 (임시)
+      setState(() {
+        if (likeStatus == "LIKE") {
+          _review.isLiked = !_review.isLiked;
+          _review.likes += _review.isLiked ? 1 : -1;
+        } else {
+          _review.isDisliked = !_review.isDisliked;
+          _review.dislikes += _review.isDisliked ? 1 : -1;
+        }
+      });
+    } catch (e) {
+      print("❌ 좋아요/싫어요 처리 오류: $e");
+    }
+  }
+
   Future<void> _editReview() async {
     final updatedReview = await Navigator.push(
       context,
@@ -43,7 +81,6 @@ class _ReviewDetailState extends State<ReviewDetail> {
     }
   }
 
-  /// ✅ 리뷰 삭제 처리
   void _deleteReview() {
     showDeleteConfirmationModal(context, _review.id).then((result) {
       if (result == true) {
@@ -67,7 +104,6 @@ class _ReviewDetailState extends State<ReviewDetail> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              /// ✅ 리뷰 제목 + 점 3개 아이콘 추가
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -79,8 +115,6 @@ class _ReviewDetailState extends State<ReviewDetail> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-
-                  /// ✅ 점 3개 아이콘 (수정 & 삭제 옵션)
                   GestureDetector(
                     onTapDown: (TapDownDetails details) {
                       tapPosition = details.globalPosition;
@@ -105,44 +139,63 @@ class _ReviewDetailState extends State<ReviewDetail> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 12),
 
-              /// ✅ 프로필 + 닉네임 + 방문 횟수 & 방문 날짜
+              /// ✅ 프로필 + 유저명 + 방문 정보 + 좋아요
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   CircleAvatar(
-                    backgroundImage: NetworkImage(
-                      _review.profileImageUrl ?? 'assets/default_profile.png',
-                    ),
                     radius: 20,
+                    backgroundImage: _buildProfileImageProvider(_review.profileImageUrl),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      _review.username,
-                      style: Theme.of(context).textTheme.bodyLarge,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_review.username, style: Theme.of(context).textTheme.bodyLarge),
+                        const SizedBox(height: 4),
+                        Text(
+                          "${_review.visitCount}번째 방문 | ${_formatDate(_review.date)}",
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    "${_review.visitCount}번째 방문 | ${_formatDate(_review.date)}",
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.thumb_up,
+                          size: 18,
+                          color: _review.isLiked ? Colors.blue : Colors.grey,
+                        ),
+                        onPressed: () => _toggleLike("LIKE"),
+                      ),
+                      Text('${_review.likes}', style: TextStyle(fontSize: 12)),
+                      IconButton(
+                        icon: Icon(
+                          Icons.thumb_down,
+                          size: 18,
+                          color: _review.isDisliked ? Colors.red : Colors.grey,
+                        ),
+                        onPressed: () => _toggleLike("DISLIKE"),
+                      ),
+                      Text('${_review.dislikes}', style: TextStyle(fontSize: 12)),
+                    ],
                   ),
                 ],
               ),
 
               const SizedBox(height: 12),
-
               Divider(color: Colors.grey[300], thickness: 1),
-
               const SizedBox(height: 12),
 
-              /// ✅ 리뷰 이미지 표시 (사용자 이미지 없으면 기본 이미지 중 하나 선택)
+              /// ✅ 리뷰 이미지 표시
               _buildReviewImage(_review.imageUrl, int.parse(_review.id)),
 
               const SizedBox(height: 12),
-
-              /// ✅ 리뷰 내용
               Text(
                 _review.content,
                 style: TextStyle(fontSize: 14, color: Colors.black87),
@@ -154,8 +207,23 @@ class _ReviewDetailState extends State<ReviewDetail> {
     );
   }
 
-  /// ✅ 리뷰 이미지 하나만 표시 (사용자가 업로드한 이미지 없을 경우 기본 이미지 중 하나 선택)
+  ImageProvider _buildProfileImageProvider(String? imageUrl) {
+    final baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://your-api.com';
+
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return const AssetImage('assets/default_profile.png');
+    } else if (imageUrl.startsWith('http')) {
+      return NetworkImage(imageUrl);
+    } else if (imageUrl.startsWith('assets/')) {
+      return AssetImage(imageUrl);
+    } else {
+      return NetworkImage('$baseUrl/uploads/profile/$imageUrl');
+    }
+  }
+
   Widget _buildReviewImage(String? imageUrl, int reviewId) {
+    final baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://your-api.com';
+
     List<String> defaultImages = [
       "assets/images/review_image.jpg",
       "assets/images/review_image2.jpg",
@@ -164,12 +232,14 @@ class _ReviewDetailState extends State<ReviewDetail> {
 
     String selectedImage;
 
-    // ✅ 사용자가 업로드한 이미지가 있을 경우 그대로 사용
     if (imageUrl != null && imageUrl.isNotEmpty) {
-      selectedImage = imageUrl;
+      if (!imageUrl.startsWith('http') && !imageUrl.startsWith('assets/')) {
+        selectedImage = '$baseUrl/uploads/review/$imageUrl';
+      } else {
+        selectedImage = imageUrl;
+      }
     } else {
-      // ✅ 업로드된 이미지가 없으면 기본 이미지 중 하나를 순서대로 선택
-      int imageIndex = reviewId % defaultImages.length; // 0, 1, 2 순환
+      int imageIndex = reviewId % defaultImages.length;
       selectedImage = defaultImages[imageIndex];
     }
 
@@ -180,14 +250,15 @@ class _ReviewDetailState extends State<ReviewDetail> {
         color: Colors.grey[300],
         borderRadius: BorderRadius.circular(8),
         image: DecorationImage(
-          image: selectedImage.startsWith("http") ? NetworkImage(selectedImage) : AssetImage(selectedImage) as ImageProvider,
+          image: selectedImage.startsWith("http")
+              ? NetworkImage(selectedImage)
+              : AssetImage(selectedImage) as ImageProvider,
           fit: BoxFit.cover,
         ),
       ),
     );
   }
 
-  /// ✅ 날짜 포맷팅 함수
   String _formatDate(DateTime date) {
     return "${date.month}.${date.day}";
   }

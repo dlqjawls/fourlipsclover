@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../services/review_service.dart';
+import '../../../providers/app_provider.dart';
 
-/// "삭제 확인" 모달 창
 Future<bool?> showDeleteConfirmationModal(BuildContext context, String reviewId) async {
   return await showDialog<bool>(
     context: context,
@@ -25,13 +26,18 @@ Future<bool?> showDeleteConfirmationModal(BuildContext context, String reviewId)
                   throw Exception("유효하지 않은 reviewId: $reviewId");
                 }
 
-                // ✅ 삭제 요청
-                bool isDeleted = await ReviewService.deleteReview(parsedReviewId);
+                final accessToken = Provider.of<AppProvider>(context, listen: false).jwtToken;
+                if (accessToken == null) throw Exception("토큰 없음");
 
-                Navigator.pop(context, isDeleted); // ✅ 삭제 성공 여부 반환
+                bool isDeleted = await ReviewService.deleteReview(
+                  reviewId: parsedReviewId,
+                  accessToken: accessToken,
+                );
+
+                Navigator.pop(context, isDeleted);
               } catch (e) {
                 print("❌ 삭제 오류: $e");
-                Navigator.pop(context, false); // ❌ 삭제 실패
+                Navigator.pop(context, false);
               }
             },
           ),
