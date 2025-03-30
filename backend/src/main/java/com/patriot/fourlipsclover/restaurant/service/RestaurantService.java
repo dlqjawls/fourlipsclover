@@ -25,9 +25,11 @@ import com.patriot.fourlipsclover.restaurant.mapper.ReviewMapper;
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewLikeJpaRepository;
+import com.patriot.fourlipsclover.tag.service.TagService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -47,6 +49,7 @@ public class RestaurantService {
 	private final RestaurantMapper restaurantMapper;
 	private final ReviewJpaRepository reviewRepository;
 	private final ReviewImageService reviewImageService;
+	private final TagService tagService;
 
 	@Transactional
 	public ReviewResponse create(ReviewCreate reviewCreate, List<MultipartFile> images) {
@@ -62,6 +65,8 @@ public class RestaurantService {
 				.build();
 
 		reviewRepository.save(review);
+		CompletableFuture.runAsync(() -> tagService.generateTag(review));
+
 		List<String> imageUrls = reviewImageService.uploadFiles(review, images);
 		ReviewResponse response = reviewMapper.toReviewImageDto(review, imageUrls);
 		response.setLikedCount(0);
