@@ -52,7 +52,7 @@ public class MypageController {
 		response.put("name", mypageData.getNickname());
 		response.put("badgeName", "현지인");
 		response.put("profileUrl", mypageData.getProfileUrl());
-
+		response.put("tags", mypageData.getTags());
 		response.put("reviewCount", 10);
 		response.put("groupCount", 2);
 		response.put("albumCount", 5);

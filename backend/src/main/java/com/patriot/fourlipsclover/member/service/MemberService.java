@@ -7,10 +7,15 @@ import com.patriot.fourlipsclover.auth.jwt.JwtTokenProvider;
 import com.patriot.fourlipsclover.auth.service.KakaoAuthService;
 import com.patriot.fourlipsclover.exception.UserInfoParsingException;
 import com.patriot.fourlipsclover.member.entity.Member;
+import com.patriot.fourlipsclover.member.entity.MemberReviewTag;
 import com.patriot.fourlipsclover.member.mapper.MemberMapper;
 import com.patriot.fourlipsclover.member.repository.MemberRepository;
 import com.patriot.fourlipsclover.mypage.dto.response.MypageResponse;
 import com.patriot.fourlipsclover.mypage.service.MypageImageService;
+import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
+import com.patriot.fourlipsclover.tag.repository.MemberReviewTagRepository;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -26,6 +31,7 @@ public class MemberService {
 	private final JwtTokenProvider jwtTokenProvider;
 	private final MemberMapper memberMapper;
 	private final MypageImageService mypageImageService;
+	private final MemberReviewTagRepository memberReviewTagRepository;
 
 	public JwtResponse processKakaoLoginAndGetToken(String accessToken) {
 		String userInfo = kakaoAuthService.getUserInfo(accessToken);
@@ -71,9 +77,20 @@ public class MemberService {
 		return new JwtResponse(jwtToken);
 	}
 
-	@Transactional
+	@Transactional(readOnly = true)
 	public MypageResponse getMypageData(long memberId) {
 		Member member = memberRepository.findByMemberId(memberId);
-		return memberMapper.toDto(member);
+		MypageResponse response = memberMapper.toDto(member);
+		List<MemberReviewTag> memberTags = memberReviewTagRepository.findByMemberId(memberId);
+		List<RestaurantTagResponse> tagList = new ArrayList<>();
+		for (MemberReviewTag data : memberTags) {
+			RestaurantTagResponse restaurantTagResponse = new RestaurantTagResponse();
+			restaurantTagResponse.setRestaurantTagId(data.getMemberReviewTagId());
+			restaurantTagResponse.setTagName(data.getTag().getName());
+			restaurantTagResponse.setCategory(data.getTag().getCategory());
+			tagList.add(restaurantTagResponse);
+		}
+		response.setTags(tagList);
+		return response;
 	}
 }
