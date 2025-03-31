@@ -3,8 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../config/theme.dart';
 import '../../../models/plan/plan_list_model.dart';
+import '../../../models/plan/plan_model.dart';
 import '../../../models/plan/plan_schedule_model.dart';
 import '../../../providers/plan_provider.dart';
+import '../../../widgets/clover_loading_spinner.dart';
+import '../plan_detail_screen.dart';
 
 class CalendarEventBottomSheet extends StatefulWidget {
   final int groupId;
@@ -36,42 +39,15 @@ class _CalendarEventBottomSheetState extends State<CalendarEventBottomSheet> {
     
     try {
       // 1. 계획 로드
-      final plans = await planProvider.fetchPlans(widget.groupId);
-      final plansForDate = plans.where((plan) {
-        return !widget.date.isBefore(plan.startDate) && 
-               !widget.date.isAfter(plan.endDate.add(const Duration(days: 1)));
-      }).toList();
+      final plans = await planProvider.getPlansForDate(widget.groupId, widget.date);
       
       // 2. 일정 로드
-      List<PlanSchedule> schedulesForDate = [];
-      for (var plan in plansForDate) {
-        final schedules = await planProvider.fetchPlanSchedules(widget.groupId, plan.planId);
-        
-        // 해당 날짜에 속하는 일정만 필터링
-        final filteredSchedules = schedules.where((schedule) {
-          final scheduleDate = DateTime(
-            schedule.visitAt.year,
-            schedule.visitAt.month,
-            schedule.visitAt.day,
-          );
-          final targetDate = DateTime(
-            widget.date.year,
-            widget.date.month,
-            widget.date.day,
-          );
-          return scheduleDate.isAtSameMomentAs(targetDate);
-        }).toList();
-        
-        schedulesForDate.addAll(filteredSchedules);
-      }
-      
-      // 방문 시간순으로 정렬
-      schedulesForDate.sort((a, b) => a.visitAt.compareTo(b.visitAt));
+      final schedulesForDate = await planProvider.getSchedulesForDate(widget.groupId, widget.date);
       
       // 데이터 설정 (상태 업데이트)
       if (mounted) {
         setState(() {
-          _plans = plansForDate;
+          _plans = plans;
           _schedules = schedulesForDate;
           _isLoading = false;
         });
@@ -87,23 +63,40 @@ class _CalendarEventBottomSheetState extends State<CalendarEventBottomSheet> {
       }
     }
   }
+
+  // 계획 상세 화면으로 이동 (상세 일정 탭 선택)
+  void _navigateToPlanDetail(PlanList planList) {
+    // 바텀시트 닫기
+    Navigator.pop(context);
+    
+    // PlanList 객체를 Plan 객체로 변환
+    final plan = Plan(
+      planId: planList.planId,
+      groupId: widget.groupId,
+      treasurerId: planList.treasurerId,
+      title: planList.title,
+      description: planList.description,
+      startDate: planList.startDate,
+      endDate: planList.endDate,
+      createdAt: planList.createdAt,
+      updatedAt: null, // PlanList에 없는 필드는 null로 설정
+    );
+    
+    // 계획 상세 화면으로 이동
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PlanDetailScreen(
+          plan: plan,
+          groupId: widget.groupId,
+          initialTabIndex: 1, // 상세 일정 탭(인덱스 1) 선택
+        ),
+      ),
+    );
+  }
   
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-          ),
-        ),
-        height: 200,
-        child: const Center(child: CircularProgressIndicator()),
-      );
-    }
-    
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -131,53 +124,52 @@ class _CalendarEventBottomSheetState extends State<CalendarEventBottomSheet> {
           
           // 날짜 표시
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              DateFormat('yyyy년 MM월 dd일').format(widget.date),
-              style: TextStyle(
-                fontFamily: 'Anemone_air',
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.darkGray,
-              ),
+            padding: const EdgeInsets.symmetric(
+              vertical: 16,
+              horizontal: 20,
             ),
-          ),
-          
-          const Divider(height: 1, thickness: 1),
-          
-          // 이벤트 목록 또는 빈 상태
-          Expanded(
-            child: (_schedules?.isEmpty ?? true) 
-              ? _buildEmptyState(_plans ?? [])
-              : _buildEventList(_schedules!),
-          ),
-          
-          // 하단 버튼
-          if (_plans?.isNotEmpty ?? false)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () {
-                  // 세부 일정 추가 화면으로 이동
-                  // TODO: 일정 추가 화면으로 이동하는 코드 추가
-                },
-                child: const Text(
-                  '세부 일정 추가',
-                  style: TextStyle(
-                    fontFamily: 'Anemone_air',
-                    fontSize: 16,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // 날짜 텍스트
+                Text(
+                  DateFormat('yyyy년 MM월 dd일').format(widget.date),
+                  style: const TextStyle(
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
+                
+                // 새로고침 버튼
+                IconButton(
+                  icon: Icon(
+                    Icons.refresh,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                  onPressed: _loadData,
+                ),
+              ],
             ),
+          ),
+          
+          const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+          
+          // 로딩 스피너 또는 이벤트 목록
+          _isLoading
+            ? const Padding(
+                padding: EdgeInsets.all(32.0),
+                child: CloverLoadingSpinner(size: 40),
+              )
+            : Expanded(
+                child: (_schedules?.isEmpty ?? true) 
+                  ? _buildEmptyState(_plans ?? [])
+                  : _buildEventList(_schedules!),
+              ),
+          
+          // 하단 버튼 영역 - 계획이 있을 때만 표시
+          if (_plans?.isNotEmpty ?? false)
+            _buildBottomButton(),
         ],
       ),
     );
@@ -188,29 +180,32 @@ class _CalendarEventBottomSheetState extends State<CalendarEventBottomSheet> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          // 이미지 또는 아이콘
           Icon(
             Icons.event_note,
-            size: 48,
+            size: 64,
             color: AppColors.lightGray,
           ),
           const SizedBox(height: 16),
+          
+          // 안내 메시지
           Text(
             plans.isEmpty 
               ? '이 날짜에 계획된 여행이 없어요' 
               : '세부 일정이 없어요',
             style: TextStyle(
-              fontFamily: 'Anemone_air',
               fontSize: 16,
               color: AppColors.mediumGray,
+              fontWeight: FontWeight.w500,
             ),
           ),
+          
           if (plans.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                '세부 일정을 추가해보세요',
+                '아래 버튼을 눌러 일정을 확인해보세요',
                 style: TextStyle(
-                  fontFamily: 'Anemone_air',
                   fontSize: 14,
                   color: AppColors.mediumGray,
                 ),
@@ -227,65 +222,168 @@ class _CalendarEventBottomSheetState extends State<CalendarEventBottomSheet> {
       itemCount: schedules.length,
       itemBuilder: (context, index) {
         final schedule = schedules[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          elevation: 1,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Container(
-                  width: 4,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        schedule.placeName,
-                        style: TextStyle(
-                          fontFamily: 'Anemone_air',
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.darkGray,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        schedule.notes ?? '메모 없음',
-                        style: TextStyle(
-                          fontFamily: 'Anemone_air',
-                          fontSize: 14,
-                          color: AppColors.mediumGray,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  DateFormat('HH:mm').format(schedule.visitAt),
-                  style: TextStyle(
-                    fontFamily: 'Anemone_air',
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+        return _buildScheduleCard(schedule);
       },
+    );
+  }
+  
+  Widget _buildScheduleCard(PlanSchedule schedule) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 0,
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          // 일정 상세 보기 또는 편집 화면으로 이동할 수 있습니다
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // 시간 표시
+              Container(
+                width: 64,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      DateFormat('HH:mm').format(schedule.visitAt),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // 세로 구분선
+              Container(
+                width: 1,
+                height: 40,
+                color: AppColors.lightGray,
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+              
+              // 장소 및 메모 정보
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 장소명
+                    Text(
+                      schedule.placeName ?? "알수없는 장소",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    
+                    // 메모가 있으면 표시
+                    if (schedule.notes != null && schedule.notes!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          schedule.notes!,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.mediumGray,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              
+              // 오른쪽 화살표 아이콘
+              Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: AppColors.mediumGray,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildBottomButton() {
+    // 여러 계획이 있을 경우 선택 가능
+    if ((_plans?.length ?? 0) > 1) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Divider(height: 24, thickness: 1, color: Color(0xFFEEEEEE)),
+            
+            // 계획 선택 드롭다운 버튼
+            DropdownButtonFormField<PlanList>(
+              decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: AppColors.lightGray),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                hintText: "상세 일정을 확인할 계획 선택",
+                hintStyle: TextStyle(color: AppColors.mediumGray),
+              ),
+              items: _plans!.map((plan) => DropdownMenuItem<PlanList>(
+                value: plan,
+                child: Text(plan.title),
+              )).toList(),
+              onChanged: (plan) {
+                if (plan != null) {
+                  _navigateToPlanDetail(plan);
+                }
+              },
+              icon: Icon(Icons.calendar_month, color: AppColors.primary),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    // 하나의 계획만 있는 경우 바로 일정 추가 버튼 표시
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+        onPressed: _plans!.isNotEmpty ? () => _navigateToPlanDetail(_plans!.first) : null,
+        icon: const Icon(Icons.calendar_month, size: 20),
+        label: const Text(
+          '상세 일정 확인하기',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
     );
   }
 }
