@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class MatchDetailResponse {
 
+    private Integer matchId;
     private String regionName;
     private String guideNickname;
     private String status;  // 상태 (PENDING, CONFIRMED, REJECTED)
