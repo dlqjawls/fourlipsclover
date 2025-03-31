@@ -321,13 +321,10 @@ class _MatchingScreenState extends State<MatchingScreen>
 
   void _navigateToDetail(dynamic match) {
     Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder:
-            (context) => MatchingDetailScreen(
-              matchId: match is MatchRequest ? match.matchId : 0,
-            ),
-      ),
-    );
+  context,
+  MaterialPageRoute(
+    builder: (context) => MatchingDetailScreen(matchId: match.matchId),
+  ),
+);
   }
 }

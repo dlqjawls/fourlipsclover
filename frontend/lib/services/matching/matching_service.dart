@@ -209,11 +209,82 @@ class MatchingService {
       throw Exception('매칭 응답 처리 중 오류 발생: $e');
     }
   }
+Future<List<MatchRequest>> getConfirmedMatches() async {
+  try {
+    final token = await _getToken();
+    debugPrint('=== 접수된 매칭 목록 조회 시작 ===');
 
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/match/guide/confirmed'),
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    debugPrint('응답 상태 코드: ${response.statusCode}');
+
+    if (response.statusCode == 200) {
+      final String decodedBody = utf8.decode(response.bodyBytes);
+      debugPrint('응답 데이터: $decodedBody');
+      
+      final List<dynamic> data = json.decode(decodedBody);
+      final List<MatchRequest> matches = [];
+      
+      for (var item in data) {
+        try {
+          matches.add(MatchRequest.fromJson(item));
+          debugPrint('매칭 데이터 변환 성공: ${matches.last.matchId}');
+        } catch (e) {
+          debugPrint('데이터 변환 실패: $e');
+          debugPrint('실패한 데이터: $item');
+        }
+      }
+      
+      debugPrint('확정된 매칭 수: ${matches.length}');
+      return matches;
+    } else if (response.statusCode == 404) {
+      debugPrint('확정된 매칭이 없습니다.');
+      return []; // 빈 리스트 반환
+    } else {
+      throw Exception('접수된 매칭 목록 조회 실패 (${response.statusCode})');
+    }
+  } catch (e) {
+    debugPrint('접수된 매칭 목록 조회 중 오류: $e');
+    throw Exception('접수된 매칭 목록 조회 실패: $e');
+  }
+}
+
+Future<void> confirmMatch(int matchId) async {
+  try {
+    final token = await _getToken();
+    debugPrint('=== 매칭 확인 요청 시작 ===');
+    debugPrint('매칭 ID: $matchId');
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/api/match/guide/confirm/$matchId'),
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      debugPrint('매칭 확인 성공');
+    } else {
+      throw Exception('매칭 확인 실패 (${response.statusCode})');
+    }
+  } catch (e) {
+    debugPrint('매칭 확인 중 오류: $e');
+    throw Exception('매칭 확인 실패: $e');
+  }
+}
   Future<MatchingDetail> getMatchDetail(int matchId) async {
     try {
       final token = await _getToken();
       debugPrint('=== 매칭 상세 조회 요청 시작 ===');
+      debugPrint('매칭 ID: $matchId');
+      debugPrint('요청 URL: $baseUrl/api/match/$matchId');
 
       final response = await http.get(
         Uri.parse('$baseUrl/api/match/$matchId'),
@@ -223,16 +294,44 @@ class MatchingService {
         },
       );
 
+      debugPrint('응답 상태 코드: ${response.statusCode}');
+      debugPrint('응답 헤더: ${response.headers}');
+
       if (response.statusCode == 200) {
         final String decodedBody = utf8.decode(response.bodyBytes);
+        debugPrint('응답 데이터: $decodedBody');
+        
         final Map<String, dynamic> data = json.decode(decodedBody);
-        return MatchingDetail.fromJson(data);
+        final detail = MatchingDetail.fromJson(data);
+        
+        debugPrint('매칭 상세 정보 변환 성공');
+        debugPrint('=== 매칭 상세 조회 완료 ===');
+        return detail;
       } else {
-        throw Exception('매칭 상세 조회 실패 (${response.statusCode})');
+        final String errorMessage = utf8.decode(response.bodyBytes);
+        debugPrint('오류 응답: $errorMessage');
+        
+        if (response.statusCode == 404) {
+          throw MatchingDetailException(
+            '해당 매칭을 찾을 수 없습니다.',
+            response.statusCode
+          );
+        } else {
+          throw MatchingDetailException(
+            '매칭 상세 조회 실패',
+            response.statusCode
+          );
+        }
       }
-    } catch (e) {
-      debugPrint('매칭 상세 조회 오류: $e');
-      throw Exception('매칭 상세 조회 중 오류 발생');
+    } catch (e, stackTrace) {
+      debugPrint('=== 매칭 상세 조회 중 예외 발생 ===');
+      debugPrint('예외 내용: $e');
+      debugPrint('스택 트레이스: $stackTrace');
+      
+      if (e is MatchingDetailException) {
+        rethrow;
+      }
+      throw MatchingDetailException('매칭 상세 조회 중 오류가 발생했습니다: $e');
     }
-  }
 }
+  }
