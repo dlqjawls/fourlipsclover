@@ -6,6 +6,7 @@ import '../models/restaurant_model.dart';
 import '../models/review_model.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // import '../constants/api_constants.dart';
 
@@ -15,7 +16,7 @@ class ReviewService {
   static const String apiPrefix = '/api/restaurant';
 
   /// ✅ 더미 데이터 포함 여부 (fetchReviews만 true, 나머지는 false)
-  static bool useDummyDataForReviews = true; // fetchReviews()만 더미 데이터 포함
+  static bool useDummyDataForReviews = false; // fetchReviews()만 더미 데이터 포함
   static bool useDummyDataForOtherApis = false; // 나머지 API는 실제 데이터만 사용
 
   /// ✅ 리뷰 목록 조회 (API + 더미 데이터 포함)
@@ -242,10 +243,14 @@ class ReviewService {
   static Future<String> toggleLikeStatus({
     required int reviewId,
     required int memberId,
-    required String likeStatus, // "LIKE" 또는 "DISLIKE"
+    required String likeStatus,
     required String accessToken,
   }) async {
     final url = Uri.parse('$baseUrl$apiPrefix/reviews/$reviewId/like');
+
+    print("🚀 요청 URL: $url");
+    print("📩 요청 데이터: memberId=$memberId, likeStatus=$likeStatus");
+
     final response = await http.post(
       url,
       headers: {
@@ -258,6 +263,9 @@ class ReviewService {
       }),
     );
 
+    print("📬 응답 코드: ${response.statusCode}");
+    print("📬 응답 바디: ${response.body}");
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return data["message"] ?? "처리 완료";
@@ -265,6 +273,4 @@ class ReviewService {
       throw Exception('좋아요/싫어요 처리 실패: ${response.statusCode}');
     }
   }
-
-
 }
