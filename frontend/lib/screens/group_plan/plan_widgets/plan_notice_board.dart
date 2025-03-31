@@ -43,7 +43,7 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
       // 여기서 실제로는 API 호출로 데이터를 가져올 예정
       // 임시 데이터
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       // 공지사항 목록 - 중요 항목을 먼저 정렬, 최대 6개로 제한
       final List<NoticeItem> noticeList = [
         NoticeItem(
@@ -230,7 +230,7 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
     return Container(
       decoration: BoxDecoration(
         // 화이트보드 배경 디자인
-        color: Colors.grey.shade100,
+        color: AppColors.background,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),

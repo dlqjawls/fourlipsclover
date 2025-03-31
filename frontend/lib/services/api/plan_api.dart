@@ -72,7 +72,6 @@ class PlanApi {
       );
 
       debugPrint('응답 코드: ${response.statusCode}');
-      debugPrint('응답 본문: ${response.body}');
 
       if (response.statusCode == 201) {
         return Plan.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
@@ -135,9 +134,6 @@ class PlanApi {
         url,
         headers: {'Authorization': 'Bearer $token'},
       );
-
-      // 응답 본문 출력
-      debugPrint('API 응답!!!!: ${response.body}');
 
       if (response.statusCode == 200) {
         return PlanDetail.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
@@ -242,6 +238,9 @@ class PlanApi {
       '$baseUrl${getApiPrefix(groupId)}/$planId/schedule/create',
     );
 
+    // 디버깅을 위한 요청 데이터 출력
+    final requestBody = jsonEncode(request.toJson());
+
     try {
       final response = await http.post(
         url,
@@ -249,8 +248,11 @@ class PlanApi {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode(request.toJson()),
+        body: requestBody,
       );
+
+      // 응답 정보 출력
+      debugPrint('계획 일정 생성 응답 코드: ${response.statusCode}');
 
       if (response.statusCode == 201) {
         return PlanSchedule.fromJson(

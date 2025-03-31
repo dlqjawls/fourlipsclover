@@ -8,9 +8,8 @@ import '../../config/theme.dart';
 import '../../widgets/clover_loading_spinner.dart'; // 로딩 스피너 import 추가
 import 'plan_widgets/plan_members_bar.dart';
 import 'plan_widgets/plan_notice_board.dart';
-import 'plan_widgets/plan_schedule_view.dart';
+import 'plan_widgets/timeline_plan_schedule_view.dart';
 import 'plan_widgets/plan_settlement_view.dart';
-import './plan_widgets/plan_notice_board.dart';
 
 class PlanDetailScreen extends StatefulWidget {
   final Plan plan;
@@ -104,59 +103,66 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
         centerTitle: true,
         elevation: 0,
       ),
-      body: Stack(
-        children: [
-          // 메인 컨텐츠
-          _planDetail == null
-              ? Container() // 데이터가 없는 경우 빈 컨테이너 (로딩 스피너가 대신 표시됨)
-              : Column(
-                children: [
-                  // 여행 멤버 바
-                  PlanMembersBar(
-                    members: _planDetail!.members,
-                    currentUserId: _getMyUserId(),
-                    treasurerId: _planDetail!.treasurerId,
-                  ),
-
-                  // 상단 탭 버튼
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 10.0,
+      body: LoadingOverlay(
+        isLoading: _isLoading || isProviderLoading,
+        overlayColor: Colors.white.withOpacity(0.7),
+        minDisplayTime: const Duration(milliseconds: 1200),
+        child:
+            _planDetail == null
+                ? Container() // 데이터가 없는 경우 빈 컨테이너 (로딩 스피너가 대신 표시됨)
+                : Column(
+                  children: [
+                    // 여행 멤버 바
+                    PlanMembersBar(
+                      members: _planDetail!.members,
+                      currentUserId: _getMyUserId(),
+                      treasurerId: _planDetail!.treasurerId,
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+
+                    // 상단 탭 버튼
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 10.0,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          _buildTabButton('공지사항', 0, Icons.announcement),
+                          _buildTabButton('상세 일정', 1, Icons.schedule),
+                          _buildTabButton('정산', 2, Icons.receipt_long),
+                        ],
+                      ),
+                    ),
+
+                    // 선택된 탭에 따른 컨텐츠
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.4),
+                              spreadRadius: 1,
+                              blurRadius: 4,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
-                      ],
+                        child: _buildSelectedView(),
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        _buildTabButton('공지사항', 0, Icons.announcement),
-                        _buildTabButton('상세 일정', 1, Icons.schedule),
-                        _buildTabButton('정산', 2, Icons.receipt_long),
-                      ],
-                    ),
-                  ),
-
-                  // 선택된 탭에 따른 컨텐츠
-                  Expanded(child: _buildSelectedView()),
-                ],
-              ),
-
-          // 로딩 오버레이
-          if (_isLoading || isProviderLoading)
-            Container(
-              color: Colors.white.withOpacity(0.7),
-              width: double.infinity,
-              height: double.infinity,
-              child: Center(child: CloverLoadingSpinner(size: 120)),
-            ),
-        ],
+                  ],
+                ),
       ),
     );
   }
@@ -215,7 +221,10 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
         );
 
       case 1: // 여행 상세 계획
-        return PlanScheduleView(plan: _currentPlan, groupId: widget.groupId);
+        return TimelinePlanScheduleView(
+          plan: _currentPlan,
+          groupId: widget.groupId,
+        );
 
       case 2: // 정산
         return PlanSettlementView(
