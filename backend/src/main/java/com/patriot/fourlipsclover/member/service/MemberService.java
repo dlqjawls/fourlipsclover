@@ -11,6 +11,9 @@ import com.patriot.fourlipsclover.member.mapper.MemberMapper;
 import com.patriot.fourlipsclover.member.repository.MemberRepository;
 import com.patriot.fourlipsclover.mypage.dto.response.MypageResponse;
 import com.patriot.fourlipsclover.mypage.service.MypageImageService;
+import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
+import com.patriot.fourlipsclover.tag.service.TagService;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -26,6 +29,7 @@ public class MemberService {
 	private final JwtTokenProvider jwtTokenProvider;
 	private final MemberMapper memberMapper;
 	private final MypageImageService mypageImageService;
+	private final TagService tagService;
 
 	public JwtResponse processKakaoLoginAndGetToken(String accessToken) {
 		String userInfo = kakaoAuthService.getUserInfo(accessToken);
@@ -71,9 +75,12 @@ public class MemberService {
 		return new JwtResponse(jwtToken);
 	}
 
-	@Transactional
+	@Transactional(readOnly = true)
 	public MypageResponse getMypageData(long memberId) {
 		Member member = memberRepository.findByMemberId(memberId);
-		return memberMapper.toDto(member);
+		MypageResponse response = memberMapper.toDto(member);
+		List<RestaurantTagResponse> tagList = tagService.findRestaurantTagByMemberId(memberId);
+		response.setTags(tagList);
+		return response;
 	}
 }

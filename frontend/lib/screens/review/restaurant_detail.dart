@@ -29,7 +29,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
   void fetchData() {
     // final safeRestaurantId = widget.restaurantId.isNotEmpty ? widget.restaurantId : "1605310387";
-    final safeRestaurantId = "1605310387";
+    final safeRestaurantId = widget.restaurantId;
     setState(() {
       restaurantData = RestaurantService.fetchRestaurantDetails(safeRestaurantId);
       reviews = ReviewService.fetchReviews(safeRestaurantId);

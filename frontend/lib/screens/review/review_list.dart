@@ -4,6 +4,7 @@ import '../../models/review_model.dart';
 import '../review/review_detail.dart';
 import '../review/review_write.dart';
 import '../../services/review_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ReviewList extends StatefulWidget {
   final String restaurantId;
@@ -122,8 +123,8 @@ class _ReviewListState extends State<ReviewList> {
                         Row(
                           children: [
                             CircleAvatar(
-                              backgroundImage: NetworkImage(review.profileImageUrl ?? 'assets/default_profile.png'),
                               radius: 20,
+                              backgroundImage: _buildProfileImageProvider(review.profileImageUrl),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -165,12 +166,27 @@ class _ReviewListState extends State<ReviewList> {
     );
   }
 
-  /// ✅ 리뷰 이미지 표시 (리뷰에 이미지가 없으면 기본 이미지 할당)
-  Widget _buildReviewImage(String? imageUrl, int index) {
-    String assignedImage = defaultImages[index % defaultImages.length]; // 3개 이미지 순환
+  /// ✅ 프로필 이미지 분기 처리 함수
+  ImageProvider _buildProfileImageProvider(String? imageUrl) {
+    final baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://your-api.com';
 
     if (imageUrl == null || imageUrl.isEmpty) {
-      imageUrl = assignedImage; // 기본 이미지 할당
+      return const AssetImage('assets/default_profile.png');
+    } else if (imageUrl.startsWith('http')) {
+      return NetworkImage(imageUrl);
+    } else if (imageUrl.startsWith('assets/')) {
+      return AssetImage(imageUrl);
+    } else {
+      return NetworkImage('$baseUrl/uploads/profile/$imageUrl');
+    }
+  }
+
+  /// ✅ 리뷰 이미지 표시 (리뷰에 이미지가 없으면 기본 이미지 할당)
+  Widget _buildReviewImage(String? imageUrl, int index) {
+    String assignedImage = defaultImages[index % defaultImages.length];
+
+    if (imageUrl == null || imageUrl.isEmpty) {
+      imageUrl = assignedImage;
     }
 
     return Container(
@@ -179,7 +195,9 @@ class _ReviewListState extends State<ReviewList> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
         image: DecorationImage(
-          image: imageUrl.startsWith("http") ? NetworkImage(imageUrl) : AssetImage(imageUrl) as ImageProvider,
+          image: imageUrl.startsWith("http")
+              ? NetworkImage(imageUrl)
+              : AssetImage(imageUrl) as ImageProvider,
           fit: BoxFit.cover,
         ),
       ),

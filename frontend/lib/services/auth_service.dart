@@ -5,7 +5,7 @@ import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
-
+import '../services/matching/matching_service.dart';
 class AuthService {
   // 카카오 로그인 처리
   Future<Map<String, dynamic>> kakaoLogin() async {
@@ -74,6 +74,14 @@ class AuthService {
           final responseData = jsonDecode(response.body);
           if (responseData['jwtToken'] == null) {
             throw Exception('서버 응답에 JWT 토큰이 없습니다.');
+          }
+           // 로그인 성공 후 매칭 목록 초기화
+          try {
+            await MatchingService.initializeMatches();
+            debugPrint('매칭 목록 초기화 성공');
+          } catch (e) {
+            debugPrint('매칭 목록 초기화 실패: $e');
+            // 매칭 목록 초기화 실패는 로그인 실패로 처리하지 않음
           }
           debugPrint('로그인 성공');
           debugPrint(accessToken);

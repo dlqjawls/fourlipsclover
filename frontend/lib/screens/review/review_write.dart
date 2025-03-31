@@ -1,15 +1,18 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:frontend/config/theme.dart';
-// import 'dart:io'; // 이미지 관련 코드 제거
-// import 'package:image_picker/image_picker.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart'; // ✅ Provider 추가
 import '../../models/review_model.dart';
 import '../../services/review_service.dart';
+import '../../config/theme.dart';
+import '../../providers/app_provider.dart'; // ✅ AppProvider import
 
 class ReviewWriteScreen extends StatefulWidget {
   final Review? review; // 수정할 리뷰 (null이면 새 리뷰 작성)
   final String kakaoPlaceId; // 식당 고유 ID
 
-  const ReviewWriteScreen({Key? key, this.review, required this.kakaoPlaceId}) : super(key: key);
+  const ReviewWriteScreen({Key? key, this.review, required this.kakaoPlaceId})
+      : super(key: key);
 
   @override
   _ReviewWriteScreenState createState() => _ReviewWriteScreenState();
@@ -18,32 +21,28 @@ class ReviewWriteScreen extends StatefulWidget {
 class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
-  // File? _image; // 업로드한 이미지 파일 저장 (나중에 사용할 경우 주석 해제)
-  bool isSubmitting = false; // 요청 중 상태
+  File? _image;
+  bool isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
     if (widget.review != null) {
-      // ✅ 수정 모드: 기존 데이터 불러오기
       _titleController.text = widget.review!.title ?? "";
       _contentController.text = widget.review!.content;
     }
   }
 
-  /// ✅ 이미지 선택 함수 (현재 사용하지 않으므로 주석 처리)
-  /*
   Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile =
+    await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
       });
     }
   }
-  */
 
-  /// ✅ 리뷰 저장 (작성 & 수정)
   Future<void> _submitReview() async {
     if (_contentController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -57,28 +56,40 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
     });
 
     try {
+      final appProvider = Provider.of<AppProvider>(context, listen: false);
+      final accessToken = appProvider.jwtToken;
+      if (accessToken == null) {
+        throw Exception("로그인이 필요합니다.");
+      }
+
       if (widget.review == null) {
-        // ✅ 리뷰 작성 API 호출
+        // ✅ 리뷰 작성
         await ReviewService.createReview(
-          memberId: 1, // 현재 로그인한 유저 ID (임시)
+          memberId: int.parse(appProvider.user!.id.toString()),
           kakaoPlaceId: widget.kakaoPlaceId,
           content: _contentController.text.trim(),
           visitedAt: DateTime.now(),
+          imageFile: _image,
+          accessToken: accessToken, // ✅ 토큰 전달
         );
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("리뷰가 등록되었습니다.")));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("리뷰가 등록되었습니다.")));
       } else {
-        // ✅ 리뷰 수정 API 호출
+        // ✅ 리뷰 수정
         await ReviewService.updateReview(
           reviewId: int.parse(widget.review!.id),
           content: _contentController.text.trim(),
           visitedAt: DateTime.now(),
+          accessToken: accessToken,
         );
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("리뷰가 수정되었습니다.")));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("리뷰가 수정되었습니다.")));
       }
 
-      Navigator.pop(context, true); // ✅ 성공 시 이전 화면으로 이동 & 갱신 트리거
+      Navigator.pop(context, true);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("오류 발생: $e")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("오류 발생: $e")));
     } finally {
       setState(() {
         isSubmitting = false;
@@ -88,7 +99,7 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isEditMode = widget.review != null; // 수정 모드인지 확인
+    final bool isEditMode = widget.review != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -120,28 +131,31 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
             ),
             const SizedBox(height: 16),
 
-            /// 사진 추가 공간 (추후 사용할 경우 주석 해제)
-            /*
-            GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                width: double.infinity,
-                height: 150,
-                decoration: BoxDecoration(
-                  color: AppColors.lightGray,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.lightGray),
+            /// 이미지 선택 UI (작성 시에만 보이도록)
+            if (!isEditMode)
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  width: double.infinity,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    color: AppColors.lightGray,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.lightGray),
+                  ),
+                  child: _image != null
+                      ? ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(_image!, fit: BoxFit.cover),
+                  )
+                      : Center(
+                    child: Text("이미지 선택",
+                        style: TextStyle(color: AppColors.darkGray)),
+                  ),
                 ),
-                child: _image != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.file(_image!, fit: BoxFit.cover),
-                      )
-                    : Center(child: Text("이미지 선택", style: TextStyle(color: AppColors.darkGray))),
               ),
-            ),
-            const SizedBox(height: 16),
-            */
+
+            if (!isEditMode) const SizedBox(height: 16),
 
             /// 내용 입력
             Expanded(
@@ -160,7 +174,7 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
             ),
             const SizedBox(height: 16),
 
-            /// 리뷰 저장 버튼
+            /// 저장 버튼
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(

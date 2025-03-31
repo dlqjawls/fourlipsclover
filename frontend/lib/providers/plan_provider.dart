@@ -7,6 +7,9 @@ import '../models/plan/plan_schedule_model.dart';
 import '../models/plan/plan_create_request.dart';
 import '../models/plan/plan_update_request.dart';
 import '../models/plan/plan_schedule_create_request.dart';
+import '../models/plan/plan_schedule_update_model.dart';
+import '../models/plan/plan_schedule_update_request.dart';
+import '../models/plan/plan_schedule_detail_model.dart';
 import '../services/api/plan_api.dart';
 
 class PlanProvider with ChangeNotifier {
@@ -72,13 +75,13 @@ class PlanProvider with ChangeNotifier {
       final plans = await _planApi.getPlans(groupId);
       _planLists[groupId] = plans;
       _error = null;
-      
+
       // 각 계획의 상세 정보 미리 로드 (멤버 수를 위해)
       for (var plan in plans) {
         // 비동기로 로드하되 응답을 기다리지 않음 - 백그라운드에서 로드
         _prefetchPlanDetails(groupId, plan.planId);
       }
-      
+
       notifyListeners();
       return plans;
     } catch (e) {
@@ -94,11 +97,11 @@ class PlanProvider with ChangeNotifier {
   Future<void> _prefetchPlanDetails(int groupId, int planId) async {
     try {
       final planDetail = await _planApi.getPlanDetail(groupId, planId);
-      
+
       // 멤버 수 및 총무 이름 캐시 업데이트
       if (planDetail.members != null) {
         _planMemberCounts[planId] = planDetail.members.length;
-        
+
         // 총무 이름 찾기
         try {
           final treasurerMember = planDetail.members.firstWhere(
@@ -109,12 +112,12 @@ class PlanProvider with ChangeNotifier {
           _planTreasurerNames[planId] = '총무';
         }
       }
-      
+
       // selectedPlanDetail 업데이트는 이미 선택된 계획에 대해서만
       if (_selectedPlanDetail?.planId == planId) {
         _selectedPlanDetail = planDetail;
       }
-      
+
       notifyListeners();
     } catch (e) {
       debugPrint('계획 상세 정보 사전 로드 중 오류: $e');
@@ -149,11 +152,11 @@ class PlanProvider with ChangeNotifier {
     try {
       final planDetail = await _planApi.getPlanDetail(groupId, planId);
       _selectedPlanDetail = planDetail;
-      
+
       // 멤버 수와 총무 이름 캐시 업데이트
       if (planDetail.members != null) {
         _planMemberCounts[planId] = planDetail.members.length;
-        
+
         try {
           final treasurerMember = planDetail.members.firstWhere(
             (member) => member.memberId == planDetail.treasurerId,
@@ -163,7 +166,7 @@ class PlanProvider with ChangeNotifier {
           _planTreasurerNames[planId] = '총무';
         }
       }
-      
+
       _error = null;
       notifyListeners();
       return planDetail;
@@ -224,7 +227,7 @@ class PlanProvider with ChangeNotifier {
       if (_selectedPlanDetail?.planId == planId) {
         _selectedPlanDetail = null;
       }
-      
+
       // 캐시에서 멤버 수와 총무 이름 제거
       _planMemberCounts.remove(planId);
       _planTreasurerNames.remove(planId);
@@ -339,6 +342,108 @@ class PlanProvider with ChangeNotifier {
     }
   }
 
+  // 계획 일정 삭제
+  Future<void> deletePlanSchedule(
+    int groupId,
+    int planId,
+    int scheduleId,
+  ) async {
+    _setLoading(true);
+    try {
+      await _planApi.deletePlanSchedule(groupId, planId, scheduleId);
+
+      // 캐시된 일정 목록에서 삭제
+      if (_planSchedules[planId] != null) {
+        _planSchedules[planId]!.removeWhere(
+          (schedule) => schedule.planScheduleId == scheduleId,
+        );
+        notifyListeners();
+      }
+
+      _error = null;
+    } catch (e) {
+      _error = '일정 삭제에 실패했습니다: $e';
+      debugPrint(_error);
+      throw Exception(_error);
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // PlanProvider 클래스에 아래 메서드 추가
+  Future<PlanScheduleUpdate> updatePlanSchedule({
+    required int groupId,
+    required int planId,
+    required int scheduleId,
+    required PlanScheduleUpdateRequest request,
+  }) async {
+    _setLoading(true);
+    try {
+      final updatedSchedule = await _planApi.updatePlanSchedule(
+        groupId: groupId,
+        planId: planId,
+        scheduleId: scheduleId,
+        request: request,
+      );
+
+      // 캐시된 일정 목록 갱신
+      if (_planSchedules[planId] != null) {
+        // 해당 스케줄을 찾아 업데이트
+        final index = _planSchedules[planId]!.indexWhere(
+          (schedule) => schedule.planScheduleId == scheduleId,
+        );
+        if (index != -1) {
+          // 업데이트된 정보로 스케줄 객체 생성
+          final updatedScheduleObj = PlanSchedule(
+            planScheduleId: scheduleId,
+            placeName: updatedSchedule.placeName,
+            notes: updatedSchedule.notes,
+            visitAt: updatedSchedule.visitAt,
+          );
+
+          // 기존 스케줄 교체
+          _planSchedules[planId]![index] = updatedScheduleObj;
+          notifyListeners();
+        }
+      }
+
+      _error = null;
+      return updatedSchedule;
+    } catch (e) {
+      _error = '일정 수정에 실패했습니다: $e';
+      debugPrint(_error);
+      throw Exception(_error);
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // PlanProvider 클래스에 다음 메서드를 추가합니다
+
+// 계획-일정 상세 조회
+Future<PlanScheduleDetail> getPlanScheduleDetail(
+  int groupId,
+  int planId,
+  int scheduleId,
+) async {
+  _setLoading(true);
+  try {
+    final scheduleDetail = await _planApi.getPlanScheduleDetail(
+      groupId,
+      planId,
+      scheduleId,
+    );
+    _error = null;
+    return scheduleDetail;
+  } catch (e) {
+    _error = '일정 상세 정보를 불러오는데 실패했습니다: $e';
+    debugPrint(_error);
+    throw Exception(_error);
+  } finally {
+    _setLoading(false);
+  }
+}
+
   void _setLoading(bool loading) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_isLoading != loading) {
@@ -360,14 +465,15 @@ class PlanProvider with ChangeNotifier {
     if (_planTreasurerNames.containsKey(planId)) {
       return _planTreasurerNames[planId]!;
     }
-    
+
     // 선택된 계획이 해당 계획이라면 총무 이름 찾기
-    if (_selectedPlanDetail?.planId == planId && _selectedPlanDetail?.members != null) {
+    if (_selectedPlanDetail?.planId == planId &&
+        _selectedPlanDetail?.members != null) {
       try {
         final treasurerMember = _selectedPlanDetail!.members.firstWhere(
           (member) => member.memberId == _selectedPlanDetail!.treasurerId,
         );
-        
+
         // 캐시에 저장하고 반환
         _planTreasurerNames[planId] = treasurerMember.nickname;
         return treasurerMember.nickname;
@@ -375,7 +481,7 @@ class PlanProvider with ChangeNotifier {
         debugPrint('총무를 찾을 수 없음: $e');
       }
     }
-    
+
     // 기본값
     return '총무';
   }
@@ -384,31 +490,32 @@ class PlanProvider with ChangeNotifier {
   int getPlanMemberCount(int planId) {
     // 디버깅 정보
     debugPrint('getPlanMemberCount 호출: planId=$planId');
-    
+
     // 캐시된 멤버 수가 있으면 반환
     if (_planMemberCounts.containsKey(planId)) {
       final count = _planMemberCounts[planId]!;
       debugPrint('캐시된 멤버 수 반환: $count');
       return count;
     }
-    
+
     debugPrint('_selectedPlanDetail 존재 여부: ${_selectedPlanDetail != null}');
-    
+
     // 선택된 계획이 해당 계획이라면 멤버 수 반환
-    if (_selectedPlanDetail?.planId == planId && _selectedPlanDetail?.members != null) {
+    if (_selectedPlanDetail?.planId == planId &&
+        _selectedPlanDetail?.members != null) {
       final count = _selectedPlanDetail!.members.length;
       debugPrint('selectedPlanDetail에서 멤버 수 찾음: $count');
-      
+
       // 캐시에 저장
       _planMemberCounts[planId] = count;
       return count;
     }
-    
+
     debugPrint('일치하는 계획을 찾을 수 없어 0 반환');
     return 0;
   }
 
-    // 로딩 상태 직접 설정 (공통화)
+  // 로딩 상태 직접 설정 (공통화)
   void setLoading(bool loading) {
     _setLoading(loading);
   }
