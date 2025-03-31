@@ -53,4 +53,33 @@ class UserService {
       rethrow;
     }
   }
+
+  Future<String> uploadProfileImage(String userId, String imagePath) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwtToken');
+      final baseUrl = dotenv.env['API_BASE_URL'];
+
+      final url = Uri.parse(
+        '$baseUrl/api/mypage/$userId/upload-profile-image',
+      );
+
+      var request = http.MultipartRequest('POST', url);
+      request.headers['Authorization'] = '$token';
+      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+      final decodedResponse = jsonDecode(responseBody);
+
+      if (response.statusCode == 200) {
+        return decodedResponse['profileImageUrl'];
+      } else {
+        throw Exception('이미지 업로드 실패: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('uploadProfileImage 에러: $e');
+      rethrow;
+    }
+  }
 }
