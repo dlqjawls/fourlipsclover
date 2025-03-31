@@ -1,5 +1,7 @@
 package com.patriot.fourlipsclover.restaurant.dto.response;
 
+import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,4 +24,6 @@ public class RestaurantResponse {
 	private String placeUrl;
 	private Double x;
 	private Double y;
+
+	private List<RestaurantTagResponse> tags;
 }
