@@ -311,36 +311,43 @@ class PlanProvider with ChangeNotifier {
 
   // 계획 일정 생성
   Future<PlanSchedule> createPlanSchedule({
-    required int groupId,
-    required int planId,
-    required PlanScheduleCreateRequest request,
-  }) async {
-    _setLoading(true);
-    try {
-      final newSchedule = await _planApi.createPlanSchedule(
-        groupId: groupId,
-        planId: planId,
-        request: request,
-      );
+  required int groupId,
+  required int planId,
+  required PlanScheduleCreateRequest request,
+}) async {
+  _setLoading(true);
+  debugPrint('일정 생성 시작: $request');
+  
+  try {
+    final newSchedule = await _planApi.createPlanSchedule(
+      groupId: groupId,
+      planId: planId,
+      request: request,
+    );
+    
+    debugPrint('API 호출 성공, 스케줄 ID: ${newSchedule.planScheduleId}');
 
-      // 캐시된 일정 목록 갱신
-      if (_planSchedules[planId] != null) {
-        _planSchedules[planId]!.add(newSchedule);
-      } else {
-        await fetchPlanSchedules(groupId, planId);
-      }
-
-      _error = null;
-      notifyListeners();
-      return newSchedule;
-    } catch (e) {
-      _error = '일정 생성에 실패했습니다: $e';
-      debugPrint(_error);
-      throw Exception(_error);
-    } finally {
-      _setLoading(false);
+    // 캐시된 일정 목록 갱신 - 여기서 에러가 발생할 수 있음
+    if (_planSchedules.containsKey(planId)) {
+      debugPrint('캐시된 일정 목록에 새 일정 추가');
+      _planSchedules[planId]!.add(newSchedule);
+      notifyListeners(); // 중요: 변경 후 알림
+    } else {
+      debugPrint('캐시된 일정 목록이 없어 새로 불러오기');
+      // 캐시가 없으면 새로 불러옴
+      await fetchPlanSchedules(groupId, planId);
     }
+
+    _error = null;
+    return newSchedule;
+  } catch (e) {
+    _error = '일정 생성에 실패했습니다: $e';
+    debugPrint(_error);
+    throw Exception(_error);
+  } finally {
+    _setLoading(false);
   }
+}
 
   // 계획 일정 삭제
   Future<void> deletePlanSchedule(

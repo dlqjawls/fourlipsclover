@@ -1,12 +1,13 @@
+// lib/models/plan/plan_schedule_model.dart
 class PlanSchedule {
   final int planScheduleId;
-  final String placeName;
+  final String? placeName; // null 허용으로 변경
   final String? notes;
   final DateTime visitAt;
 
   PlanSchedule({
     required this.planScheduleId,
-    required this.placeName,
+    this.placeName, // required 제거
     this.notes,
     required this.visitAt,
   });
@@ -14,7 +15,7 @@ class PlanSchedule {
   factory PlanSchedule.fromJson(Map<String, dynamic> json) {
     return PlanSchedule(
       planScheduleId: json['planScheduleId'],
-      placeName: json['placeName'],
+      placeName: json['placeName'] ?? '알 수 없는 장소', // null 처리 추가
       notes: json['notes'],
       visitAt: DateTime.parse(json['visitAt']),
     );

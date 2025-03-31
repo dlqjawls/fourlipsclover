@@ -293,7 +293,7 @@ class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        widget.schedule.placeName,
+                        widget.schedule.placeName ?? '알 수 없는 장소',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
