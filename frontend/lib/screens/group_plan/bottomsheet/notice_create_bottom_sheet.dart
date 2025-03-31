@@ -1,17 +1,24 @@
+// lib/screens/group_plan/bottomsheet/notice_create_bottom_sheet.dart
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../config/theme.dart';
-import '../../../models/notice_item.dart'; // NoticeItem 모델 임포트
+import '../../../models/notice_item.dart'; // 기존 임시 모델 사용
+import '../../../models/notice/notice_model.dart'; // 새 모델도 함께 참조
+import '../../../providers/notice_provider.dart'; // 공지사항 Provider
 import '../../../widgets/custom_switch.dart'; // 커스텀 스위치 임포트
 
 class NoticeCreateBottomSheet extends StatefulWidget {
   final List<Color> availableColors;
   final Function(NoticeItem) onNoticeCreated;
   final int maxNoticeCount;
+  final int planId; // 계획 ID 추가
 
   const NoticeCreateBottomSheet({
     Key? key,
     required this.availableColors,
     required this.onNoticeCreated,
+    required this.planId, // 필수 파라미터로 변경
     this.maxNoticeCount = 6,
   }) : super(key: key);
 
@@ -388,6 +395,10 @@ Future<void> showNoticeCreateBottomSheet({
   required Function(NoticeItem) onNoticeCreated,
   int maxNoticeCount = 6,
 }) async {
+  final planId = ModalRoute.of(context)!.settings.arguments is Map<String, dynamic> 
+      ? (ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>)['planId'] as int? ?? 0
+      : 0;
+
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -396,6 +407,7 @@ Future<void> showNoticeCreateBottomSheet({
         (context) => NoticeCreateBottomSheet(
           availableColors: availableColors,
           onNoticeCreated: onNoticeCreated,
+          planId: planId,
           maxNoticeCount: maxNoticeCount,
         ),
   );
