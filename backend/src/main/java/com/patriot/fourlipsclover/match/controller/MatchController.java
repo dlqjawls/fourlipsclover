@@ -8,6 +8,7 @@ import com.patriot.fourlipsclover.match.entity.Match;
 import com.patriot.fourlipsclover.match.service.MatchService;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentApproveResponse;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentReadyResponse;
+import com.patriot.fourlipsclover.payment.repository.PaymentItemRepository;
 import com.patriot.fourlipsclover.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,7 @@ public class MatchController {
 
     private final MatchService matchService;
     private final PaymentService paymentService;
+    private final PaymentItemRepository paymentItemRepository;
 
     // 공통 인증 정보 추출 메서드
     private long getCurrentMemberId() {
@@ -36,19 +38,17 @@ public class MatchController {
     @PostMapping("/create")
     public ResponseEntity<PaymentReadyResponse> createMatch(@RequestBody MatchCreateRequest request) {
         long currentMemberId = getCurrentMemberId();
+        final Integer PAYMENT_ITEM_ID = 1;
 
+        // 매칭 신청서 validation 처리
         matchService.validateMatchRequest(request, currentMemberId);
 
         // 최초 결제하기 버튼 (아이템명, 가격 등의 정보가 들어있는 결제하는 URL을 리턴해줌)
-        // 상품명, 수량, 결제비용 등은 테이블 따로 뺼 예정
-        PaymentReadyResponse paymentReadyResponse = paymentService.ready(
+        PaymentReadyResponse paymentReadyResponse = paymentService.readyForMatch(
                 String.valueOf(currentMemberId),
-                "매칭 비용",  // 상품명
-                "1",  // 수량
-                "2000"  // 결제비용
+                PAYMENT_ITEM_ID
         );
 
-        // 결제 URL을 반환해주면, 클라이언트는 해당 URL로 리디렉션하여 결제 진행
         return ResponseEntity.ok(paymentReadyResponse);
     }
 
@@ -75,7 +75,7 @@ public class MatchController {
         return ResponseEntity.ok(paymentApproveResponse);
     }
 
-    // 신청자 - 매칭 신청 내역 조회(현지인 수락 상태 상관없이 전체 신청 목록 조회)
+    // 신청자 - 매칭 신청 내역 목록 조회(현지인 수락 상태 상관없이 전체 신청 목록 조회)
     @GetMapping
     public ResponseEntity<List<MatchListResponse>> getMatchList() {
         long currentMemberId = getCurrentMemberId();

@@ -5,7 +5,7 @@ import '../../models/plan/plan_detail_model.dart';
 import '../../providers/plan_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../config/theme.dart';
-import '../../widgets/clover_loading_spinner.dart'; // 로딩 스피너 import 추가
+import '../../widgets/clover_loading_spinner.dart';
 import 'plan_widgets/plan_members_bar.dart';
 import 'plan_widgets/plan_notice_board.dart';
 import 'plan_widgets/timeline_plan_schedule_view.dart';
@@ -14,16 +14,21 @@ import 'plan_widgets/plan_settlement_view.dart';
 class PlanDetailScreen extends StatefulWidget {
   final Plan plan;
   final int groupId;
+  final int initialTabIndex; // 초기 선택 탭 인덱스 추가
 
-  const PlanDetailScreen({Key? key, required this.plan, required this.groupId})
-    : super(key: key);
+  const PlanDetailScreen({
+    Key? key, 
+    required this.plan, 
+    required this.groupId, 
+    this.initialTabIndex = 0, // 기본값은 0(공지사항 탭)
+  }) : super(key: key);
 
   @override
   State<PlanDetailScreen> createState() => _PlanDetailScreenState();
 }
 
 class _PlanDetailScreenState extends State<PlanDetailScreen> {
-  int _selectedIndex = 0; // 0: 공지사항, 1: 여행 상세 계획, 2: 정산
+  late int _selectedIndex; // 0: 공지사항, 1: 여행 상세 계획, 2: 정산
   late Plan _currentPlan;
   PlanDetail? _planDetail;
   bool _isLoading = false;
@@ -32,6 +37,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
   void initState() {
     super.initState();
     _currentPlan = widget.plan;
+    _selectedIndex = widget.initialTabIndex; // 초기 탭 인덱스 설정
 
     // 빌드가 완료된 후 계획 상세 정보 로드
     WidgetsBinding.instance.addPostFrameCallback((_) {
