@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/config/theme.dart';
 import 'package:frontend/screens/user/edit_widgets/profile_image_section.dart';
-import 'package:frontend/screens/user/edit_widgets/info_tile.dart';
+import 'package:frontend/models/user_model.dart';
 
 class UserEditScreen extends StatefulWidget {
-  const UserEditScreen({super.key});
+  final UserProfile profile;
+
+  const UserEditScreen({super.key, required this.profile});
 
   @override
   State<UserEditScreen> createState() => _UserEditScreenState();
@@ -17,7 +19,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
       backgroundColor: AppColors.verylightGray,
       appBar: AppBar(
         backgroundColor: AppColors.verylightGray,
-        title: const Text('나의 정보 수정'),
+        title: const Text('프로필 사진 변경'),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -28,16 +30,9 @@ class _UserEditScreenState extends State<UserEditScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const ProfileImageSection(),
-            const SizedBox(height: 30),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: const [
-                  InfoTile(label: '주소 변경', info: '광주 싸피 어딘가'),
-                  SizedBox(height: 30),
-                ],
-              ),
+            ProfileImageSection(
+              userId: widget.profile.userId, // memberId에서 userId로 변경
+              initialImageUrl: widget.profile.profileUrl,
             ),
           ],
         ),

@@ -15,6 +15,7 @@ import 'providers/map_provider.dart';
 import 'providers/user_provider.dart';
 import 'providers/notice_provider.dart'; // 추가된 NoticeProvider
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:frontend/services/user_service.dart';
 
 void main() async {
   // Flutter 엔진 초기화
@@ -32,6 +33,11 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => UserProvider()),
+        Provider(
+          create:
+              (context) =>
+                  UserService(userProvider: context.read<UserProvider>()),
+        ),
         ChangeNotifierProvider(
           create:
               (context) => AppProvider(
