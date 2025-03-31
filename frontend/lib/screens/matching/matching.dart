@@ -41,6 +41,9 @@ class _MatchingScreenState extends State<MatchingScreen>
       _fetchMatches();
     } catch (e) {
       debugPrint('사용자 역할 확인 오류: $e');
+      // 에러가 발생해도 매칭 목록을 가져오도록 함
+      _fetchMatches();
+      // 나중에 유저 정보에  현지인 인증 정보 추가되면 이 부분 수정 필요
     }
   }
 
@@ -60,17 +63,17 @@ class _MatchingScreenState extends State<MatchingScreen>
         final guideMatches = await _matchingService.getGuideMatchRequests();
         setState(() {
           matches = guideMatches;
-          pendingMatchCount = guideMatches
-              .where((match) => match.status == 'PENDING')
-              .length;
+          pendingMatchCount =
+              guideMatches.where((match) => match.status == 'PENDING').length;
         });
       } else {
         final applicantMatches = await _matchingService.getApplicantMatches();
         setState(() {
           matches = applicantMatches;
-          pendingMatchCount = applicantMatches
-              .where((match) => match.status == 'PENDING')
-              .length;
+          pendingMatchCount =
+              applicantMatches
+                  .where((match) => match.status == 'PENDING')
+                  .length;
         });
       }
     } catch (e) {
@@ -103,23 +106,25 @@ class _MatchingScreenState extends State<MatchingScreen>
       ),
       body: Column(
         children: [
-          if (isGuide && pendingMatchCount > 0) _buildBanner(),
+          _buildBanner(),
           Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : matches.isEmpty
+            child:
+                isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : matches.isEmpty
                     ? _buildEmptyState()
                     : _buildMatchList(),
           ),
         ],
       ),
-      floatingActionButton: matches.isNotEmpty
-          ? FloatingActionButton(
-              onPressed: () => _navigateToCreateMatch(),
-              backgroundColor: AppColors.primary,
-              child: const Icon(Icons.add),
-            )
-          : null,
+      floatingActionButton:
+          matches.isNotEmpty
+              ? FloatingActionButton(
+                onPressed: () => _navigateToCreateMatch(),
+                backgroundColor: AppColors.primary,
+                child: const Icon(Icons.add),
+              )
+              : null,
     );
   }
 
@@ -176,10 +181,7 @@ class _MatchingScreenState extends State<MatchingScreen>
         children: [
           Text(
             '아직 매칭 내역이 없습니다',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppColors.mediumGray,
-            ),
+            style: TextStyle(fontSize: 16, color: AppColors.mediumGray),
           ),
           const SizedBox(height: 16),
           ElevatedButton(
@@ -192,10 +194,7 @@ class _MatchingScreenState extends State<MatchingScreen>
             ),
             child: const Text(
               '새로운 매칭 만들기',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.white),
             ),
           ),
         ],
@@ -324,9 +323,10 @@ class _MatchingScreenState extends State<MatchingScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => MatchingDetailScreen(
-          matchId: match is MatchRequest ? match.matchId : 0,
-        ),
+        builder:
+            (context) => MatchingDetailScreen(
+              matchId: match is MatchRequest ? match.matchId : 0,
+            ),
       ),
     );
   }

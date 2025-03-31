@@ -4,16 +4,17 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/matching/matching_main_model.dart';
+import '../../models/matching/matching_detail.dart';
 
 class MatchingService {
   static final MatchingService _instance = MatchingService._internal();
-  
+
   factory MatchingService() {
     return _instance;
   }
 
   MatchingService._internal();
-  
+
   final String baseUrl = dotenv.env['API_BASE_URL'] ?? '';
 
   static Future<void> initializeMatches() async {
@@ -21,10 +22,10 @@ class MatchingService {
       final prefs = await SharedPreferences.getInstance();
       final userRole = prefs.getString('userRole');
       final service = MatchingService();
-      
+
       debugPrint('=== 매칭 목록 초기화 시작 ===');
       debugPrint('사용자 역할: $userRole');
-      
+
       if (userRole == 'GUIDE') {
         await service.getGuideMatchRequests();
       } else {
@@ -63,11 +64,11 @@ class MatchingService {
       if (response.statusCode == 200) {
         final String decodedBody = utf8.decode(response.bodyBytes);
         debugPrint('원본 응답 데이터: $decodedBody');
-        
+
         final List<dynamic> data = json.decode(decodedBody);
         debugPrint('JSON 파싱 결과: $data');
         final List<MatchRequest> matches = [];
-        
+
         for (var item in data) {
           try {
             final match = MatchRequest.fromJson(item);
@@ -88,7 +89,7 @@ class MatchingService {
         final Map<String, dynamic> errorJson = json.decode(errorMessage);
         debugPrint('응답 오류 내용: ${errorJson['error'] ?? errorMessage}');
         debugPrint('=== 가이드 매칭 요청 실패 ===');
-        
+
         if (response.statusCode == 404) {
           throw Exception('매칭 신청 내역이 없습니다.');
         } else {
@@ -124,11 +125,11 @@ class MatchingService {
       if (response.statusCode == 200) {
         final String decodedBody = utf8.decode(response.bodyBytes);
         debugPrint('원본 응답 데이터: $decodedBody');
-        
+
         final List<dynamic> data = json.decode(decodedBody);
         debugPrint('JSON 파싱 결과: $data');
         final List<MatchApplication> matches = [];
-        
+
         for (var item in data) {
           try {
             final match = MatchApplication.fromJson(item);
@@ -149,7 +150,7 @@ class MatchingService {
         final Map<String, dynamic> errorJson = json.decode(errorMessage);
         debugPrint('응답 오류 내용: ${errorJson['error']}');
         debugPrint('=== 신청자 매칭 요청 실패 ===');
-        
+
         if (response.statusCode == 404) {
           throw Exception('매칭 신청 내역이 없습니다.');
         } else {
@@ -174,7 +175,7 @@ class MatchingService {
       final token = await _getToken();
       debugPrint('=== 매칭 응답 요청 시작 ===');
       debugPrint('매칭 ID: $matchId, 액션: $action');
-      
+
       final response = await http.post(
         Uri.parse('$baseUrl/api/match/$matchId'),
         headers: {
@@ -206,6 +207,32 @@ class MatchingService {
       debugPrint('예외 내용: $e');
       debugPrint('스택 트레이스: $stackTrace');
       throw Exception('매칭 응답 처리 중 오류 발생: $e');
+    }
+  }
+
+  Future<MatchingDetail> getMatchDetail(int matchId) async {
+    try {
+      final token = await _getToken();
+      debugPrint('=== 매칭 상세 조회 요청 시작 ===');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/match/$matchId'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final String decodedBody = utf8.decode(response.bodyBytes);
+        final Map<String, dynamic> data = json.decode(decodedBody);
+        return MatchingDetail.fromJson(data);
+      } else {
+        throw Exception('매칭 상세 조회 실패 (${response.statusCode})');
+      }
+    } catch (e) {
+      debugPrint('매칭 상세 조회 오류: $e');
+      throw Exception('매칭 상세 조회 중 오류 발생');
     }
   }
 }
