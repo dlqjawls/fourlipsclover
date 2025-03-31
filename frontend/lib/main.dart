@@ -13,6 +13,7 @@ import 'providers/group_provider.dart';
 import 'providers/plan_provider.dart';
 import 'providers/map_provider.dart';
 import 'providers/user_provider.dart';
+import 'providers/notice_provider.dart'; // 추가된 NoticeProvider
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
@@ -41,6 +42,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => GroupProvider()),
         ChangeNotifierProvider(create: (_) => PlanProvider()),
+        ChangeNotifierProvider(create: (_) => NoticeProvider()), 
         ChangeNotifierProvider(create: (context) => MapProvider()),
       ],
       child: MaterialApp(
