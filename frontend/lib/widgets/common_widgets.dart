@@ -5,7 +5,9 @@ class BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
 
-  const BottomNavBar({Key? key, required this.currentIndex, required this.onTap}) : super(key: key);
+  const BottomNavBar(
+      {Key? key, required this.currentIndex, required this.onTap})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +26,8 @@ class BottomNavBar extends StatelessWidget {
             color: Colors.white,
             border: currentIndex == 2
                 ? null // ✅ 맛집 선택 시 기존 보더 제거
-                : const Border(top: BorderSide(color: Color(0xFFF3F3F3), width: 0.5)), // 기본 직선 보더 유지
+                : const Border(top: BorderSide(
+                color: Color(0xFFF3F3F3), width: 0.5)), // 기본 직선 보더 유지
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -45,80 +48,133 @@ class BottomNavBar extends StatelessWidget {
   Widget _buildNavItem(int index, String assetPath, String label) {
     return GestureDetector(
       onTap: () => onTap(index),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-            '$assetPath${currentIndex == index ? "_selected" : "_unselected"}.png',
-            width: 24,
-            height: 24,
-          ),
-          const SizedBox(height: 5),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: AppColors.darkGray,
+      behavior: HitTestBehavior.translucent,
+      child: Container(
+        width: 80,
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            /// ✅ 아이콘 애니메이션 적용!
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180), // ← 속도도 자연스럽게
+              switchInCurve: Curves.easeInOut,
+              switchOutCurve: Curves.easeInOut,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              child: Image.asset(
+                '$assetPath${currentIndex == index ? "_selected" : "_unselected"}.png',
+                key: ValueKey(currentIndex == index),
+                width: 24,
+                height: 24,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-        ],
+            const SizedBox(height: 5),
+            Container(
+              width: 40, // 텍스트 길이에 관계 없이 아이콘 아래 정렬 유지
+              alignment: Alignment.center,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: AppColors.darkGray,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
 
+
+
   // AI 추천 버튼 (맛집 버튼)
+// ✅ 교체: 자연스러운 효과 적용된 AI 추천 버튼
   Widget _buildAiItem(int index, String assetPath, String label) {
     return GestureDetector(
       onTap: () => onTap(index),
-      child: SizedBox(
-        width: 40,
-        height: 60,
-        child: Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            // ✅ 초록색 원 (애니메이션)
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
-              top: currentIndex == index ? -10 : -10,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 50),
-                curve: Curves.easeOut,
-                width: currentIndex == index ? 50 : 0,
-                height: currentIndex == index ? 50 : 0,
-                decoration: BoxDecoration(
-                  color: currentIndex == index ? AppColors.primary : Colors.transparent,
-                  shape: BoxShape.circle,
+      behavior: HitTestBehavior.translucent,
+      child: Container(
+        width: 80,
+        alignment: Alignment.center,
+        child: SizedBox(
+          width: 40,
+          height: 60,
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              // ✅ 초록색 애니메이션 원
+              // 새로운 코드 - 중심에서 부풀듯이 커지는 초록 원
+              Positioned(
+                top: -10,
+                child: AnimatedSwitcher(
+                  duration: Duration(milliseconds: 180),
+                  transitionBuilder: (child, animation) {
+                    return ScaleTransition(scale: animation, child: child);
+                  },
+                  child: currentIndex == index
+                      ? Container(
+                    key: const ValueKey('green'),
+                    width: 50,
+                    height: 50,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  )
+                      : const SizedBox.shrink(key: ValueKey('none')),
                 ),
               ),
-            ),
-            // 아이콘
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-              top: currentIndex == index ? 0 : 0,
-              child: Image.asset(
-                '$assetPath${currentIndex == index ? "_selected" : "_unselected"}.png',
-                width: 24,
-                height: 24,
-                color: currentIndex == index ? Colors.black : AppColors.darkGray,
-              ),
-            ),
-            // ✅ "맛집" 선택 시 텍스트 숨김
-            if (currentIndex != index)
-              Positioned(
-                top: 29,
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 10,
+
+              // ✅ 아이콘 교차 전환 애니메이션
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeInOut,
+                top: 0,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  switchInCurve: Curves.easeInOut,
+                  switchOutCurve: Curves.easeInOut,
+                  transitionBuilder: (child, animation) {
+                    return ScaleTransition(scale: animation, child: child);
+                  },
+                  child: currentIndex == index
+                      ? Image.asset(
+                    '${assetPath}_selected.png',
+                    key: const ValueKey('selected'),
+                    width: 24,
+                    height: 24,
+                    color: Colors.black,
+                  )
+                      : Image.asset(
+                    '${assetPath}_unselected.png',
+                    key: const ValueKey('unselected'),
+                    width: 24,
+                    height: 24,
                     color: AppColors.darkGray,
                   ),
                 ),
               ),
-          ],
+
+              // ✅ 텍스트는 선택 안 됐을 때만 보여줌
+              if (currentIndex != index)
+                Positioned(
+                  top: 29,
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppColors.darkGray,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
