@@ -25,9 +25,7 @@ class PlanMembersBar extends StatelessWidget {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-        decoration: BoxDecoration(
-          color: Colors.white,
-        ),
+        decoration: BoxDecoration(color: Colors.white),
         child: Center(
           child: Text(
             '아직 여행 멤버가 없습니다',
@@ -63,16 +61,17 @@ class PlanMembersBar extends StatelessWidget {
             ],
           ),
         ),
-        
+
         // 확장 상태에 따라 순서 변경
-        if (isExpanded) 
+        if (isExpanded)
           // 펼쳐진 상태: 멤버 목록 먼저 표시
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
             ),
+            decoration: BoxDecoration(color: Colors.white),
             child: SizedBox(
               height: 70,
               child: ListView(
@@ -103,17 +102,14 @@ class PlanMembersBar extends StatelessWidget {
               ),
             ),
           ),
-        
+
         // 토글 버튼은 항상 표시 (위치만 바뀜)
         Stack(
           alignment: Alignment.center,
           children: [
             // 가로 구분선
-            Container(
-              height: 1,
-              color: Colors.grey.withOpacity(0.2),
-            ),
-            
+            Container(height: 1, color: Colors.grey.withOpacity(0.2)),
+
             // 토글 버튼
             GestureDetector(
               onTap: onToggle,
@@ -131,10 +127,7 @@ class PlanMembersBar extends StatelessWidget {
                 child: Center(
                   child: Text(
                     isExpanded ? '▲' : '▼',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.darkGray,
-                    ),
+                    style: TextStyle(fontSize: 17, color: AppColors.mediumGray),
                   ),
                 ),
               ),
@@ -238,10 +231,7 @@ class PlanMembersBar extends StatelessWidget {
               fontFamily: 'Anemone_air',
               fontSize: 11,
               color: AppColors.darkGray,
-              fontWeight:
-                  isCurrentUser
-                      ? FontWeight.bold
-                      : FontWeight.normal, // 현재 사용자는 굵게 표시
+              fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

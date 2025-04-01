@@ -174,7 +174,7 @@ class GroupMembersBar extends StatelessWidget {
                 child: Center(
                   child: Text(
                     isExpanded ? '▲' : '▼',
-                    style: TextStyle(fontSize: 14, color: AppColors.darkGray),
+                    style: TextStyle(fontSize: 17, color: AppColors.mediumGray),
                   ),
                 ),
               ),
