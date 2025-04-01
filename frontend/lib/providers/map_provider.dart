@@ -28,8 +28,8 @@ class MapMarker {
     bool? isSelected,
   }) {
     return MapMarker(
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
+      latitude: longitude ?? this.longitude,
+      longitude: latitude ?? this.latitude,
       title: title ?? this.title,
       id: id ?? this.id,
       isSelected: isSelected ?? this.isSelected,
@@ -83,8 +83,8 @@ class MapLabel {
   }) {
     return MapLabel(
       id: id ?? this.id,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
+      latitude: longitude ?? this.longitude,
+      longitude: latitude ?? this.latitude,
       text: text ?? this.text,
       imageAsset: imageAsset ?? this.imageAsset,
       textSize: textSize ?? this.textSize,
@@ -203,8 +203,8 @@ class MapProvider extends ChangeNotifier {
     required double longitude,
     int? zoomLevel,
   }) {
-    _centerLatitude = latitude;
-    _centerLongitude = longitude;
+    _centerLatitude = longitude;
+    _centerLongitude = latitude;
     if (zoomLevel != null) {
       _zoomLevel = zoomLevel;
     }
@@ -230,8 +230,8 @@ class MapProvider extends ChangeNotifier {
         '${latitude}_${longitude}_${DateTime.now().millisecondsSinceEpoch}';
 
     final newMarker = MapMarker(
-      latitude: latitude,
-      longitude: longitude,
+      latitude: longitude,
+      longitude: latitude,
       title: title,
       id: markerId,
       isSelected: select,

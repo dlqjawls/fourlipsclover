@@ -27,6 +27,9 @@ class MapPreview extends StatelessWidget {
     // Provider 사용
     final mapProvider = Provider.of<MapProvider>(context);
 
+    // 라벨이 있는지 확인
+    print("MapPreview - 라벨 수: ${mapProvider.labels.length}");
+
     // 위도/경도 값 결정 (위젯 속성 → Provider)
     final lat = latitude ?? mapProvider.centerLatitude;
     final lng = longitude ?? mapProvider.centerLongitude;
@@ -98,14 +101,12 @@ class MapPreview extends StatelessWidget {
                   ),
                 ),
 
-              // 카카오맵 뷰 적용 - 인터랙션 방지를 위한 AbsorbPointer 추가
-              AbsorbPointer(
-                absorbing: true, // 모든 터치 이벤트 차단
+              // 카카오맵 뷰 적용 - 인터랙션 방지를 위한 AbsorbPointer 대신 IgnorePointer ? ? 
+              IgnorePointer(
                 child: KakaoMapNativeView(
-                  latitude: lat,
-                  longitude: lng,
-                  zoomLevel: zoom,
-                  // Provider에서 자동으로 변경을 감지하도록 설정
+                  latitude: latitude,
+                  longitude: longitude,
+                  zoomLevel: zoomLevel,
                   listenToProvider: true,
                 ),
               ),

@@ -1,22 +1,26 @@
 // lib/providers/search_provider.dart
 import 'package:flutter/material.dart';
 import '../models/search_history.dart';
+import '../models/restaurant_model.dart';  // 식당 모델 import
+import '../services/api/search_api.dart';      // 검색 API 서비스 import
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class SearchProvider extends ChangeNotifier {
   bool _isSearchMode = false;
-  List<SearchHistory> _searchHistory = [
-    SearchHistory(query: "수완지구 양식", date: "03.14"),
-    SearchHistory(query: "수완지구 술집", date: "03.10"),
-    SearchHistory(query: "각화동", date: "03.08"),
-    SearchHistory(query: "우츠", date: "03.07"),
-    SearchHistory(query: "대전", date: "03.07"),
-  ];
+  List<SearchHistory> _searchHistory = [];
+  
+  // 검색 결과 상태 추가
+  List<RestaurantResponse> _searchResults = [];
+  bool _isLoading = false;
+  String? _error;
   
   // 게터
   bool get isSearchMode => _isSearchMode;
   List<SearchHistory> get searchHistory => _searchHistory;
+  List<RestaurantResponse> get searchResults => _searchResults;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
   
   // 검색 모드 전환
   void toggleSearchMode(bool value, [TextEditingController? controller]) {
@@ -29,6 +33,33 @@ class SearchProvider extends ChangeNotifier {
     
     notifyListeners();
   }
+  
+  // 검색 결과 가져오기
+Future<List<RestaurantResponse>> fetchSearchResults(String query) async {
+  _isLoading = true;
+  _error = null;
+  notifyListeners();
+  
+  try {
+    // 검색 API 호출
+    final results = await RestaurantSearchApi.searchRestaurants(query);
+    
+    // 비동기 작업 완료 후 상태 업데이트
+    _searchResults = results;
+    _isLoading = false;
+    notifyListeners();
+    
+    return results;
+  } catch (e) {
+    _isLoading = false;
+    _error = e.toString();
+    notifyListeners();
+    
+    print('검색 결과 가져오기 오류: $e');
+    return [];
+  }
+}
+  
   // 검색 기록 추가
   void addSearchHistory(String query) {
     // 빈 검색어는 추가하지 않음
@@ -51,6 +82,12 @@ class SearchProvider extends ChangeNotifier {
     
     // 변경사항 저장
     saveSearchHistory();
+    notifyListeners();
+  }
+  
+  // 검색 결과 초기화
+  void clearSearchResults() {
+    _searchResults = [];
     notifyListeners();
   }
   
