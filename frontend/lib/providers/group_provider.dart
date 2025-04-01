@@ -201,34 +201,34 @@ class GroupProvider with ChangeNotifier {
     }
   }
 
-  // 그룹 삭제 (API)
-  Future<bool> deleteGroup(int groupId) async {
-    _setLoading(true);
-    try {
-      await _groupApi.deleteGroup(groupId);
+Future<bool> deleteGroup(int groupId) async {
+  _setLoading(true);
+  try {
+    await _groupApi.deleteGroup(groupId);
 
-      // 그룹 리스트에서 삭제된 그룹 제거
-      _groups.removeWhere((group) => group.groupId == groupId);
+    // 캐시된 그룹 목록에서 삭제
+    _groups.removeWhere((group) => group.groupId == groupId);
 
-      // 선택된 그룹이 삭제된 그룹이라면 선택 해제 또는 첫 번째 그룹 선택
-      if (_selectedGroup?.groupId == groupId) {
-        _selectedGroup = _groups.isNotEmpty ? _groups.first : null;
-      }
-
-      // 캐시에서도 제거
-      _groupDetailsCache.remove(groupId);
-
-      _error = null;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _error = '그룹 삭제에 실패했습니다: $e';
-      debugPrint(_error);
-      return false;
-    } finally {
-      _setLoading(false);
+    // 선택된 그룹이 삭제된 그룹이라면 선택 해제 또는 첫 번째 그룹 선택
+    if (_selectedGroup?.groupId == groupId) {
+      _selectedGroup = _groups.isNotEmpty ? _groups.first : null;
     }
+
+    // 캐시에서도 제거
+    _groupDetailsCache.remove(groupId);
+
+    _error = null;
+    notifyListeners();
+    return true;
+  } catch (e) {
+    _error = '그룹 삭제에 실패했습니다: $e';
+    debugPrint(_error);
+    notifyListeners(); // 에러 상태 알림
+    return false;
+  } finally {
+    _setLoading(false);
   }
+}
 
   // 그룹 초대 링크 생성 (API)
   Future<String?> generateInviteLink(int groupId) async {

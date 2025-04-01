@@ -17,9 +17,9 @@ class PlanDetailScreen extends StatefulWidget {
   final int initialTabIndex; // 초기 선택 탭 인덱스 추가
 
   const PlanDetailScreen({
-    Key? key, 
-    required this.plan, 
-    required this.groupId, 
+    Key? key,
+    required this.plan,
+    required this.groupId,
     this.initialTabIndex = 0, // 기본값은 0(공지사항 탭)
   }) : super(key: key);
 
@@ -98,6 +98,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         title: Text(
           _currentPlan.title,
           style: TextStyle(
