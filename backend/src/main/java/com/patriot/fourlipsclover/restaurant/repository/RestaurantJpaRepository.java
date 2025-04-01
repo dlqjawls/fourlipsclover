@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface RestaurantJpaRepository extends JpaRepository<Restaurant, Long> {
+public interface RestaurantJpaRepository extends JpaRepository<Restaurant, Integer> {
 
     Optional<Restaurant> findByKakaoPlaceId(String kakaoPlaceId);
 

@@ -14,7 +14,7 @@ import java.util.List;
 public class LocalsProposalRequest {
 
     private Integer matchId;
-    private List<Long> restaurantIds;
+    private List<Integer> restaurantIds;
     private String recommendMenu;
     private String description;
 

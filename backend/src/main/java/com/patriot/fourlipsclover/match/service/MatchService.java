@@ -374,9 +374,9 @@ public class MatchService {
         LocalsProposal savedProposal = localsProposalRepository.save(localsProposal);
 
         // DTO 생성: 저장된 엔티티에서 식당 ID 리스트 추출
-        List<Long> restaurantIds = savedProposal.getRestaurantList()
+        List<Integer> restaurantIds = savedProposal.getRestaurantList()
                 .stream()
-                .map(restaurant -> restaurant.getRestaurantId().longValue())
+                .map(Restaurant::getRestaurantId)
                 .collect(Collectors.toList());
 
         LocalsProposalResponse response = new LocalsProposalResponse(

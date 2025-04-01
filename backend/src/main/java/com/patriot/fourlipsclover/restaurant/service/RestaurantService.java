@@ -1,5 +1,6 @@
 package com.patriot.fourlipsclover.restaurant.service;
 
+import com.patriot.fourlipsclover.restaurant.dto.kafka.RestaurantKafkaDto;
 import com.patriot.fourlipsclover.config.CustomUserDetails;
 import com.patriot.fourlipsclover.exception.DeletedResourceAccessException;
 import com.patriot.fourlipsclover.exception.InvalidDataException;
@@ -16,26 +17,24 @@ import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
 import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
-import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
-import com.patriot.fourlipsclover.restaurant.entity.Review;
-import com.patriot.fourlipsclover.restaurant.entity.ReviewLike;
-import com.patriot.fourlipsclover.restaurant.entity.ReviewLikePK;
+import com.patriot.fourlipsclover.restaurant.entity.*;
 import com.patriot.fourlipsclover.restaurant.mapper.RestaurantMapper;
 import com.patriot.fourlipsclover.restaurant.mapper.ReviewMapper;
-import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
-import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
-import com.patriot.fourlipsclover.restaurant.repository.ReviewLikeJpaRepository;
+import com.patriot.fourlipsclover.restaurant.repository.*;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RestaurantService {
@@ -47,6 +46,8 @@ public class RestaurantService {
 	private final RestaurantMapper restaurantMapper;
 	private final ReviewJpaRepository reviewRepository;
 	private final ReviewImageService reviewImageService;
+	private final CityRepository cityRepository;
+	private final FoodCategoryRepository foodCategoryRepository;
 
 	@Transactional
 	public ReviewResponse create(ReviewCreate reviewCreate, List<MultipartFile> images) {
@@ -214,5 +215,90 @@ public class RestaurantService {
 				}
 		);
 		return result[0];
+	}
+
+	@Transactional
+	public void processKafkaMessage(RestaurantKafkaDto dto) {
+		// dto가 null인지 먼저 확인
+		if (dto == null) {
+			log.error("Restaurant DTO is null, cannot process Kafka message");
+			return;
+		}
+
+		// 필수 ID 필드 검증
+		if (dto.getRestaurantId() == null) {
+			log.error("Restaurant ID is null, cannot process Kafka message");
+			return;
+		}
+
+		log.info("Processing Kafka message for restaurant: {}", dto.getRestaurantId());
+
+		// 기본값으로 "r" (read) 설정
+		String operation = dto.getOp();
+		if (operation == null) {
+			operation = "r";
+			log.info("Operation type is null, defaulting to 'r' (read)");
+		}
+
+		try {
+			switch (operation) {
+				case "c":
+				case "r":
+				case "u":
+					saveOrUpdateFromKafka(dto);
+					break;
+				case "d":
+					deleteFromKafka(dto);
+					break;
+				default:
+					log.warn("Unknown operation type in Kafka message: {}", operation);
+			}
+		} catch (Exception e) {
+			log.error("Error processing Kafka message for restaurant {}: {}",
+					dto.getRestaurantId(), e.getMessage(), e);
+		}
+	}
+
+	private void saveOrUpdateFromKafka(RestaurantKafkaDto dto) {
+		Restaurant restaurant = restaurantRepository.findById(dto.getRestaurantId())
+				.orElse(new Restaurant());
+
+		// DTO에서 엔티티로 데이터 복사
+		restaurant.setRestaurantId(dto.getRestaurantId());
+		restaurant.setPlaceName(dto.getPlaceName());
+		restaurant.setAddressName(dto.getAddressName());
+		restaurant.setRoadAddressName(dto.getRoadAddressName());
+		restaurant.setCategoryName(dto.getCategoryName());
+		restaurant.setPhone(dto.getPhone());
+		restaurant.setPlaceUrl(dto.getPlaceUrl());
+		restaurant.setX(dto.getX());
+		restaurant.setY(dto.getY());
+
+		// 모든 필수 필드 검증
+		if (dto.getRestaurantId() == null) {
+			log.error("Cannot save restaurant with null ID");
+			return;
+		}
+
+		// 연관 엔티티 설정 (City와 FoodCategory 레퍼런스를 찾아서 설정)
+		if (dto.getCityId() != null) {
+			City city = cityRepository.findById(dto.getCityId()).orElse(null);
+			restaurant.setCity(city);
+		}
+
+		if (dto.getFoodCategoryId() != null) {
+			FoodCategory foodCategory = foodCategoryRepository.findById(dto.getFoodCategoryId()).orElse(null);
+			restaurant.setFoodCategory(foodCategory);
+		}
+
+		restaurantRepository.save(restaurant);
+		log.info("Restaurant saved/updated from Kafka: {}", restaurant.getRestaurantId());
+	}
+
+	private void deleteFromKafka(RestaurantKafkaDto dto) {
+		restaurantRepository.findById(dto.getRestaurantId()).ifPresent(restaurant -> {
+			restaurantRepository.delete(restaurant);
+			log.info("Restaurant deleted from Kafka: {}", dto.getRestaurantId());
+		});
 	}
 }
