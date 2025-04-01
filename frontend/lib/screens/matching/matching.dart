@@ -6,6 +6,7 @@ import 'package:frontend/screens/matching/matchinglocal/matching_local_list.dart
 import 'package:frontend/services/matching/matching_service.dart';
 import 'package:frontend/models/matching/matching_main_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/screens/matching/matchinglocal/matching_local_resist.dart';
 
 class MatchingScreen extends StatefulWidget {
   const MatchingScreen({Key? key}) : super(key: key);
@@ -29,6 +30,12 @@ class _MatchingScreenState extends State<MatchingScreen>
   void initState() {
     super.initState();
     _checkUserRole();
+  }
+
+  void refreshBanner() {
+    setState(() {
+      // FutureBuilder가 새로운 future를 시작하도록 강제
+    });
   }
 
   Future<void> _checkUserRole() async {
@@ -92,6 +99,7 @@ class _MatchingScreenState extends State<MatchingScreen>
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
@@ -129,48 +137,82 @@ class _MatchingScreenState extends State<MatchingScreen>
   }
 
   Widget _buildBanner() {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const MatchingLocalListScreen(),
+    return FutureBuilder<Map<String, int>>(
+      future: _matchingService.getMatchingCounts(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          debugPrint('매칭 카운트 로드 오류: ${snapshot.error}');
+          return const SizedBox.shrink();
+        }
+
+        final counts =
+            snapshot.data ?? {'confirmedCount': 0, 'pendingCount': 0};
+        final confirmedCount = counts['confirmedCount'] ?? 0;
+        final pendingCount = counts['pendingCount'] ?? 0;
+
+        if (confirmedCount == 0 && pendingCount == 0) {
+          return const SizedBox.shrink();
+        }
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MatchingLocalListScreen(),
+              ),
+            ).then((_) {
+              setState(() {});
+            });
+          },
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Image.asset('assets/images/logo.png', width: 60, height: 60),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (confirmedCount > 0)
+                        Text(
+                          '진행중인 매칭 ${confirmedCount}건',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      if (pendingCount > 0)
+                        Text(
+                          '미확인 매칭 ${pendingCount}건',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      const Text(
+                        '확인하러 가기',
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right),
+              ],
+            ),
           ),
         );
       },
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Image.asset('assets/images/logo.png', width: 60, height: 60),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '미확인 매칭 ${pendingMatchCount}건',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Text(
-                    '확인하러 가기',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right),
-          ],
-        ),
-      ),
     );
   }
 
@@ -321,10 +363,10 @@ class _MatchingScreenState extends State<MatchingScreen>
 
   void _navigateToDetail(dynamic match) {
     Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (context) => MatchingDetailScreen(matchId: match.matchId),
-  ),
-);
+      context,
+      MaterialPageRoute(
+        builder: (context) => MatchingDetailScreen(matchId: match.matchId),
+      ),
+    );
   }
 }

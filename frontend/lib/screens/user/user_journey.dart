@@ -9,6 +9,7 @@ class UserJourneyScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.verylightGray,
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(

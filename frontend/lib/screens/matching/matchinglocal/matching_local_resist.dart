@@ -36,6 +36,7 @@ class _MatchingLocalResistScreenState extends State<MatchingLocalResistScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         elevation: 0,
         backgroundColor: Colors.white,
         title: const Text('기획서 작성'),
