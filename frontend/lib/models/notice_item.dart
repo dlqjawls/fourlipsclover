@@ -1,3 +1,5 @@
+// lib/models/notice_item.dart
+
 import 'package:flutter/material.dart';
 
 class NoticeItem {
@@ -11,7 +13,7 @@ class NoticeItem {
     required this.id,
     required this.content,
     required this.color,
-    this.isImportant = false,
+    required this.isImportant,
     required this.createdAt,
   });
 }

@@ -2,6 +2,7 @@ package com.patriot.fourlipsclover.match.service;
 
 import com.patriot.fourlipsclover.exception.*;
 import com.patriot.fourlipsclover.group.repository.GroupRepository;
+import com.patriot.fourlipsclover.group.service.GroupService;
 import com.patriot.fourlipsclover.match.dto.request.LocalsProposalRequest;
 import com.patriot.fourlipsclover.match.dto.request.MatchCreateRequest;
 import com.patriot.fourlipsclover.match.dto.response.*;
@@ -39,6 +40,7 @@ public class MatchService {
     private final PaymentApprovalRepository paymentApprovalRepository;
     private final LocalsProposalRepository localsProposalRepository;
     private final RestaurantJpaRepository restaurantJpaRepository;
+    private final GroupService groupService;
 
     public void validateMatchRequest(MatchCreateRequest request, long memberId) {
         boolean isMember = memberRepository.existsById(memberId);
@@ -138,6 +140,9 @@ public class MatchService {
             guideRequestForm.setCreatedAt(LocalDateTime.now());
             guideRequestFormRepository.save(guideRequestForm);  // 가이드 신청서 저장
             match.setGuideRequestForm(guideRequestForm);  // 매칭과 연결
+
+            // 그룹 처리: 그룹이 선택되지 않으면 "나홀로 여행" 그룹을 생성하고 할당
+            groupService.handleGroupAssignment(guideRequestForm);
         }
 
         // 태그 처리: MatchCreateRequest에서 받은 태그를 MatchTag로 변환하여 저장
@@ -377,9 +382,9 @@ public class MatchService {
         LocalsProposal savedProposal = localsProposalRepository.save(localsProposal);
 
         // DTO 생성: 저장된 엔티티에서 식당 ID 리스트 추출
-        List<Long> restaurantIds = savedProposal.getRestaurantList()
+        List<Integer> restaurantIds = savedProposal.getRestaurantList()
                 .stream()
-                .map(restaurant -> restaurant.getRestaurantId().longValue())
+                .map(Restaurant::getRestaurantId)
                 .collect(Collectors.toList());
 
         LocalsProposalResponse response = new LocalsProposalResponse(

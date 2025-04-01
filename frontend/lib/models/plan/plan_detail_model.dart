@@ -1,4 +1,3 @@
-// plan_detail_model.dart 파일
 
 import 'package:flutter/foundation.dart';
 import '../group/member_model.dart'; // Member 클래스가 정의된 파일 임포트
@@ -32,10 +31,11 @@ class PlanDetail {
     // members 필드 파싱
     List<Member> membersList = [];
     if (json['members'] != null) {
-      membersList = (json['members'] as List)
-          .map((member) => Member.fromJson(member))
-          .toList();
-      
+      membersList =
+          (json['members'] as List)
+              .map((member) => Member.fromJson(member))
+              .toList();
+
       // role 설정 (총무 또는 회원)
       final treasurerId = json['treasurerId'];
       for (var member in membersList) {
@@ -52,7 +52,8 @@ class PlanDetail {
       startDate: DateTime.parse(json['startDate']),
       endDate: DateTime.parse(json['endDate']),
       createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      updatedAt:
+          json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
       members: membersList, // 파싱된 멤버 리스트 전달
     );
   }

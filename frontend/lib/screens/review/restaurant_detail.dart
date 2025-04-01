@@ -20,6 +20,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   late Future<Map<String, dynamic>> restaurantData;
   late Future<List<Review>> reviews;
   bool isFavorite = false;
+  String? representativeImageUrl;
 
   @override
   void initState() {
@@ -28,12 +29,28 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   }
 
   void fetchData() {
-    // final safeRestaurantId = widget.restaurantId.isNotEmpty ? widget.restaurantId : "1605310387";
     final safeRestaurantId = widget.restaurantId;
-    setState(() {
-      restaurantData = RestaurantService.fetchRestaurantDetails(safeRestaurantId);
-      reviews = ReviewService.fetchReviews(safeRestaurantId);
+    restaurantData = RestaurantService.fetchRestaurantDetails(safeRestaurantId);
+    reviews = ReviewService.fetchReviews(safeRestaurantId);
+
+    reviews.then((reviewList) {
+      final imageUrl = getRepresentativeImage(reviewList);
+      setState(() {
+        representativeImageUrl = imageUrl;
+      });
     });
+  }
+
+  String? getRepresentativeImage(List<Review> reviews) {
+    final withImages = reviews.where((r) => r.imageUrl != null && r.imageUrl!.isNotEmpty).toList();
+    if (withImages.isEmpty) return null;
+
+    withImages.sort((a, b) {
+      final likeCompare = b.likes.compareTo(a.likes);
+      return likeCompare != 0 ? likeCompare : b.date.compareTo(a.date);
+    });
+
+    return withImages.first.imageUrl;
   }
 
   void toggleFavorite() {
@@ -62,16 +79,15 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
           final data = snapshot.data!;
           final menu = data['menu'] ?? [];
-          print("✅ 가게 데이터: $data");
 
           return Scaffold(
             appBar: AppBar(
               backgroundColor: AppColors.background,
               elevation: 0,
-              centerTitle: true, // ✅ 제목 완전 중앙 정렬
+              centerTitle: true,
               title: Text(
                 data['placeName'] ?? "가게 정보",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.black),
@@ -98,20 +114,31 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  RestaurantInfo(data: data),
+                  RestaurantInfo(data: data, imageUrl: representativeImageUrl),
 
-                  /// ✅ 메뉴 리스트 (menu가 없으면 빈 리스트로 대체)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 12.0),
+                    child: Divider(thickness: 6.5, color: AppColors.verylightGray, height: 24),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                    child: Text("메뉴", style: TextStyle(fontSize: 16)),
+                  ),
+
                   if (menu.isNotEmpty)
                     MenuList(menu: menu)
                   else
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Text("메뉴 정보가 없습니다.", style: TextStyle(fontSize: 14, color: Colors.grey)),
-                      ),
-                    ),
+                    const Center(child: Padding(padding: EdgeInsets.all(16.0), child: Text("메뉴 정보가 없습니다."))),
 
-                  /// ✅ 리뷰 목록 (리뷰 작성 후 화면 갱신 기능 추가)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 16.0),
+                    child: Divider(thickness: 6.5, color: AppColors.verylightGray, height: 24),
+                  ),
+                  // const Padding(
+                  //   padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                  //   child: Text("리뷰", style: TextStyle(fontSize: 16)),
+                  // ),
+
                   ReviewList(
                     restaurantId: widget.restaurantId,
                     onReviewUpdated: fetchData,

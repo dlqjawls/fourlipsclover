@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../config/theme.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import 'dart:math' as math;
-import '../bottomsheet/notice_create_bottom_sheet.dart'; // 바텀시트 파일 임포트
-import '../../../models/notice_item.dart';
-import '../../../providers/plan_provider.dart'; // Provider 추가
-import 'package:provider/provider.dart'; // Provider 추가
+import '../../../config/theme.dart';
+import '../../../models/notice/notice_model.dart';
+import '../../../providers/notice_provider.dart';
+import '../bottomsheet/notice_create_bottom_sheet.dart';
 
 class PlanNoticeBoard extends StatefulWidget {
   final int planId;
@@ -18,142 +19,102 @@ class PlanNoticeBoard extends StatefulWidget {
 }
 
 class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
-  List<NoticeItem> _notices = []; // 실제로는 API에서 가져올 예정
-  final List<Color> _availableColors = [
-    Colors.yellow.shade100, // 연한 노랑
-    Colors.pink.shade100, // 연한 분홍
-    Colors.blue.shade100, // 연한 파랑
-    Colors.green.shade100, // 연한 초록
-    Colors.orange.shade100, // 연한 주황
-  ];
+  List<NoticeModel> _notices = [];
 
   @override
   void initState() {
     super.initState();
-    _loadNotices();
+    // 직접 호출하지 않고 다음 프레임으로 예약
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadNotices();
+    });
   }
 
+  // 공지사항 목록 가져오기
   Future<void> _loadNotices() async {
-    // 로딩 상태를 시작하기 위해 Provider 업데이트
-    // PlanProvider 또는 별도의 LoadingProvider를 사용할 수 있습니다
-    final planProvider = Provider.of<PlanProvider>(context, listen: false);
-    planProvider.setLoading(true);
+    final noticeProvider = Provider.of<NoticeProvider>(context, listen: false);
+
+    // 먼저 로딩 상태를 설정
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      noticeProvider.setLoading(true);
+    });
 
     try {
-      // 여기서 실제로는 API 호출로 데이터를 가져올 예정
-      // 임시 데이터
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // 공지사항 목록 - 중요 항목을 먼저 정렬, 최대 6개로 제한
-      final List<NoticeItem> noticeList = [
-        NoticeItem(
-          id: '1',
-          content: '숙소 체크인: 12월 17일 15:00 - 제주 시티호텔, 사전 예약 완료',
-          color: Colors.yellow.shade100,
-          isImportant: true,
-          createdAt: DateTime.now().subtract(const Duration(days: 2)),
-        ),
-        NoticeItem(
-          id: '3',
-          content: '렌트카: 모닝 2대, 공항 픽업 (입국장 1층에서 만나요)',
-          color: Colors.green.shade100,
-          isImportant: true,
-          createdAt: DateTime.now(),
-        ),
-        NoticeItem(
-          id: '4',
-          content: '여행 경비: 1인당 30만원 예상, 총무에게 20만원씩 모을 예정',
-          color: Colors.pink.shade100,
-          isImportant: true,
-          createdAt: DateTime.now().subtract(const Duration(hours: 12)),
-        ),
-        NoticeItem(
-          id: '2',
-          content: '12월 18일 해녀체험 예약했어요! 오전 10시까지 모이기',
-          color: Colors.blue.shade100,
-          isImportant: false,
-          createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        ),
-        NoticeItem(
-          id: '5',
-          content: '준비물: 수영복, 선크림, 모자, 우산, 여분 옷',
-          color: Colors.orange.shade100,
-          isImportant: false,
-          createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        ),
-      ];
-
-      // 공지사항 수가 6개를 초과하면 6개로 제한
-      if (noticeList.length > 6) {
-        noticeList.length = 6;
+      final notices = await noticeProvider.fetchNotices(widget.planId);
+      if (mounted) {
+        setState(() {
+          _notices = notices;
+        });
       }
-
-      setState(() {
-        _notices = noticeList;
-      });
     } catch (e) {
-      // 에러 처리
       debugPrint('공지사항 로드 중 오류: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('공지사항을 불러오는데 실패했습니다: $e')));
+      }
     } finally {
-      // 로딩 상태 종료
-      planProvider.setLoading(false);
+      if (mounted) {
+        // 로딩 상태 해제도 다음 프레임으로 예약
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          noticeProvider.setLoading(false);
+        });
+      }
     }
   }
 
-  // 공지사항 추가
-  Future<void> _showAddNoticeBottomSheet() async {
-    // 별도의 바텀시트 컴포넌트 사용
+  // 공지사항 추가 바텀시트 표시
+  void _showAddNoticeBottomSheet() {
+    final noticeProvider = Provider.of<NoticeProvider>(context, listen: false);
+
+    // 이용 가능한 색상 리스트 만들기
+    final availableColors = [
+      AppColors.noticeMemoYellow,
+      AppColors.noticeMemoRed,
+      AppColors.noticeMemoBlue,
+      AppColors.noticeMemoGreen,
+      AppColors.noticeMemoOrange,
+      AppColors.noticeMemoViolet,
+    ];
+
     showNoticeCreateBottomSheet(
       context: context,
-      availableColors: _availableColors,
-      onNoticeCreated: (newNotice) {
-        setState(() {
-          // 최대 6개 제한 확인
-          if (_notices.length >= 6) {
-            // 가장 오래된 비중요 공지사항 삭제
-            final nonImportantIndex = _notices.indexWhere(
-              (notice) => !notice.isImportant,
-            );
-            if (nonImportantIndex != -1) {
-              _notices.removeAt(nonImportantIndex);
-            } else {
-              // 모두 중요 공지사항인 경우 가장 오래된 것 삭제
-              _notices.removeLast();
-            }
-          }
-
-          // 새 공지사항 추가 (중요 공지사항은 중요 공지사항들 중 맨 뒤에 추가)
-          if (newNotice.isImportant) {
-            // 마지막 중요 공지사항 위치 찾기
-            final lastImportantIndex = _notices.lastIndexWhere(
-              (notice) => notice.isImportant,
-            );
-
-            if (lastImportantIndex == -1) {
-              // 중요 공지사항이 없으면 맨 앞에 추가
-              _notices.insert(0, newNotice);
-            } else {
-              // 있으면 마지막 중요 공지사항 뒤에 추가
-              _notices.insert(lastImportantIndex + 1, newNotice);
-            }
-          } else {
-            // 중요하지 않은 공지사항은 가장 마지막에 추가
-            _notices.add(newNotice);
-          }
-        });
-      },
+      availableColors: availableColors,
       maxNoticeCount: 6,
+      onNoticeCreated: (newNotice) async {
+        try {
+          // NoticeItem에서 NoticeModel로 변환
+          final notice = NoticeModel(
+            planId: widget.planId,
+            isImportant: newNotice.isImportant,
+            color: noticeProvider.getNoticeColorFromColor(newNotice.color),
+            content: newNotice.content,
+          );
+
+          // API 통신으로 공지사항 생성
+          await noticeProvider.createNotice(widget.planId, notice);
+
+          // 생성 후 공지사항 목록 다시 불러오기
+          _loadNotices();
+
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('공지사항이 추가되었습니다')));
+        } catch (e) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('공지사항 추가에 실패했습니다: $e')));
+        }
+      },
     );
   }
 
   // 공지사항 삭제 확인 다이얼로그
-  Future<void> _showDeleteConfirmDialog(NoticeItem notice) async {
-    // 위치를 계산하기 위한 RenderBox 가져오기
+  Future<void> _showDeleteConfirmDialog(NoticeModel notice) async {
     final RenderBox? overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox?;
 
-    // 삭제 확인 다이얼로그 표시
-    showDialog(
+    final confirmed = await showDialog<bool>(
       context: context,
       barrierColor: Colors.black.withOpacity(0.3),
       builder: (context) {
@@ -187,7 +148,7 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
                     // 취소 버튼
                     TextButton(
                       onPressed: () {
-                        Navigator.of(context).pop(); // 다이얼로그 닫기
+                        Navigator.of(context).pop(false); // 다이얼로그 닫기 (취소)
                       },
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.grey.shade700,
@@ -197,8 +158,7 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
                     // 삭제 버튼
                     ElevatedButton(
                       onPressed: () {
-                        Navigator.of(context).pop(); // 다이얼로그 닫기
-                        _deleteNotice(notice.id); // 공지사항 삭제
+                        Navigator.of(context).pop(true); // 다이얼로그 닫기 (확인)
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade400,
@@ -214,19 +174,35 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
         );
       },
     );
+
+    if (confirmed == true && notice.planNoticeId != null) {
+      await _deleteNotice(notice.planNoticeId!);
+    }
   }
 
   // 공지사항 삭제
-  Future<void> _deleteNotice(String id) async {
-    setState(() {
-      _notices.removeWhere((notice) => notice.id == id);
-    });
+  Future<void> _deleteNotice(int planNoticeId) async {
+    final noticeProvider = Provider.of<NoticeProvider>(context, listen: false);
 
-    // 여기서 실제로는 API 호출로 데이터를 삭제할 예정
+    try {
+      await noticeProvider.deleteNotice(widget.planId, planNoticeId);
+      _loadNotices(); // 목록 새로고침
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('공지사항이 삭제되었습니다')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('공지사항 삭제에 실패했습니다: $e')));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final noticeProvider = Provider.of<NoticeProvider>(context);
+    final isLoading = noticeProvider.isLoading;
+
     return Container(
       decoration: BoxDecoration(
         // 화이트보드 배경 디자인
@@ -264,69 +240,10 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
               ),
               child: Stack(
                 children: [
-                  // 로딩 스피너 제거 - 전체 LoadingOverlay에서 처리
-                  _notices.isEmpty
-                      ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.sticky_note_2_outlined,
-                              size: 72,
-                              color: AppColors.lightGray,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              '등록된 공지사항이 없어요',
-                              style: TextStyle(
-                                fontFamily: 'Anemone_air',
-                                fontSize: 24,
-                                color: AppColors.mediumGray,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '새로운 공지사항을 추가해보세요',
-                              style: TextStyle(
-                                fontFamily: 'Anemone_air',
-                                fontSize: 16,
-                                color: AppColors.mediumGray,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            GestureDetector(
-                              onTap: _showAddNoticeBottomSheet,
-                              child: Container(
-                                width: 64,
-                                height: 64,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: AppColors.verylightGray,
-                                  border: Border.all(
-                                    color: AppColors.primary,
-                                    width: 2.0,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      spreadRadius: 1,
-                                      blurRadius: 3,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.add,
-                                    color: AppColors.primary,
-                                    size: 32,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
+                  isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _notices.isEmpty
+                      ? _buildEmptyState()
                       : _buildNoticeBoardLayout(),
                 ],
               ),
@@ -337,8 +254,68 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
     );
   }
 
+  // 공지사항이 없는 경우 표시할 위젯
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.sticky_note_2_outlined,
+            size: 72,
+            color: AppColors.lightGray,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '등록된 공지사항이 없어요',
+            style: TextStyle(
+              fontFamily: 'Anemone_air',
+              fontSize: 24,
+              color: AppColors.mediumGray,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '새로운 공지사항을 추가해보세요',
+            style: TextStyle(
+              fontFamily: 'Anemone_air',
+              fontSize: 16,
+              color: AppColors.mediumGray,
+            ),
+          ),
+          const SizedBox(height: 24),
+          GestureDetector(
+            onTap: _showAddNoticeBottomSheet,
+            child: Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.verylightGray,
+                border: Border.all(color: AppColors.primary, width: 2.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 3,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Icon(Icons.add, color: AppColors.primary, size: 32),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // 공지사항 배치 레이아웃
   Widget _buildNoticeBoardLayout() {
+    final noticeProvider = Provider.of<NoticeProvider>(context, listen: false);
+
     // 화면 크기 기준으로 열 수 계산
     final screenWidth = MediaQuery.of(context).size.width;
     final itemWidth = 160.0; // 각 메모 아이템의 기본 너비
@@ -382,12 +359,20 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
           ),
           children: [
             // 공지사항 메모들
-            ...List.generate(_notices.length, (index) {
+            ..._notices.asMap().entries.map((entry) {
+              final index = entry.key;
+              final notice = entry.value;
+
+              // Provider에서 색상 가져오기
+              final noticeColor = noticeProvider.getColorFromNoticeColor(
+                notice.color,
+              );
+
               return LayoutId(
                 id: 'notice_$index',
-                child: _buildNoticeItem(_notices[index], index),
+                child: _buildNoticeItem(notice, noticeColor, index),
               );
-            }),
+            }).toList(),
 
             // 추가 버튼 (6개 미만일 때만)
             if (showAddButton)
@@ -432,9 +417,9 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
   }
 
   // 공지사항 아이템 위젯 (메모지 스타일)
-  Widget _buildNoticeItem(NoticeItem notice, int index) {
+  Widget _buildNoticeItem(NoticeModel notice, Color noticeColor, int index) {
     // 회전 각도 계산 (살짝 기울임)
-    final random = math.Random(notice.id.hashCode);
+    final random = math.Random(notice.planNoticeId?.hashCode ?? index);
     final rotation =
         (random.nextDouble() * 10 - 5) * math.pi / 180; // -5도에서 5도 사이 랜덤 회전
 
@@ -445,7 +430,7 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
         constraints: const BoxConstraints(minHeight: 120, maxHeight: 200),
         margin: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: notice.color,
+          color: noticeColor,
           borderRadius: BorderRadius.circular(4),
           boxShadow: [
             BoxShadow(

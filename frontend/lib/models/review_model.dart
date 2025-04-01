@@ -67,7 +67,7 @@ class Review {
       localRank: 0,
       likes: response.likedCount,
       dislikes: response.dislikedCount,
-      date: response.visitedAt ?? DateTime.now(),
+      date: response.createdAt ?? DateTime.now(),
       menu: [],
       isLiked: false,
       isDisliked: false,

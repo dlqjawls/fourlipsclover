@@ -49,13 +49,13 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
   final TextEditingController _amountController = TextEditingController();
   int? _selectedPayerId; // 결제자 ID
   final Set<int> _selectedParticipantIds = {}; // 참여자 ID 집합
+  bool _isLoading = true; // 초기값을 true로 설정
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadPayments();
-    });
+    // Future.microtask를 사용하여 빌드 후 로드
+    Future.microtask(() => _loadPayments());
   }
 
   @override
@@ -68,10 +68,6 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
   // 결제 내역 로드 (임시 데이터)
   Future<void> _loadPayments() async {
     if (!mounted) return; // 위젯이 이미 dispose된 경우 중단
-
-    // Provider를 통해 로딩 상태 관리
-    final planProvider = Provider.of<PlanProvider>(context, listen: false);
-    planProvider.setLoading(true);
 
     try {
       // 임시 데이터 생성 (실제로는 API에서 가져와야 함)
@@ -118,14 +114,68 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
             paymentDate: DateTime.now().subtract(const Duration(hours: 5)),
             participantIds: [1, 2, 3, 4],
           ),
+          PaymentItem(
+            id: '5',
+            title: '카페 음료',
+            amount: 32000,
+            payerNickname: '민수',
+            payerId: 3,
+            paymentDate: DateTime.now().subtract(const Duration(days: 3)),
+            participantIds: [1, 2, 3, 4],
+          ),
+          PaymentItem(
+            id: '6',
+            title: '기념품 구매',
+            amount: 45000,
+            payerNickname: '철수',
+            payerId: 1,
+            paymentDate: DateTime.now().subtract(const Duration(days: 4)),
+            participantIds: [1, 3, 4],
+          ),
+          PaymentItem(
+            id: '7',
+            title: '택시비',
+            amount: 28000,
+            payerNickname: '영희',
+            payerId: 2,
+            paymentDate: DateTime.now().subtract(
+              const Duration(days: 2, hours: 12),
+            ),
+            participantIds: [1, 2, 3, 4],
+          ),
+          PaymentItem(
+            id: '8',
+            title: '해변 파라솔 대여',
+            amount: 15000,
+            payerNickname: '민수',
+            payerId: 3,
+            paymentDate: DateTime.now().subtract(
+              const Duration(days: 3, hours: 4),
+            ),
+            participantIds: [1, 3, 4],
+          ),
+          PaymentItem(
+            id: '9',
+            title: '점심 식사',
+            amount: 75000,
+            payerNickname: '철수',
+            payerId: 1,
+            paymentDate: DateTime.now().subtract(
+              const Duration(days: 1, hours: 8),
+            ),
+            participantIds: [1, 2, 3, 4],
+          ),
         ];
+        _isLoading = false;
       });
     } catch (e) {
       debugPrint('결제 내역 로드 중 오류: $e');
-    } finally {
-      // 로딩 상태 종료
       if (mounted) {
-        planProvider.setLoading(false);
+        setState(() {
+          _isLoading = false;
+          // 에러 발생 시 빈 리스트로 설정
+          _payments = [];
+        });
       }
     }
   }
@@ -255,7 +305,7 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
                         }
 
                         // 정산 추가 (임시 구현)
-                        final double amount;
+                        double amount;
                         try {
                           amount = double.parse(_amountController.text.trim());
                         } catch (e) {
@@ -266,11 +316,19 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
                         }
 
                         // 결제자 닉네임 찾기
-                        final payer = widget.members.firstWhere(
+                        final membersList = widget.members.toList();
+                        final payerIndex = membersList.indexWhere(
                           (m) => m.memberId == _selectedPayerId,
-                          orElse: () => null,
                         );
-                        if (payer == null) return;
+
+                        if (payerIndex == -1) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('결제자를 찾을 수 없습니다.')),
+                          );
+                          return;
+                        }
+
+                        final payer = membersList[payerIndex];
 
                         final newPayment = PaymentItem(
                           id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -303,103 +361,272 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
     );
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : SingleChildScrollView(
+          child: Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(
+                vertical: 30,
+              ), // 위아래 여백 추가 (테이프가 잘리지 않도록)
+              width: MediaQuery.of(context).size.width * 0.75, // 영수증 너비 조정
+              child: ReceiptWidget(
+                payments: _payments,
+                planTitle: widget.planTitle ?? '여행 계획',
+                onAddPayment: _showAddPaymentDialog,
+              ),
+            ),
+          ),
+        );
+  }
+}
+
+// 영수증 스타일 위젯
+class ReceiptWidget extends StatelessWidget {
+  final List<PaymentItem> payments;
+  final String? planTitle;
+  final VoidCallback onAddPayment;
+  final String date;
+
+  const ReceiptWidget({
+    Key? key,
+    required this.payments,
+    this.planTitle,
+    required this.onAddPayment,
+    this.date = '2020.12.17~19', // 기본값 설정
+  }) : super(key: key);
+
   // 총액 계산
   double get _totalAmount {
-    return _payments.fold(0, (sum, item) => sum + item.amount);
-  }
-
-  // 멤버별 정산 내역 계산
-  Map<int, Map<String, dynamic>> _calculateSettlement() {
-    final Map<int, double> paid = {}; // 각 멤버가 지불한 금액
-    final Map<int, double> share = {}; // 각 멤버가 부담해야 할 금액
-    final Map<int, Map<String, dynamic>> result = {}; // 최종 결과
-
-    // 초기화
-    for (var member in widget.members) {
-      paid[member.memberId] = 0;
-      share[member.memberId] = 0;
-      result[member.memberId] = {
-        'nickname': member.nickname,
-        'paid': 0.0,
-        'share': 0.0,
-        'balance': 0.0, // 양수: 받을 금액, 음수: 지불할 금액
-      };
-    }
-
-    // 각 결제 항목에 대해 계산
-    for (var payment in _payments) {
-      // 결제자가 지불한 금액 추가
-      paid[payment.payerId] = (paid[payment.payerId] ?? 0) + payment.amount;
-
-      // 참여자별 부담 금액 계산
-      final perPersonShare = payment.amount / payment.participantIds.length;
-      for (var participantId in payment.participantIds) {
-        share[participantId] = (share[participantId] ?? 0) + perPersonShare;
-      }
-    }
-
-    // 최종 정산 결과 계산
-    for (var memberId in paid.keys) {
-      final paidAmount = paid[memberId] ?? 0;
-      final shareAmount = share[memberId] ?? 0;
-      final balance = paidAmount - shareAmount; // 양수: 받을 금액, 음수: 지불할 금액
-
-      if (result.containsKey(memberId)) {
-        result[memberId]!['paid'] = paidAmount;
-        result[memberId]!['share'] = shareAmount;
-        result[memberId]!['balance'] = balance;
-      }
-    }
-
-    return result;
+    return payments.fold(0, (sum, item) => sum + item.amount);
   }
 
   @override
   Widget build(BuildContext context) {
-    // 멤버별 정산 내역
-    final settlementResult = _calculateSettlement();
-
     // 숫자 포맷터
     final currencyFormat = NumberFormat('#,###', 'ko_KR');
+    final startDate =
+        planTitle != null && planTitle!.contains("2023")
+            ? "2023.09.15~17" // 임시 날짜 설정 (나중에 실제 데이터로 대체)
+            : date;
 
     return Container(
-      color: Colors.grey.shade100,
-      child: Column(
+      color: AppColors.background,
+      padding: const EdgeInsets.all(16), // 여백 추가
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          // 상단 정보 및 추가 버튼
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '여행 정산',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      '총 ${_payments.length}건, ${currencyFormat.format(_totalAmount)}원',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.mediumGray,
-                      ),
-                    ),
-                  ],
+          // 영수증 본체
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
                 ),
-                ElevatedButton.icon(
-                  onPressed: _showAddPaymentDialog,
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('결제 추가'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+              ],
+              border: Border.all(color: Colors.grey.shade300, width: 1),
+            ),
+            child: Column(
+              children: [
+                // 영수증 제목
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 32, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '네잎네산',
+                        style: TextStyle(
+                          fontFamily: 'Anemone_air',
+                          fontSize: 20, // 글자 크기 줄임
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.darkGray,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Image.asset(
+                        'assets/images/clover.png',
+                        width: 30,
+                        height: 30,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 구분선
+                _buildDottedLine(),
+
+                // 여행지 정보
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          planTitle ?? '여행 계획',
+                          style: TextStyle(
+                            fontFamily: 'Anemone_air',
+                            fontSize: 14, // 글자 크기 줄임
+                            color: AppColors.darkGray,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        startDate,
+                        style: TextStyle(
+                          fontFamily: 'Anemone_air',
+                          fontSize: 14, // 글자 크기 줄임
+                          color: AppColors.darkGray,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 구분선
+                _buildDottedLine(),
+
+                // 영수증 항목들
+                if (payments.isEmpty)
+                  _buildEmptyPaymentsView()
+                else
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight:
+                          MediaQuery.of(context).size.height *
+                          0.4, // 스크롤 가능한 최대 높이 설정
+                      minHeight: 200,
+                    ),
+
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: payments.length,
+                      separatorBuilder:
+                          (context, index) => const SizedBox(height: 4),
+                      itemBuilder: (context, index) {
+                        final payment = payments[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      payment.title,
+                                      style: TextStyle(
+                                        fontFamily: 'Anemone_air',
+                                        fontSize: 14,
+                                        color: AppColors.darkGray,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      DateFormat(
+                                        'yyyy.MM.dd',
+                                      ).format(payment.paymentDate),
+                                      style: TextStyle(
+                                        fontFamily: 'Anemone_air',
+                                        fontSize: 10,
+                                        color: AppColors.mediumGray,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '${currencyFormat.format(payment.amount)}',
+                                style: TextStyle(
+                                  fontFamily: 'Anemone_air',
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.darkGray,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                // 구분선
+                _buildDottedLine(),
+
+                // 총액
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '총 지출액',
+                        style: TextStyle(
+                          fontFamily: 'Anemone_air',
+                          fontSize: 16, // 글자 크기 줄임
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.darkGray,
+                        ),
+                      ),
+                      Text(
+                        '${currencyFormat.format(_totalAmount)}',
+                        style: TextStyle(
+                          fontFamily: 'Anemone_air',
+                          fontSize: 16, // 글자 크기 줄임
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.darkGray,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 구분선
+                _buildDottedLine(),
+
+                // 바코드
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 50, // 바코드 높이 줄임
+                        width: 200, // 바코드 너비 줄임
+                        child: CustomPaint(painter: BarcodePainter()),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 푸터
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 24), // 패딩 줄임
+                  child: Text(
+                    'GOOD LUCK',
+                    style: TextStyle(
+                      fontFamily: 'Anemone_air',
+                      fontSize: 14, // 글자 크기 줄임
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
@@ -407,384 +634,160 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
             ),
           ),
 
-          Expanded(
-            child: Column(
-              children: [
-                if (_payments.isEmpty)
-                  Expanded(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.receipt_long,
-                            size: 64,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            '등록된 결제 내역이 없습니다',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '결제 내역을 추가하여 정산을 시작해보세요!',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          // 영수증 형태 결제 목록
-                          Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: [
-                                // 영수증 헤더
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary.withOpacity(0.1),
-                                    borderRadius: const BorderRadius.only(
-                                      topLeft: Radius.circular(8),
-                                      topRight: Radius.circular(8),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        '${widget.planTitle ?? '여행'} 정산 내역',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.primary,
-                                        ),
-                                      ),
-                                      Text(
-                                        '총액: ${currencyFormat.format(_totalAmount)}원',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.primaryDark,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+          // 왼쪽 상단 테이프
+          Positioned(top: 5, left: -60, child: _buildTape()),
 
-                                // 영수증 내용
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        flex: 5,
-                                        child: Text(
-                                          '항목',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          '결제자',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          '금액',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                          textAlign: TextAlign.right,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+          // 오른쪽 하단 테이프
+          Positioned(bottom: -10, right: -35, child: _buildTape()),
+        ],
+      ),
+    );
+  }
 
-                                // 구분선
-                                Divider(
-                                  color: Colors.grey.shade300,
-                                  thickness: 1,
-                                  height: 1,
-                                ),
+  // 투명 테이프 위젯 (사선 모양)
+  Widget _buildTape() {
+    return Transform.rotate(
+      angle: -0.7, // 약간 기울어진 모양
+      child: ClipPath(
+        clipper: TapeClipper(),
+        child: Container(
+          width: 150,
+          height: 50,
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(6),
+          ),
+        ),
+      ),
+    );
+  }
 
-                                // 결제 항목 목록
-                                ListView.separated(
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  shrinkWrap: true,
-                                  itemCount: _payments.length,
-                                  separatorBuilder:
-                                      (context, index) => Divider(
-                                        color: Colors.grey.shade200,
-                                        height: 1,
-                                      ),
-                                  itemBuilder: (context, index) {
-                                    final payment = _payments[index];
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 12,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          // 항목명
-                                          Expanded(
-                                            flex: 5,
-                                            child: Text(
-                                              payment.title,
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                          ),
-                                          // 결제자
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(
-                                              payment.payerNickname,
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                          ),
-                                          // 금액
-                                          Expanded(
-                                            flex: 3,
-                                            child: Text(
-                                              '${currencyFormat.format(payment.amount)}원',
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                              textAlign: TextAlign.right,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
+  // 점선 구분선 위젯
+  Widget _buildDottedLine() {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+      height: 1,
+      child: CustomPaint(
+        painter: DottedLinePainter(),
+        size: const Size(double.infinity, 1),
+      ),
+    );
+  }
 
-                                // 영수증 푸터 (총액)
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: const BorderRadius.only(
-                                      bottomLeft: Radius.circular(8),
-                                      bottomRight: Radius.circular(8),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text(
-                                        '합계',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        '${currencyFormat.format(_totalAmount)}원',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          // 정산 결과 (멤버별)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // 정산 결과 헤더
-                                const Text(
-                                  '정산 결과',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-
-                                // 멤버별 정산 내역
-                                Column(
-                                  children:
-                                      settlementResult.values.map((
-                                        memberResult,
-                                      ) {
-                                        final nickname =
-                                            memberResult['nickname'];
-                                        final paid =
-                                            memberResult['paid'] as double;
-                                        final share =
-                                            memberResult['share'] as double;
-                                        final balance =
-                                            memberResult['balance'] as double;
-
-                                        return Container(
-                                          margin: const EdgeInsets.only(
-                                            bottom: 8,
-                                          ),
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                balance > 0
-                                                    ? Colors.green.shade50
-                                                    : balance < 0
-                                                    ? Colors.red.shade50
-                                                    : Colors.grey.shade50,
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            border: Border.all(
-                                              color:
-                                                  balance > 0
-                                                      ? Colors.green.shade200
-                                                      : balance < 0
-                                                      ? Colors.red.shade200
-                                                      : Colors.grey.shade300,
-                                            ),
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              // 닉네임
-                                              Text(
-                                                nickname,
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-
-                                              // 지불 및 부담 금액
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
-                                                children: [
-                                                  Text(
-                                                    '지불한 금액: ${currencyFormat.format(paid)}원',
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    '부담할 금액: ${currencyFormat.format(share)}원',
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 8),
-
-                                              // 정산 결과
-                                              Text(
-                                                balance > 0
-                                                    ? '받을 금액: ${currencyFormat.format(balance)}원'
-                                                    : balance < 0
-                                                    ? '보낼 금액: ${currencyFormat.format(-balance)}원'
-                                                    : '정산 완료',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  color:
-                                                      balance > 0
-                                                          ? Colors
-                                                              .green
-                                                              .shade700
-                                                          : balance < 0
-                                                          ? Colors.red.shade700
-                                                          : Colors
-                                                              .grey
-                                                              .shade700,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      }).toList(),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
+  // 비어있는 경우 위젯
+  Widget _buildEmptyPaymentsView() {
+    return Container(
+      height: 180, // 빈 상태 높이 줄임
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.receipt_long_outlined,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '아직 등록된 결제 내역이 없습니다',
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 16,
+              fontFamily: 'Anemone_air',
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: onAddPayment,
+            icon: const Icon(Icons.add, size: 20),
+            label: const Text('결제 내역 추가'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+// 테이프 모양을 위한 클리퍼
+class TapeClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    Path path = Path();
+    path.moveTo(size.width * 0.25, size.height * 0.5); // 왼쪽 하단 모서리에서 시작
+    path.lineTo(size.width * 0.1, 0); // 왼쪽 상단 모서리
+    path.lineTo(size.width, 0); // 오른쪽 상단 모서리
+    path.lineTo(size.width, size.height); // 오른쪽 하단 모서리
+    path.lineTo(size.width * 0.1, size.height); // 왼쪽 하단 모서리
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
+
+// 점선 그리기 위한 CustomPainter
+class DottedLinePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint =
+        Paint()
+          ..color = Colors.grey.shade400
+          ..strokeWidth = 1
+          ..style = PaintingStyle.stroke;
+
+    double dashWidth = 5, dashSpace = 5, startX = 0;
+
+    while (startX < size.width) {
+      canvas.drawLine(Offset(startX, 0), Offset(startX + dashWidth, 0), paint);
+      startX += dashWidth + dashSpace;
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+// 바코드 그리기 위한 CustomPainter
+class BarcodePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint =
+        Paint()
+          ..color = Colors.black
+          ..style = PaintingStyle.fill;
+
+    final random = List.generate(
+      50,
+      (index) => index * 3.0 + (index % 3) * 2.0,
+    );
+    double startX = 0;
+
+    for (int i = 0; i < random.length; i++) {
+      // 각 바코드 라인의 두께와 간격 설정
+      final lineWidth = i % 4 == 0 ? 3.0 : 1.5;
+      final spaceWidth = 2.0;
+
+      // 바코드 선 그리기
+      canvas.drawRect(Rect.fromLTWH(startX, 0, lineWidth, size.height), paint);
+
+      startX += lineWidth + spaceWidth;
+
+      // 바코드가 영역을 벗어나면 그리기 중단
+      if (startX > size.width) break;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

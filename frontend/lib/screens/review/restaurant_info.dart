@@ -3,73 +3,93 @@ import '../../config/theme.dart';
 
 class RestaurantInfo extends StatelessWidget {
   final Map<String, dynamic> data;
+  final String? imageUrl; // ✅ 대표 이미지 URL 전달받음
 
-  const RestaurantInfo({Key? key, required this.data}) : super(key: key);
+  const RestaurantInfo({
+    Key? key,
+    required this.data,
+    this.imageUrl,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // ✅ 디버깅: 주소 값 확인
     print("RestaurantInfo Data: ${data['addressName']}");
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        /// 가게 이미지
+        /// ✅ 대표 이미지 (우선순위: imageUrl > data['image'] > 기본 이미지)
         Container(
           width: double.infinity,
           height: 200,
           decoration: BoxDecoration(
             color: AppColors.mediumGray,
-            image: (data['image'] != null && data['image'].isNotEmpty)
-                ? DecorationImage(
-              image: NetworkImage(data['image']), // ✅ 서버에서 이미지 가져오기
-              fit: BoxFit.cover,
-            )
-                : const DecorationImage(
-              image: AssetImage("assets/images/restaurant_image.jpg"), // ✅ 기본 이미지 적용
+            image: DecorationImage(
+              image: _buildImageProvider(),
               fit: BoxFit.cover,
             ),
           ),
         ),
 
-        /// 태그 목록 추가
+        /// ✅ 태그 예쁘게 출력
         if (data['tags'] != null && data['tags'] is List)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Wrap(
               spacing: 8.0,
               runSpacing: 4.0,
               children: (data['tags'] as List<dynamic>).map<Widget>((tag) {
-                return Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    border: Border.all(color: AppColors.mediumGray),
-                    borderRadius: BorderRadius.circular(20),
+                final tagName = tag['tagName']?.toString().replaceAll(' ', '') ?? '';
+                return Chip(
+                  label: Text(
+                    '#$tagName',
+                    style: const TextStyle(fontSize: 12, color: AppColors.primaryDark),
                   ),
-                  child: Text(
-                    tag.toString(),
-                    style: TextStyle(color: AppColors.darkGray),
+                  backgroundColor: AppColors.primary.withOpacity(0.15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
+                  side: BorderSide.none,
                 );
               }).toList(),
             ),
           ),
 
-        /// 가게 정보
+        /// ✅ 기본 정보
         Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildInfoRow(Icons.location_on, data['addressName'] ?? "주소 정보 없음"),
               _buildInfoRow(Icons.access_time, "영업시간: ${data['business_hours'] ?? "정보 없음"}"),
-              _buildInfoRow(Icons.phone, (data['phone'] != null && data['phone'].toString().trim().isNotEmpty) ? data['phone'] : "전화 번호: 정보 없음"),
+              _buildInfoRow(
+                Icons.phone,
+                (data['phone'] != null && data['phone'].toString().trim().isNotEmpty)
+                    ? data['phone']
+                    : "전화 번호: 정보 없음",
+              ),
             ],
           ),
         ),
       ],
     );
+  }
+
+  /// ✅ 이미지 우선순위 설정
+  ImageProvider _buildImageProvider() {
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      return imageUrl!.startsWith("http")
+          ? NetworkImage(imageUrl!)
+          : AssetImage(imageUrl!) as ImageProvider;
+    }
+
+    final original = data['image'];
+    if (original != null && original.isNotEmpty) {
+      return NetworkImage(original);
+    }
+
+    return const AssetImage("assets/images/restaurant_image.jpg");
   }
 
   Widget _buildInfoRow(IconData icon, String text) {
@@ -82,7 +102,7 @@ class RestaurantInfo extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: TextStyle(color: AppColors.darkGray, fontSize: 14),
+              style: const TextStyle(color: AppColors.darkGray, fontSize: 14),
               overflow: TextOverflow.ellipsis,
               maxLines: 2,
             ),
