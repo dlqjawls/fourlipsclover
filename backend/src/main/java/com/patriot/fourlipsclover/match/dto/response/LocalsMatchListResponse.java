@@ -21,7 +21,7 @@ public class LocalsMatchListResponse {
     private Long applicantId;      // 신청자(매칭 요청자)의 회원 ID
     private String regionName;     // 지역 이름
     private LocalDateTime createdAt;  // 매칭 생성 일시
-    private String status;         // 매칭 상태 (PENDING, CONFIRMED, REJECTED, CANCELED)
-    private Integer price;         // 팁 금액(상품 테이블 만들어서 가져올 예정)
+    private String matchingStatus;         // 매칭 상태 (PENDING, CONFIRMED, REJECTED, CANCELED)
+    private Integer price;         // 팁 금액(결제 성공 후 데이터에서 가져올 예정)
 
 }

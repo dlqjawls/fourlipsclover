@@ -8,8 +8,9 @@ import com.patriot.fourlipsclover.match.entity.Match;
 import com.patriot.fourlipsclover.match.service.MatchService;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentApproveResponse;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentReadyResponse;
-import com.patriot.fourlipsclover.payment.repository.PaymentItemRepository;
 import com.patriot.fourlipsclover.payment.service.PaymentService;
+import com.patriot.fourlipsclover.restaurant.dto.response.RegionListResponse;
+import com.patriot.fourlipsclover.restaurant.service.RegionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -25,7 +26,7 @@ public class MatchController {
 
     private final MatchService matchService;
     private final PaymentService paymentService;
-    private final PaymentItemRepository paymentItemRepository;
+    private final RegionService regionService;
 
     // 공통 인증 정보 추출 메서드
     private long getCurrentMemberId() {
@@ -137,6 +138,13 @@ public class MatchController {
         long currentMemberId = getCurrentMemberId();
         matchService.rejectMatch(matchId, currentMemberId);
         return ResponseEntity.ok("매칭 거절 및 결제 취소 완료");
+    }
+
+    // 사용자 - Region(광역시) 리스트 조회
+    @GetMapping("/region-list")
+    public ResponseEntity<List<RegionListResponse>> getRegionList() {
+        List<RegionListResponse> response = regionService.getRegionList();
+        return ResponseEntity.ok(response);
     }
 
     // 현지인 - 기획서 작성 완료된 매칭에 대해 채팅방 생성(세션기간 1일)

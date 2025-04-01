@@ -12,6 +12,8 @@ import com.patriot.fourlipsclover.group.repository.GroupInvitationRepository;
 import com.patriot.fourlipsclover.group.repository.GroupJoinRequestRepository;
 import com.patriot.fourlipsclover.group.repository.GroupMemberRepository;
 import com.patriot.fourlipsclover.group.repository.GroupRepository;
+import com.patriot.fourlipsclover.match.entity.GuideRequestForm;
+import com.patriot.fourlipsclover.match.repository.GuideRequestFormRepository;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberRepository;
 import com.patriot.fourlipsclover.notification.service.NotificationService;
@@ -37,6 +39,7 @@ public class GroupService {
     private final NotificationService notificationService;
     private final MemberRepository memberRepository;
     private final GroupJoinRequestRepository groupJoinRequestRepository;
+    private final GuideRequestFormRepository guideRequestFormRepository;
 
     public GroupResponse createGroup(GroupCreateRequest request, Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
@@ -230,6 +233,23 @@ public class GroupService {
         }
 
         return groupJoinRequestRepository.findByGroup_GroupId(groupId);
+    }
+
+    public void handleGroupAssignment(GuideRequestForm guideRequestForm) {
+        // 그룹이 선택되지 않은 경우 (나홀로 여행 선택)
+        if (guideRequestForm.getGroup() == null) {
+            // 새로운 그룹을 생성하고, 해당 그룹에 매칭 신청자 추가
+            Group newGroup = new Group();
+            newGroup.setName("새로운 여행");  // 기본 이름 설정
+            newGroup.setCreatedAt(LocalDateTime.now());
+
+            // 그룹 생성 후, 해당 그룹의 ID를 신청서에 설정
+            groupRepository.save(newGroup);
+
+            // 신청서에 생성된 그룹 ID 저장
+            guideRequestForm.setGroup(newGroup);
+            guideRequestFormRepository.save(guideRequestForm);
+        }
     }
 
 }

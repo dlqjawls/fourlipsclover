@@ -1,5 +1,6 @@
 package com.patriot.fourlipsclover.match.entity;
 
+import com.patriot.fourlipsclover.group.entity.Group;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -22,15 +23,10 @@ public class GuideRequestForm {
     @Column(name = "guide_request_form_id", nullable = false)
     private Integer guideRequestFormId;
 
-//    // Match 엔티티와의 양방향 연관관계 설정 -> 양방향 설정시 db에 값 생성 불가,, 삭제 예정
-//    @OneToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "match_id", referencedColumnName = "match_id")
-//    private Match match;
-
-//    // 현지인 컨설팅이 끝나면 선택한 group에 plan으로 추가될 수 있도록 옵션 제공
-//    @OneToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "group_id")
-//    private Group group;
+    // 현지인 컨설팅이 끝나면 선택한 group에 plan으로 추가될 수 있도록 옵션 제공
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_id")
+    private Group group; // 그룹 정보
 
     // 도보, 버스, 자동차, 기타
     @Column(name = "transportation", nullable = false)
