@@ -1,6 +1,7 @@
 // lib/services/kakao_map_service.dart
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import 'package:frontend/providers/map_provider.dart';
 
 
 
@@ -22,6 +23,33 @@ class KakaoMapPlatform {
       return false;
     }
   }
+
+  static Future<void> addLabelsInBatch(List<MapLabel> labels) async {
+  try {
+    // 기존 라벨 제거
+    await clearLabels();
+    
+    // 모든 라벨을 한 번에 추가
+    for (var label in labels) {
+      await addLabel(
+        labelId: label.id,
+        latitude: label.latitude,
+        longitude: label.longitude,
+        text: label.text,
+        imageAsset: label.imageAsset,
+        textSize: label.textSize,
+        alpha: label.alpha ?? 1.0,
+        rotation: label.rotation ?? 0.0,
+        zIndex: label.zIndex,
+        isClickable: label.isClickable,
+      );
+    }
+  } catch (e) {
+    print('라벨 일괄 추가 실패: $e');
+  }
+}
+
+
 
 
  // 라벨 클릭 콜백 변수
@@ -289,4 +317,17 @@ static Future<void> clearRoutes() async {
     rethrow;
   }
 }
+static Future<bool> initializeLabelLayer() async {
+  try {
+    print('라벨 레이어 초기화 시도');
+    final bool result = await _channel.invokeMethod('initializeLabelLayer');
+    print('라벨 레이어 초기화 결과: $result');
+    return result;
+  } catch (e) {
+    print('라벨 레이어 초기화 실패: $e');
+    return false;
+  }
+}
+
+  
 }

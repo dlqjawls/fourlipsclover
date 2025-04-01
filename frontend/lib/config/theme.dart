@@ -42,7 +42,6 @@ class AppTheme {
     colorScheme: ColorScheme.light(
       primary: AppColors.primary,
       secondary: AppColors.primaryDark,
-      surface: AppColors.background,
     ),
     textTheme: TextTheme(bodyMedium: _baseTextStyle),
   );
