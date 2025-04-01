@@ -45,8 +45,10 @@ public class RestaurantController {
 	 * @param query 검색어 (예: "장덕동 고깃집")
 	 * @return 검색된 레스토랑 목록
 	 */
+	@Operation(summary = "식당 검색", description = "검색어를 이용하여 식당을 검색합니다.")
 	@GetMapping("/search")
-	public ResponseEntity<List<RestaurantResponse>> searchRestaurants(@RequestParam String query) {
+	public ResponseEntity<List<RestaurantResponse>> searchRestaurants(
+			@Parameter(description = "검색어 (예: \"장덕동 고깃집\")", required = true) @RequestParam String query) {
 		List<RestaurantResponse> results = restaurantElasticsearchService.searchRestaurants(
 				query);
 		return ResponseEntity.ok(results);
