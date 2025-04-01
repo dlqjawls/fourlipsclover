@@ -3,9 +3,14 @@ import 'package:frontend/config/theme.dart';
 import 'package:frontend/screens/matching/matchingcreate/styles/matching_styles.dart';
 import 'package:frontend/screens/matching/matchingcreate/matching_resist.dart';
 import 'package:frontend/widgets/skeleton_loading.dart';
+import 'package:frontend/models/matching/matching_region.dart';
 class MatchingSelectLocalScreen extends StatefulWidget {
-  const MatchingSelectLocalScreen({Key? key}) : super(key: key);
+  final Region selectedRegion;
 
+  const MatchingSelectLocalScreen({
+    Key? key,
+    required this.selectedRegion,
+  }) : super(key: key);
   @override
   State<MatchingSelectLocalScreen> createState() =>
       _MatchingSelectLocalScreenState();
