@@ -7,6 +7,7 @@ import com.patriot.fourlipsclover.restaurant.dto.response.ApiResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
+import com.patriot.fourlipsclover.restaurant.service.RestaurantElasticsearchService;
 import com.patriot.fourlipsclover.restaurant.service.RestaurantService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -36,6 +37,20 @@ import org.springframework.web.multipart.MultipartFile;
 public class RestaurantController {
 
 	private final RestaurantService restaurantService;
+	private final RestaurantElasticsearchService restaurantElasticsearchService;
+
+	/**
+	 * 레스토랑 검색 API 엔드포인트
+	 *
+	 * @param query 검색어 (예: "장덕동 고깃집")
+	 * @return 검색된 레스토랑 목록
+	 */
+	@GetMapping("/search")
+	public ResponseEntity<List<RestaurantResponse>> searchRestaurants(@RequestParam String query) {
+		List<RestaurantResponse> results = restaurantElasticsearchService.searchRestaurants(
+				query);
+		return ResponseEntity.ok(results);
+	}
 
 	@Operation(summary = "주변 식당 검색", description = "위도/경도 기반으로 주변 식당을 검색합니다.")
 	@GetMapping("/nearby")
