@@ -38,6 +38,7 @@ class UserReceipt extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.verylightGray,
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         backgroundColor: Colors.white,
         centerTitle: true,
         elevation: 0,

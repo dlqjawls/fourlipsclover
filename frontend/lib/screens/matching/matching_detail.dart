@@ -6,7 +6,7 @@ import 'package:frontend/services/matching/matching_service.dart';
 class MatchingDetailScreen extends StatefulWidget {
   final int matchId;
 
-  const MatchingDetailScreen({Key? key, required this.matchId}) 
+  const MatchingDetailScreen({Key? key, required this.matchId})
     : super(key: key);
 
   @override
@@ -31,9 +31,9 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
         _isLoading = true;
         _error = null;
       });
-      
+
       final detail = await _matchingService.getMatchDetail(widget.matchId);
-      
+
       setState(() {
         _matchingDetail = detail;
       });
@@ -51,6 +51,7 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         title: const Text('매칭 상세 정보'),
         centerTitle: true,
         actions: [
@@ -66,9 +67,7 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_error != null) {
@@ -88,9 +87,7 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
     }
 
     if (_matchingDetail == null) {
-      return const Center(
-        child: Text('매칭 정보가 없습니다.'),
-      );
+      return const Center(child: Text('매칭 정보가 없습니다.'));
     }
 
     return RefreshIndicator(
@@ -153,7 +150,10 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
             _buildDetailItem('시작일', _matchingDetail!.startDate),
             _buildDetailItem('종료일', _matchingDetail!.endDate),
             _buildDetailItem('요구사항', _matchingDetail!.requirements),
-            _buildDetailItem('생성일', _formatDateTime(_matchingDetail!.createdAt)),
+            _buildDetailItem(
+              '생성일',
+              _formatDateTime(_matchingDetail!.createdAt),
+            ),
           ],
         ),
       ),
@@ -176,12 +176,7 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
               ),
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 15),
-            ),
-          ),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 15))),
         ],
       ),
     );
