@@ -6,12 +6,16 @@ class PlanMembersBar extends StatelessWidget {
   final List<Member> members; // 여행의 실제 멤버 목록
   final int currentUserId; // 현재 로그인한 사용자 ID
   final int treasurerId; // 총무 사용자 ID
+  final bool isExpanded; // 확장 상태 변수 추가
+  final VoidCallback onToggle; // 토글 함수 추가
 
   const PlanMembersBar({
     Key? key,
     required this.members,
     required this.currentUserId,
     required this.treasurerId,
+    required this.isExpanded, // 확장 상태 필수 파라미터
+    required this.onToggle, // 토글 함수 필수 파라미터
   }) : super(key: key);
 
   @override
@@ -23,13 +27,6 @@ class PlanMembersBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
         decoration: BoxDecoration(
           color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.05),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
-            ),
-          ],
         ),
         child: Center(
           child: Text(
@@ -44,73 +41,107 @@ class PlanMembersBar extends StatelessWidget {
       );
     }
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
-            blurRadius: 2,
-            offset: const Offset(0, 1),
+    return Column(
+      children: [
+        // 제목 부분 (회색선 없음)
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          color: Colors.white,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '여행 멤버 (${members.length})',
+                style: TextStyle(
+                  fontFamily: 'Anemone_air',
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.mediumGray,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 제목
-          Text(
-            '여행 멤버',
-            style: TextStyle(
-              fontFamily: 'Anemone_air',
-              fontSize: 12,
-              color: AppColors.mediumGray,
+        ),
+        
+        // 확장 상태에 따라 순서 변경
+        if (isExpanded) 
+          // 펼쳐진 상태: 멤버 목록 먼저 표시
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+            ),
+            child: SizedBox(
+              height: 70,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  // 총무 먼저 표시
+                  ...members
+                      .where((m) => m.memberId == treasurerId)
+                      .map(
+                        (member) => Padding(
+                          padding: const EdgeInsets.only(right: 12.0),
+                          child: _buildMemberAvatar(member),
+                        ),
+                      ),
+                  // 일반 멤버 표시
+                  ...members
+                      .where((m) => m.memberId != treasurerId)
+                      .map(
+                        (member) => Padding(
+                          padding: const EdgeInsets.only(right: 12.0),
+                          child: _buildMemberAvatar(member),
+                        ),
+                      ),
+
+                  // 공간 추가하여 추가 버튼과 겹치지 않게
+                  const SizedBox(width: 8),
+                ],
+              ),
             ),
           ),
-
-          const SizedBox(height: 8),
-
-          // 멤버 아바타 목록 (수평 스크롤)
-          SizedBox(
-            height: 70,
-            child: Row(
-              children: [
-                // 멤버 리스트 (스크롤 가능)
-                Expanded(
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      // 총무 먼저 표시
-                      ...members
-                          .where((m) => m.memberId == treasurerId)
-                          .map(
-                            (member) => Padding(
-                              padding: const EdgeInsets.only(right: 12.0),
-                              child: _buildMemberAvatar(member),
-                            ),
-                          ),
-                      // 일반 멤버 표시
-                      ...members
-                          .where((m) => m.memberId != treasurerId)
-                          .map(
-                            (member) => Padding(
-                              padding: const EdgeInsets.only(right: 12.0),
-                              child: _buildMemberAvatar(member),
-                            ),
-                          ),
-
-                      // 공간 추가하여 추가 버튼과 겹치지 않게
-                      const SizedBox(width: 8),
-                    ],
+        
+        // 토글 버튼은 항상 표시 (위치만 바뀜)
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            // 가로 구분선
+            Container(
+              height: 1,
+              color: Colors.grey.withOpacity(0.2),
+            ),
+            
+            // 토글 버튼
+            GestureDetector(
+              onTap: onToggle,
+              child: Container(
+                width: 60,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(
+                    color: Colors.grey.withOpacity(0.3),
+                    width: 1,
                   ),
                 ),
-              ],
+                child: Center(
+                  child: Text(
+                    isExpanded ? '▲' : '▼',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.darkGray,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 

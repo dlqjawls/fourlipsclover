@@ -55,7 +55,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   DateTime? _selectedDay;
   int _selectedIndex = 0; // 0: 캘린더, 1: 여행계획, 2: 앨범
   late Group _currentGroup;
-   bool _isLoading = false;
+  bool _isLoading = false;
+  bool _isMembersBarExpanded = false;
 
   // 그룹 상세 정보 및 멤버 데이터
   GroupDetail? _groupDetail;
@@ -118,6 +119,13 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         });
       }
     }
+  }
+
+  // 멤버바 토글 함수
+  void _toggleMembersBar() {
+    setState(() {
+      _isMembersBarExpanded = !_isMembersBarExpanded;
+    });
   }
 
   // GroupDetail 타입을 명시적으로 지정
@@ -273,12 +281,13 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             ),
         ],
       ),
-       body: LoadingOverlay(
-    isLoading: _isLoading || 
-               groupProvider.isLoading || 
-               planProvider.isLoading ||
-               _isLoadingDetail ||
-               _isLoadingPlans,
+      body: LoadingOverlay(
+        isLoading:
+            _isLoading ||
+            groupProvider.isLoading ||
+            planProvider.isLoading ||
+            _isLoadingDetail ||
+            _isLoadingPlans,
         overlayColor: Colors.white.withOpacity(0.7), // 0.7 opacity 유지
         minDisplayTime: const Duration(milliseconds: 1200), // 최소 1.2초 표시
         child: Column(
@@ -290,6 +299,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
               GroupMembersBar(
                 members: _groupDetail!.members,
                 currentUserId: _getMyUserId(),
+                isExpanded: _isMembersBarExpanded, // 토글 상태 전달
+                onToggle: _toggleMembersBar, // 토글 함수 전달
                 onAddMember: () async {
                   // 초대 링크 생성 및 공유 기능
                   final groupProvider = Provider.of<GroupProvider>(
@@ -627,41 +638,44 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   }
 
   // 그룹 삭제 실행
-Future<void> _deleteGroup() async {
-  final groupProvider = Provider.of<GroupProvider>(context, listen: false);
+  Future<void> _deleteGroup() async {
+    final groupProvider = Provider.of<GroupProvider>(context, listen: false);
 
-  setState(() {
-    _isLoading = true; // 로딩 상태 설정
-  });
+    setState(() {
+      _isLoading = true; // 로딩 상태 설정
+    });
 
-  try {
-    final success = await groupProvider.deleteGroup(_currentGroup.groupId);
+    try {
+      final success = await groupProvider.deleteGroup(_currentGroup.groupId);
 
-    if (success) {
-      // 그룹 목록 새로고침을 await로 변경
-      await Provider.of<GroupProvider>(context, listen: false).fetchMyGroups();
-      
+      if (success) {
+        // 그룹 목록 새로고침을 await로 변경
+        await Provider.of<GroupProvider>(
+          context,
+          listen: false,
+        ).fetchMyGroups();
+
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('그룹이 삭제되었습니다.')));
+        }
+      }
+    } catch (e) {
       if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('그룹이 삭제되었습니다.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('그룹 삭제 중 오류 발생: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false; // 로딩 상태 해제
+        });
       }
     }
-  } catch (e) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('그룹 삭제 중 오류 발생: $e')),
-      );
-    }
-  } finally {
-    if (mounted) {
-      setState(() {
-        _isLoading = false; // 로딩 상태 해제
-      });
-    }
   }
-}
 
   // _getMyUserId 메서드
   int _getMyUserId() {
