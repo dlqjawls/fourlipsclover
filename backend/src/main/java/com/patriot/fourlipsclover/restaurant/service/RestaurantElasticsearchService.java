@@ -20,12 +20,6 @@ public class RestaurantElasticsearchService {
 	private final ElasticsearchClient elasticsearchClient;
 	private final RestaurantMapper restaurantMapper;
 
-	/**
-	 * 다중 필드(이름, 주소, 카테고리, 태그)에서 검색어를 검색합니다. 이름(3배), 주소(2배)에 가중치를 부여합니다.
-	 *
-	 * @param query 검색어 (예: "장덕동 고깃집")
-	 * @return 검색된 RestaurantDocument 리스트
-	 */
 	public List<RestaurantResponse> searchRestaurants(String query) {
 		try {
 			SearchResponse<RestaurantDocument> response = elasticsearchClient.search(s -> s
