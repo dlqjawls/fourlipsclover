@@ -51,11 +51,18 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
   final Set<int> _selectedParticipantIds = {}; // 참여자 ID 집합
   bool _isLoading = true; // 초기값을 true로 설정
 
+  // 여행 시작일과 종료일을 저장할 변수 추가
+  DateTime? _startDate;
+  DateTime? _endDate;
+
   @override
   void initState() {
     super.initState();
     // Future.microtask를 사용하여 빌드 후 로드
-    Future.microtask(() => _loadPayments());
+    Future.microtask(() {
+      _loadPlanDates(); // 여행 날짜 로드 메서드 추가
+      _loadPayments();
+    });
   }
 
   @override
@@ -63,6 +70,28 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
     _titleController.dispose();
     _amountController.dispose();
     super.dispose();
+  }
+
+  // 여행 날짜 로드 메서드 추가
+  Future<void> _loadPlanDates() async {
+    if (!mounted) return;
+
+    try {
+      final planProvider = Provider.of<PlanProvider>(context, listen: false);
+      final planDetail = await planProvider.fetchPlanDetail(
+        widget.groupId,
+        widget.planId,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _startDate = planDetail.startDate;
+        _endDate = planDetail.endDate;
+      });
+    } catch (e) {
+      debugPrint('여행 날짜 로드 중 오류: $e');
+    }
   }
 
   // 결제 내역 로드 (임시 데이터)
@@ -178,6 +207,21 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
         });
       }
     }
+  }
+
+  // 여행 날짜 포맷 메서드 추가
+  String _formatTravelDate() {
+    if (_startDate == null || _endDate == null) {
+      return '2020.12.17~19'; // 기본값 설정
+    }
+
+    final startFormat = DateFormat('yyyy.MM.dd');
+    final endFormat = DateFormat('dd');
+
+    final start = startFormat.format(_startDate!);
+    final end = endFormat.format(_endDate!);
+
+    return '$start~$end';
   }
 
   // 결제 항목 추가 다이얼로그 표시
@@ -376,6 +420,7 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
                 payments: _payments,
                 planTitle: widget.planTitle ?? '여행 계획',
                 onAddPayment: _showAddPaymentDialog,
+                date: _formatTravelDate(), // 여행 날짜 전달
               ),
             ),
           ),
@@ -395,7 +440,7 @@ class ReceiptWidget extends StatelessWidget {
     required this.payments,
     this.planTitle,
     required this.onAddPayment,
-    this.date = '2020.12.17~19', // 기본값 설정
+    required this.date, // 필수 매개변수로 변경
   }) : super(key: key);
 
   // 총액 계산
@@ -407,10 +452,6 @@ class ReceiptWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     // 숫자 포맷터
     final currencyFormat = NumberFormat('#,###', 'ko_KR');
-    final startDate =
-        planTitle != null && planTitle!.contains("2023")
-            ? "2023.09.15~17" // 임시 날짜 설정 (나중에 실제 데이터로 대체)
-            : date;
 
     return Container(
       color: AppColors.background,
@@ -473,7 +514,7 @@ class ReceiptWidget extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          planTitle ?? '여행 계획',
+                          '# ${planTitle ?? '여행 계획'}', // '#' 추가
                           style: TextStyle(
                             fontFamily: 'Anemone_air',
                             fontSize: 14, // 글자 크기 줄임
@@ -483,7 +524,7 @@ class ReceiptWidget extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        startDate,
+                        date, // 실제 날짜 사용
                         style: TextStyle(
                           fontFamily: 'Anemone_air',
                           fontSize: 14, // 글자 크기 줄임
