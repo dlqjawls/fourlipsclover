@@ -14,6 +14,7 @@ class MyConsumptionPatternScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.verylightGray,
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         title: const Text('나의 프로필'),
         centerTitle: true,
         backgroundColor: AppColors.verylightGray,

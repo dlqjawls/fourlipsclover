@@ -18,6 +18,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
     return Scaffold(
       backgroundColor: AppColors.verylightGray,
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         backgroundColor: AppColors.verylightGray,
         title: const Text('프로필 사진 변경'),
         centerTitle: true,
