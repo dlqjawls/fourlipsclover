@@ -32,6 +32,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
   late Plan _currentPlan;
   PlanDetail? _planDetail;
   bool _isLoading = false;
+  bool _isMembersBarExpanded = false;
 
   @override
   void initState() {
@@ -42,6 +43,13 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
     // 빌드가 완료된 후 계획 상세 정보 로드
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadPlanDetail();
+    });
+  }
+
+  // 멤버바 토글 함수
+  void _toggleMembersBar() {
+    setState(() {
+      _isMembersBarExpanded = !_isMembersBarExpanded;
     });
   }
 
@@ -124,6 +132,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       members: _planDetail!.members,
                       currentUserId: _getMyUserId(),
                       treasurerId: _planDetail!.treasurerId,
+                      isExpanded: _isMembersBarExpanded,
+                      onToggle: _toggleMembersBar,
                     ),
 
                     // 상단 탭 버튼

@@ -635,24 +635,41 @@ class ReceiptWidget extends StatelessWidget {
           ),
 
           // 왼쪽 상단 테이프
-          Positioned(top: 5, left: -60, child: _buildTape()),
+          Positioned(top: 10, left: -57, child: _buildTapeTop()),
 
           // 오른쪽 하단 테이프
-          Positioned(bottom: -10, right: -35, child: _buildTape()),
+          Positioned(bottom: 7, right: -56, child: _buildTapeBottom()),
         ],
       ),
     );
   }
 
   // 투명 테이프 위젯 (사선 모양)
-  Widget _buildTape() {
+  Widget _buildTapeTop() {
     return Transform.rotate(
-      angle: -0.7, // 약간 기울어진 모양
+      angle: -0.8, // 약간 기울어진 모양
       child: ClipPath(
         clipper: TapeClipper(),
         child: Container(
-          width: 150,
-          height: 50,
+          width: 140,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(6),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTapeBottom() {
+    return Transform.rotate(
+      angle: 2.3, // 약간 기울어진 모양
+      child: ClipPath(
+        clipper: TapeClipper(),
+        child: Container(
+          width: 140,
+          height: 40,
           decoration: BoxDecoration(
             color: AppColors.primaryLight,
             borderRadius: BorderRadius.circular(6),
