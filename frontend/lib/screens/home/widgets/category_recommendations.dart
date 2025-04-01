@@ -6,6 +6,7 @@ import '../../../utils/text_style_extensions.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/nearby_restaurant_service.dart';
 import '../../../models/restaurant_model.dart';
+import '../../review/restaurant_detail.dart';
 
 class CategoryRecommendations extends StatefulWidget {
   const CategoryRecommendations({Key? key}) : super(key: key);
@@ -239,6 +240,14 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
                   return GestureDetector(
                     onTap: () {
                       // TODO: 식당 상세 페이지로 이동
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RestaurantDetailScreen(
+                            restaurantId: restaurant.kakaoPlaceId ?? '',
+                          ),
+                        ),
+                      );
                       print(
                         '식당 클릭: ${restaurant.placeName} (ID: ${restaurant.kakaoPlaceId})',
                       );
