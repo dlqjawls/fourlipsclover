@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class MatchListResponse {
 
+    private Integer matchId;
     private String regionName;  // 지역 이름
     private String guideNickname;  // 가이드의 닉네임
     private LocalDateTime createdAt;  // 매칭 생성일

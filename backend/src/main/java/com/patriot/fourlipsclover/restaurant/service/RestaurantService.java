@@ -20,12 +20,17 @@ import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.entity.*;
 import com.patriot.fourlipsclover.restaurant.mapper.RestaurantMapper;
 import com.patriot.fourlipsclover.restaurant.mapper.ReviewMapper;
-import com.patriot.fourlipsclover.restaurant.repository.*;
+import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
+import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
+import com.patriot.fourlipsclover.restaurant.repository.ReviewLikeJpaRepository;
+import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
+import com.patriot.fourlipsclover.tag.service.TagService;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
+import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -48,6 +53,7 @@ public class RestaurantService {
 	private final ReviewImageService reviewImageService;
 	private final CityRepository cityRepository;
 	private final FoodCategoryRepository foodCategoryRepository;
+	private final TagService tagService;
 
 	@Transactional
 	public ReviewResponse create(ReviewCreate reviewCreate, List<MultipartFile> images) {
@@ -63,6 +69,8 @@ public class RestaurantService {
 				.build();
 
 		reviewRepository.save(review);
+		CompletableFuture.runAsync(() -> tagService.generateTag(review));
+
 		List<String> imageUrls = reviewImageService.uploadFiles(review, images);
 		ReviewResponse response = reviewMapper.toReviewImageDto(review, imageUrls);
 		response.setLikedCount(0);
@@ -159,21 +167,31 @@ public class RestaurantService {
 		if (Objects.isNull(kakaoPlaceId) || kakaoPlaceId.isBlank()) {
 			throw new IllegalArgumentException("올바른 kakaoPlaceId 값을 입력하세요.");
 		}
-		return restaurantMapper.toDto(
+		RestaurantResponse restaurantResponse = restaurantMapper.toDto(
 				restaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
 						.orElseThrow(() -> new InvalidDataException(
 								"존재 하지 않는 식당입니다.")));
+		List<RestaurantTagResponse> restaurantTagResponses = tagService.findRestaurantTagByRestaurantId(
+				kakaoPlaceId);
+		restaurantResponse.setTags(restaurantTagResponses);
+		return restaurantResponse;
 	}
 
 	@Transactional(readOnly = true)
 	public List<RestaurantResponse> findNearbyRestaurants(Double latitude, Double longitude,
 			Integer radius) {
-
+		List<RestaurantResponse> response = new ArrayList<>();
 		List<Restaurant> nearbyRestaurants = restaurantRepository.findNearbyRestaurants(
 				latitude, longitude, radius);
-		return nearbyRestaurants.stream()
-				.map(restaurantMapper::toDto)
-				.collect(Collectors.toList());
+		for (Restaurant data : nearbyRestaurants) {
+			RestaurantResponse restaurantResponse = restaurantMapper.toDto(data);
+			List<RestaurantTagResponse> tags = tagService.findRestaurantTagByRestaurantId(
+					data.getKakaoPlaceId());
+			restaurantResponse.setTags(tags);
+			;
+			response.add(restaurantResponse);
+		}
+		return response;
 	}
 
 	@Transactional

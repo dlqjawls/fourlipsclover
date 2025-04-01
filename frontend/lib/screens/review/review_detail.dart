@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:frontend/config/theme.dart';
 import '../../models/review_model.dart';
 import '../review/review_write.dart';
 import 'widgets/review_options_modal.dart';
@@ -32,11 +33,19 @@ class _ReviewDetailState extends State<ReviewDetail> {
 
   Future<void> _loadAuthInfo() async {
     final prefs = await SharedPreferences.getInstance();
+
+    final token = prefs.getString("jwtToken");
+    final userIdStr = prefs.getString("userId");
+    final parsedId = int.tryParse(userIdStr ?? '');
+
+    print("🪪 저장된 userId: $userIdStr → int 변환: $parsedId");
+
     setState(() {
-      accessToken = prefs.getString("jwtToken");
-      memberId = prefs.getInt("memberId") ?? 0;
+      accessToken = token;
+      memberId = parsedId ?? 0;
     });
   }
+
 
   Future<void> _toggleLike(String likeStatus) async {
     try {
@@ -48,7 +57,6 @@ class _ReviewDetailState extends State<ReviewDetail> {
       );
       print("✅ 서버 응답: $message");
 
-      // 수동으로 좋아요/싫어요 수 반영 (임시)
       setState(() {
         if (likeStatus == "LIKE") {
           _review.isLiked = !_review.isLiked;
@@ -62,6 +70,7 @@ class _ReviewDetailState extends State<ReviewDetail> {
       print("❌ 좋아요/싫어요 처리 오류: $e");
     }
   }
+
 
   Future<void> _editReview() async {
     final updatedReview = await Navigator.push(
@@ -169,7 +178,7 @@ class _ReviewDetailState extends State<ReviewDetail> {
                         icon: Icon(
                           Icons.thumb_up,
                           size: 18,
-                          color: _review.isLiked ? Colors.blue : Colors.grey,
+                          color: _review.isLiked ? AppColors.primary : AppColors.lightGray,
                         ),
                         onPressed: () => _toggleLike("LIKE"),
                       ),
@@ -178,7 +187,7 @@ class _ReviewDetailState extends State<ReviewDetail> {
                         icon: Icon(
                           Icons.thumb_down,
                           size: 18,
-                          color: _review.isDisliked ? Colors.red : Colors.grey,
+                          color: _review.isDisliked ? AppColors.primary : AppColors.lightGray,
                         ),
                         onPressed: () => _toggleLike("DISLIKE"),
                       ),

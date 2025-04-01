@@ -1,3 +1,4 @@
+// lib/screens/group_plan/timeline_plan_schedule_view.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -28,6 +29,7 @@ class _TimelinePlanScheduleViewState extends State<TimelinePlanScheduleView> {
   List<PlanSchedule> _schedules = [];
   DateTime _selectedDate = DateTime.now();
   final List<DateTime> _travelDates = [];
+  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -36,9 +38,17 @@ class _TimelinePlanScheduleViewState extends State<TimelinePlanScheduleView> {
     if (_travelDates.isNotEmpty) {
       _selectedDate = _travelDates.first;
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // initState에서는 비동기 작업만 예약하고 실제 로드는 didChangeDependencies에서 수행
+    _isInitialized = false;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
       _loadSchedules();
-    });
+      _isInitialized = true;
+    }
   }
 
   void _generateTravelDates() {
@@ -51,6 +61,8 @@ class _TimelinePlanScheduleViewState extends State<TimelinePlanScheduleView> {
   }
 
   Future<void> _loadSchedules() async {
+    debugPrint('일정 데이터 로드 시작');
+
     final planProvider = Provider.of<PlanProvider>(context, listen: false);
     planProvider.setLoading(true);
 
@@ -64,6 +76,7 @@ class _TimelinePlanScheduleViewState extends State<TimelinePlanScheduleView> {
       if (mounted) {
         setState(() {
           _schedules = schedules;
+          debugPrint('로드된 일정 수: ${schedules.length}');
         });
       }
     } catch (e) {
@@ -91,20 +104,26 @@ class _TimelinePlanScheduleViewState extends State<TimelinePlanScheduleView> {
   }
 
   List<PlanSchedule> _getSchedulesForSelectedDate() {
-    return _schedules.where((schedule) {
-        final scheduleDate = DateTime(
-          schedule.visitAt.year,
-          schedule.visitAt.month,
-          schedule.visitAt.day,
-        );
-        final targetDate = DateTime(
-          _selectedDate.year,
-          _selectedDate.month,
-          _selectedDate.day,
-        );
-        return scheduleDate.isAtSameMomentAs(targetDate);
-      }).toList()
-      ..sort((a, b) => a.visitAt.compareTo(b.visitAt)); // 시간순 정렬
+    final filteredSchedules =
+        _schedules.where((schedule) {
+            final scheduleDate = DateTime(
+              schedule.visitAt.year,
+              schedule.visitAt.month,
+              schedule.visitAt.day,
+            );
+            final targetDate = DateTime(
+              _selectedDate.year,
+              _selectedDate.month,
+              _selectedDate.day,
+            );
+            return scheduleDate.isAtSameMomentAs(targetDate);
+          }).toList()
+          ..sort((a, b) => a.visitAt.compareTo(b.visitAt)); // 시간순 정렬
+
+    debugPrint(
+      '선택된 날짜(${_selectedDate.toString()})의 일정 수: ${filteredSchedules.length}',
+    );
+    return filteredSchedules;
   }
 
   void _showAddScheduleDialog() {
@@ -114,15 +133,18 @@ class _TimelinePlanScheduleViewState extends State<TimelinePlanScheduleView> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder:
-          (context) => ScheduleCreateBottomSheet(
-            groupId: widget.groupId,
-            planId: widget.plan.planId,
-            initialDate: _selectedDate,
-            onScheduleCreated: () {
-              _loadSchedules();
-            },
-          ),
+      builder: (context) {
+        return ScheduleCreateBottomSheet(
+          groupId: widget.groupId,
+          planId: widget.plan.planId,
+          initialDate: _selectedDate,
+          onScheduleCreated: () {
+            debugPrint('일정 생성 완료, 목록 새로고침 시작');
+            // 별도의 Future로 처리하여 비동기 작업이 완료될 수 있도록 함
+            Future.microtask(() => _loadSchedules());
+          },
+        );
+      },
     );
   }
 
@@ -235,7 +257,7 @@ class _TimelinePlanScheduleViewState extends State<TimelinePlanScheduleView> {
             ),
           ),
 
-          // 상단 정보 및 추가 버튼 (일정이 있을 때만 표시)
+          // 상단 정보 및 추가 버튼
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -263,34 +285,33 @@ class _TimelinePlanScheduleViewState extends State<TimelinePlanScheduleView> {
                     ),
                   ],
                 ),
-                // 동그란 버튼은 일정이 있을 때만 표시
-                if (hasSchedules)
-                  GestureDetector(
-                    onTap: _showAddScheduleDialog,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.verylightGray,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.lightGray,
-                            spreadRadius: 1,
-                            blurRadius: 3,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.add,
-                          color: AppColors.mediumGray,
-                          size: 24,
+                // 항상 추가 버튼 표시 (일정이 없어도)
+                GestureDetector(
+                  onTap: _showAddScheduleDialog,
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.verylightGray,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.lightGray,
+                          spreadRadius: 1,
+                          blurRadius: 3,
+                          offset: const Offset(0, 2),
                         ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.add,
+                        color: AppColors.mediumGray,
+                        size: 24,
                       ),
                     ),
                   ),
+                ),
               ],
             ),
           ),

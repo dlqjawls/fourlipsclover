@@ -55,6 +55,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   DateTime? _selectedDay;
   int _selectedIndex = 0; // 0: 캘린더, 1: 여행계획, 2: 앨범
   late Group _currentGroup;
+   bool _isLoading = false;
 
   // 그룹 상세 정보 및 멤버 데이터
   GroupDetail? _groupDetail;
@@ -224,6 +225,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         title: Text(
           _currentGroup.name,
           style: TextStyle(
@@ -271,8 +273,12 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             ),
         ],
       ),
-      body: LoadingOverlay(
-        isLoading: isLoading,
+       body: LoadingOverlay(
+    isLoading: _isLoading || 
+               groupProvider.isLoading || 
+               planProvider.isLoading ||
+               _isLoadingDetail ||
+               _isLoadingPlans,
         overlayColor: Colors.white.withOpacity(0.7), // 0.7 opacity 유지
         minDisplayTime: const Duration(milliseconds: 1200), // 최소 1.2초 표시
         child: Column(
@@ -621,34 +627,41 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   }
 
   // 그룹 삭제 실행
-  Future<void> _deleteGroup() async {
-    final groupProvider = Provider.of<GroupProvider>(context, listen: false);
+Future<void> _deleteGroup() async {
+  final groupProvider = Provider.of<GroupProvider>(context, listen: false);
 
-    try {
-      debugPrint('그룹 삭제 요청 시작: groupId=${_currentGroup.groupId}');
-      final success = await groupProvider.deleteGroup(_currentGroup.groupId);
-      debugPrint('그룹 삭제 응답: success=$success, error=${groupProvider.error}');
+  setState(() {
+    _isLoading = true; // 로딩 상태 설정
+  });
 
-      if (success) {
-        // 삭제 성공 후 이전 화면으로 이동
+  try {
+    final success = await groupProvider.deleteGroup(_currentGroup.groupId);
+
+    if (success) {
+      // 그룹 목록 새로고침을 await로 변경
+      await Provider.of<GroupProvider>(context, listen: false).fetchMyGroups();
+      
+      if (mounted) {
         Navigator.of(context).pop();
-
-        // 그룹 목록 화면에서 목록 새로고침 요청
-        Future.delayed(Duration(milliseconds: 500), () {
-          Provider.of<GroupProvider>(context, listen: false).fetchMyGroups();
-        });
-
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('그룹이 삭제되었습니다.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('그룹이 삭제되었습니다.')),
+        );
       }
-    } catch (e) {
-      debugPrint('그룹 삭제 중 예외 발생: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('그룹 삭제 중 오류 발생: $e')));
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('그룹 삭제 중 오류 발생: $e')),
+      );
+    }
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isLoading = false; // 로딩 상태 해제
+      });
     }
   }
+}
 
   // _getMyUserId 메서드
   int _getMyUserId() {

@@ -29,7 +29,7 @@ public class Match {
     // 최소 1개, 최대 3개의 태그를 받아와야함
     // 태그 관계 매핑
     @OneToMany(mappedBy = "match")
-    @Column(name = "matchTags")
+    @Column(name = "match_tags")
     private List<MatchTag> matchTags;
 
     // 광역시
@@ -43,7 +43,7 @@ public class Match {
     private Member guide;
 
     // 가이드 신청서
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "guide_request_form_id", nullable = false)
     private GuideRequestForm guideRequestForm;
 

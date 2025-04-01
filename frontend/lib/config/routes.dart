@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Provider import 추가
+import 'package:frontend/providers/user_provider.dart'; // UserProvider import 추가
 import 'package:frontend/screens/home/home_screen.dart';
-// 여기에 화면 import 추가 예정
 import 'package:frontend/screens/auth/login_screen.dart';
 import 'package:frontend/screens/common/base_screen.dart';
 import 'package:frontend/screens/user/user_screen.dart';
 import 'package:frontend/screens/user/user_edit.dart';
 import 'package:frontend/screens/user/user_profile.dart';
+// import 'package:frontend/screens/user/my_consumption_pattern_screen.dart'; // MyConsumptionPatternScreen import 추가
 import 'package:frontend/screens/group_plan/group_detail_screen.dart';
-import 'package:frontend/screens/group_plan/plan_detail_screen.dart'; // 추가된 부분
+import 'package:frontend/screens/group_plan/plan_detail_screen.dart';
 import 'package:frontend/models/group/group_model.dart';
-import 'package:frontend/models/plan/plan_model.dart'; // 추가된 부분
+import 'package:frontend/models/plan/plan_model.dart';
 import 'package:frontend/widgets/full_map_screen.dart';
 import 'package:frontend/screens/payment/kakao_pay_screen.dart';
 import '../screens/payment/kakao_pay_official_screen.dart';
@@ -22,7 +24,10 @@ class AppRoutes {
     '/login': (context) => const LoginScreen(),
     '/user': (context) => const UserScreen(),
     '/home': (context) => const BaseScreen(),
-    '/user_edit': (context) => const UserEditScreen(),
+    '/user_edit': (context) {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      return UserEditScreen(profile: userProvider.userProfile!);
+    },
     '/user_profile': (context) => const MyConsumptionPatternScreen(),
 
     '/kakaopay_test': (context) => KakaoPayScreen(),

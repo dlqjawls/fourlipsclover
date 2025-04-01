@@ -172,6 +172,7 @@ public class MatchService {
         List<MatchListResponse> responseList = new ArrayList<>();
 
         for (Match match : matches) {
+            Integer matchId = match.getMatchId();
             String regionName = match.getRegion().getName();  // region_name
             String guideNickname = match.getGuide().getNickname();  // guide의 nickname
             LocalDateTime createdAt = match.getCreatedAt();  // match 생성일
@@ -179,10 +180,8 @@ public class MatchService {
             LocalDate endDate = match.getGuideRequestForm().getEndDate();  // end_date
             String status = match.getStatus().name();  // 상태 (PENDING, CONFIRMED, REJECTED)
 
-            // MatchListResponse로 응답 객체 생성
-            MatchListResponse response = new MatchListResponse(regionName, guideNickname, createdAt, startDate, endDate, status);
+            MatchListResponse response = new MatchListResponse(matchId, regionName, guideNickname, createdAt, startDate, endDate, status);
 
-            // 리스트에 추가
             responseList.add(response);
         }
 
@@ -208,6 +207,7 @@ public class MatchService {
         // 가이드 신청서(GuideRequestForm) 정보 매핑
         GuideRequestForm form = match.getGuideRequestForm();
         if (form != null) {
+            response.setMatchId(matchId);
             response.setFoodPreference(form.getFoodPreference());
             response.setRequirements(form.getRequirements());
             response.setTastePreference(form.getTastePreference());
@@ -271,17 +271,19 @@ public class MatchService {
             throw new MatchNotFoundException("신청된 매칭 내역이 없습니다.");
         }
 
-        // 3. 조회된 Match 엔티티들을 LocalsMatchListResponse DTO로 변환
-        return matches.stream().map(match -> new LocalsMatchListResponse(
-                match.getMatchId(),
-                match.getMemberId(),                           // 신청자 ID
-                match.getRegion().getName(),                   // 지역 이름
-                match.getGuideRequestForm().getStartDate(),    // 시작일자
-                match.getGuideRequestForm().getEndDate(),      // 종료일자
-                match.getCreatedAt(),                          // 매칭 생성 일시
-                match.getStatus().name(),                      // 상태를 문자열로 반환
-                2000                                           // 임시 팁 금액 (아이템 테이블 추가하고 값 가져오기)
-        )).collect(Collectors.toList());
+        // 조회된 Match 엔티티들을 LocalsMatchListResponse DTO로 변환
+        return matches.stream().map(match -> {
+            GuideRequestForm requestForm = match.getGuideRequestForm();
+            return new LocalsMatchListResponse(
+                    match.getMatchId(),
+                    requestForm,                           // GuideRequestForm 객체를 그대로 전달
+                    match.getMemberId(),                   // 신청자 ID
+                    match.getRegion().getName(),           // 지역 이름
+                    match.getCreatedAt(),                  // 매칭 생성 일시
+                    match.getStatus().name(),              // 상태를 문자열로 반환
+                    2000                                   // 임시 팁 금액 (아이템 테이블 추가하고 값 가져오기)
+            );
+        }).collect(Collectors.toList());
     }
 
     // 현지인 - 매칭 수락
@@ -326,19 +328,20 @@ public class MatchService {
         if (!memberRepository.existsById(guideId)) {
             throw new MemberNotFoundException("현지인 회원이 존재하지 않습니다.");
         }
+
         List<Match> matches = matchRepository.findByGuide_MemberIdAndStatus(guideId, ApprovalStatus.CONFIRMED);
         if (matches.isEmpty()) {
             throw new MatchBusinessException("CONFIRMED 상태인 매칭 내역이 없습니다.");
         }
+
         return matches.stream().map(match -> new LocalsMatchListResponse(
                 match.getMatchId(),
+                match.getGuideRequestForm(),
                 match.getMemberId(),
-                match.getRegion().getName(), // 지역 이름 (getName() 또는 getRegionName() 메서드)
-                match.getGuideRequestForm().getStartDate(),
-                match.getGuideRequestForm().getEndDate(),
+                match.getRegion().getName(),
                 match.getCreatedAt(),
                 match.getStatus().name(),
-                2000                         // 임시 팁 금액 (아이템 테이블 추가하고 값 가져오기)
+                2000
         )).collect(Collectors.toList());
     }
 

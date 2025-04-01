@@ -19,7 +19,6 @@ class ReviewWriteScreen extends StatefulWidget {
 }
 
 class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
-  final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   File? _image;
   bool isSubmitting = false;
@@ -28,7 +27,6 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
   void initState() {
     super.initState();
     if (widget.review != null) {
-      _titleController.text = widget.review!.title ?? "";
       _contentController.text = widget.review!.content;
     }
   }
@@ -44,9 +42,18 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
   }
 
   Future<void> _submitReview() async {
-    if (_contentController.text.trim().isEmpty) {
+    final content = _contentController.text.trim();
+
+    if (content.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("리뷰 내용을 입력해주세요.")),
+      );
+      return;
+    }
+
+    if (content.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("리뷰는 10자 이상 작성해주세요.")),
       );
       return;
     }
@@ -113,17 +120,6 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// 제목 입력
-            TextField(
-              controller: _titleController,
-              style: TextStyle(fontSize: 18),
-              decoration: InputDecoration(
-                hintText: "리뷰 제목",
-                hintStyle: TextStyle(color: Colors.grey.shade400),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 8),
-              ),
-            ),
             Container(
               height: 1,
               color: Colors.grey.shade300,
