@@ -24,7 +24,7 @@ public class VisitPayment {
     private Restaurant restaurantId;
 
     @Column(name = "user_id")
-    private Integer userId;
+    private Long userId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "data_source")
