@@ -55,53 +55,56 @@ class KakaoMapPlugin(private val context: Context) {
     private lateinit var methodChannel: MethodChannel
     
     // KakaoMap 등록 및 초기화
-    fun registerKakaoMap(map: KakaoMap) {
-        Log.d("KakaoMapPlugin", "registerKakaoMap 호출됨: ${map != null}")
-        
-        this.kakaoMap = map
-        
-        // LabelManager 초기화
-        try {
-            this.labelManager = map.getLabelManager()
-            Log.d("KakaoMapPlugin", "LabelManager 초기화 성공: ${labelManager != null}")
 
-            // RouteLineManager 초기화
-            try {
-                this.routeLineManager = map.getRouteLineManager()
-                this.routeLineLayer = routeLineManager?.getLayer()
-                Log.d("KakaoMapPlugin", "RouteLineManager 초기화 성공: ${routeLineManager != null}")
-            } catch (e: Exception) {
-                Log.e("KakaoMapPlugin", "RouteLineManager 초기화 실패: ${e.message}")
-                e.printStackTrace()
-            }           
+fun registerKakaoMap(map: KakaoMap) {
+    Log.d("KakaoMapPlugin", "registerKakaoMap 호출됨: ${map != null}")
+    
+    this.kakaoMap = map
+    
+    // LabelManager 초기화
+    try {
+        // 기존 방식으로 LabelManager 가져오기
+        this.labelManager = map.getLabelManager()
+        Log.d("KakaoMapPlugin", "LabelManager 초기화 성공: ${labelManager != null}")
+
+        // RouteLineManager 초기화
+        try {
+            this.routeLineManager = map.getRouteLineManager()
+            this.routeLineLayer = routeLineManager?.getLayer()
+            Log.d("KakaoMapPlugin", "RouteLineManager 초기화 성공: ${routeLineManager != null}")
+        } catch (e: Exception) {
+            Log.e("KakaoMapPlugin", "RouteLineManager 초기화 실패: ${e.message}")
+            e.printStackTrace()
+        }           
+        
+        // 커스텀 LabelLayer 생성
+        try {
+            // 기존 레이어가 있는지 확인
+            labelLayer = labelManager?.getLayer("customLabelLayer")
+            Log.d("KakaoMapPlugin", "기존 레이어 확인: ${labelLayer != null}")
             
-            // 커스텀 LabelLayer 생성
-            try {
-                // 기존 레이어가 있는지 확인
-                labelLayer = labelManager?.getLayer("customLabelLayer")
-                Log.d("KakaoMapPlugin", "기존 레이어 확인: ${labelLayer != null}")
+            // 없으면 새로 생성
+            if (labelLayer == null) {
+                val layerOptions = LabelLayerOptions.from("customLabelLayer")
+                    .setOrderingType(OrderingType.Rank)
+                    .setCompetitionUnit(CompetitionUnit.IconAndText)
+                    .setCompetitionType(CompetitionType.All)
+                    .setZOrder(5000)
                 
-                // 없으면 새로 생성
-                if (labelLayer == null) {
-                    val layerOptions = LabelLayerOptions.from("customLabelLayer")
-                        .setOrderingType(OrderingType.Rank)
-                        .setCompetitionUnit(CompetitionUnit.IconAndText)
-                        .setCompetitionType(CompetitionType.All)
-                        .setZOrder(5000)
-                    
-                    labelLayer = labelManager?.addLayer(layerOptions)
-                    Log.d("KakaoMapPlugin", "커스텀 라벨 레이어 생성 성공: ${labelLayer != null}")
-                }
-            } catch (e: Exception) {
-                Log.e("KakaoMapPlugin", "라벨 레이어 생성 실패: ${e.message}")
-                e.printStackTrace()
+                labelLayer = labelManager?.addLayer(layerOptions)
+                Log.d("KakaoMapPlugin", "커스텀 라벨 레이어 생성 성공: ${labelLayer != null}")
             }
         } catch (e: Exception) {
-            Log.e("KakaoMapPlugin", "LabelManager 초기화 실패: ${e.message}")
+            Log.e("KakaoMapPlugin", "라벨 레이어 생성 실패: ${e.message}")
             e.printStackTrace()
         }
-        setupLabelClickListener(map)
+    } catch (e: Exception) {
+        Log.e("KakaoMapPlugin", "LabelManager 초기화 실패: ${e.message}")
+        e.printStackTrace()
     }
+    
+    setupLabelClickListener(map)
+}
     
     // 지도 중심 이동
     fun setMapCenter(latitude: Double, longitude: Double, zoomLevel: Int) {

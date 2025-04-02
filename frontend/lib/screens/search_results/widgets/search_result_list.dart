@@ -1,316 +1,60 @@
-// search_result_list.dart
+// lib/screens/search_results/widgets/search_result_list.dart
+import 'dart:math' as Math;
+
 import 'package:flutter/material.dart';
-import '../../../config/theme.dart'; // 테마 색상 적용하기 위한 import
+import 'package:provider/provider.dart';
+import '../../../config/theme.dart';
+import '../../../providers/search_provider.dart';
+import '../../../models/restaurant_model.dart';
+import '../../../widgets/clover_loading_spinner.dart';
 
 class SearchResultList extends StatefulWidget {
   final String query;
   final String? filter;
 
-  const SearchResultList({Key? key, required this.query, this.filter})
-    : super(key: key);
+  const SearchResultList({
+    Key? key,
+    required this.query,
+    this.filter,
+  }) : super(key: key);
 
   @override
   State<SearchResultList> createState() => _SearchResultListState();
 }
 
 class _SearchResultListState extends State<SearchResultList> {
-  final int _initialItemCount = 5; // 초기에 보여줄 아이템 수
-  final int _loadMoreCount = 10; // 추가로 보여줄 아이템 수
-  int _displayCount = 5; // 현재 보여주는 아이템 수
-  bool _isAllLoaded = false; // 모든 데이터가 로드되었는지 여부
-  bool _isLoading = false; // 로딩 중인지 여부
-  
-  // 모든 음식점 데이터
-  List<Map<String, dynamic>> _restaurants = [];
-  // 필터링된 음식점 데이터
-  List<Map<String, dynamic>> _filteredRestaurants = [];
-
-  void _onScroll() {
-  // 빈 메서드
-}
+  final int _initialItemCount = 5;
+  final int _loadMoreCount = 10;
+  int _displayCount = 5;
+  bool _isAllLoaded = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _displayCount = _initialItemCount;
-    
-    // 데이터 초기화
-    _initializeData();
   }
 
   @override
   void didUpdateWidget(SearchResultList oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 필터가 변경된 경우
-    if (widget.filter != oldWidget.filter) {
-      _applyFilter();
-      // 필터 변경 시 초기 아이템 수로 리셋
+    // 필터나 쿼리가 변경된 경우 초기 상태로 리셋
+    if (widget.query != oldWidget.query || widget.filter != oldWidget.filter) {
       setState(() {
         _displayCount = _initialItemCount;
         _isAllLoaded = false;
       });
     }
   }
-  
-  // 데이터 초기 로드
-  void _initializeData() {
-    // 임시 데이터 (실제로는 API에서 가져올 것)
-    _restaurants = [
-      {
-        "id": 1,
-        "name": "스시타케 광주점",
-        "score": 93,
-        "address": "광주 광산구 임방울대로 852",
-        "distance": "2.0km",
-        "tags": ["초밥", "사시미"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": true,
-        "reviewCount": 218,
-      },
-      {
-        "id": 2,
-        "name": "교다이쇼쿠도 수완점",
-        "score": 91,
-        "address": "광주 광산구 장신로 95",
-        "distance": "2.3km",
-        "tags": ["일식", "돈까스"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": false,
-        "reviewCount": 176,
-      },
-      {
-        "id": 3,
-        "name": "코너스톤 키친",
-        "score": 90,
-        "address": "광주 광산구 장신로 82",
-        "distance": "1.5km",
-        "tags": ["브런치", "파스타"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": true,
-        "reviewCount": 156,
-      },
-      {
-        "id": 4,
-        "name": "쉐프의 부엌",
-        "score": 89,
-        "address": "광주 광산구 임방울대로 840",
-        "distance": "2.5km",
-        "tags": ["양식", "스테이크"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": true,
-        "reviewCount": 142,
-      },
-      {
-        "id": 5,
-        "name": "블루밍가든",
-        "score": 86,
-        "address": "광주 광산구 장신로 110",
-        "distance": "2.1km",
-        "tags": ["브런치", "아메리칸"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": true,
-        "reviewCount": 128,
-      },
-      {
-        "id": 6,
-        "name": "금바다 해물탕",
-        "score": 85,
-        "address": "광주 광산구 임방울대로 778",
-        "distance": "2.2km",
-        "tags": ["해물탕", "해물찜"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": true,
-        "reviewCount": 115,
-      },
-      {
-        "id": 7,
-        "name": "비스트로 담길",
-        "score": 82,
-        "address": "광주 광산구 임방울대로 825-35",
-        "distance": "1.6km",
-        "tags": ["브런치", "샐러드"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": true,
-        "reviewCount": 108,
-      },
-      {
-        "id": 8,
-        "name": "더키친 수완점",
-        "score": 81,
-        "address": "광주 광산구 임방울대로 830",
-        "distance": "1.9km",
-        "tags": ["퓨전음식", "파스타"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": false,
-        "reviewCount": 96,
-      },
-      {
-        "id": 9,
-        "name": "쟁반집 수완점",
-        "score": 79,
-        "address": "광주 광산구 임방울대로 850",
-        "distance": "1.7km",
-        "tags": ["쟁반짜장", "중식"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": false,
-        "reviewCount": 87,
-      },
-      {
-        "id": 10,
-        "name": "올라 광주수완점",
-        "score": 78,
-        "address": "광주 광산구 장신로 98",
-        "distance": "1.3km",
-        "tags": ["스페인음식", "파에야"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": false,
-        "reviewCount": 82,
-      },
-      {
-        "id": 11,
-        "name": "봉추찜닭 수완점",
-        "score": 77,
-        "address": "광주 광산구 임방울대로 819",
-        "distance": "1.7km",
-        "tags": ["찜닭", "한식"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": true,
-        "reviewCount": 79,
-      },
-      {
-        "id": 12,
-        "name": "불타는 광산곱창",
-        "score": 76,
-        "address": "광주 광산구 수완로 48",
-        "distance": "1.5km",
-        "tags": ["곱창", "막창"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": false,
-        "reviewCount": 74,
-      },
-      {
-        "id": 13,
-        "name": "산수갑산 수완점",
-        "score": 75,
-        "address": "광주 광산구 수완로 80",
-        "distance": "2.0km",
-        "tags": ["닭갈비", "막걸리"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": false,
-        "reviewCount": 68,
-      },
-      {
-        "id": 14,
-        "name": "더브릭 수완점",
-        "score": 74,
-        "address": "광주 광산구 수완로 20",
-        "distance": "2.4km",
-        "tags": ["양식", "피자"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": false,
-        "reviewCount": 63,
-      },
-      {
-        "id": 15,
-        "name": "어게인리프레쉬",
-        "score": 72,
-        "address": "광주 광산구 임방울대로 800",
-        "distance": "1.6km",
-        "tags": ["샐러드", "그릭요거트"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": false,
-        "reviewCount": 59,
-      },
-      {
-        "id": 16,
-        "name": "부억간 수완지구",
-        "score": 71,
-        "address": "광주 광산구 임방울대로 825",
-        "distance": "1.8km",
-        "tags": ["파스타", "테라스"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": true,
-        "reviewCount": 54,
-      },
-      {
-        "id": 17,
-        "name": "앤티크 커피",
-        "score": 70,
-        "address": "광주 광산구 장신로 105",
-        "distance": "1.2km",
-        "tags": ["카페", "디저트"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": false,
-        "reviewCount": 48,
-      },
-      {
-        "id": 18,
-        "name": "옥이네 생선구이",
-        "score": 68,
-        "address": "광주 광산구 장신로 61",
-        "distance": "1.1km",
-        "tags": ["생선구이", "백반"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": false,
-        "reviewCount": 42,
-      },
-      {
-        "id": 19,
-        "name": "맥도날드 광주수완DT점",
-        "score": 65,
-        "address": "광주 광산구 장신로 77",
-        "distance": "1.0km",
-        "tags": ["패스트푸드", "버거"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": false,
-        "reviewCount": 38,
-      },
-      {
-        "id": 20,
-        "name": "어니스트식스티 수완점",
-        "score": 64,
-        "address": "광주 광산구 임방울대로 788",
-        "distance": "2.1km",
-        "tags": ["스테이크", "와인"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": false,
-        "reviewCount": 31,
-      },
-      {
-        "id": 21,
-        "name": "명랑회관 수완점",
-        "score": 63,
-        "address": "광주 광산구 수완로 75",
-        "distance": "1.9km",
-        "tags": ["떡볶이", "한식"],
-        "image": "https://via.placeholder.com/100",
-        "isBookmarked": false,
-        "reviewCount": 26,
-      },
-    ];
-    
-    // 필터 적용
-    _applyFilter();
-  }
-  
-  // 필터 적용
-  void _applyFilter() {
-    setState(() {
-      if (widget.filter != null && widget.filter!.isNotEmpty) {
-        _filteredRestaurants = _restaurants
-            .where((restaurant) => (restaurant["tags"] as List).contains(widget.filter))
-            .toList();
-      } else {
-        _filteredRestaurants = List.from(_restaurants);
-      }
-    });
-  }
 
   // 더 많은 항목 로드
   void _loadMoreItems() {
-    if (!_isAllLoaded && !_isLoading) {
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    final filteredResults = _getFilteredResults(searchProvider.searchResults);
+    
+    if (!_isAllLoaded && !_isLoading && _displayCount < filteredResults.length) {
       setState(() {
-        _isLoading = true; // 로딩 시작
+        _isLoading = true;
       });
 
       // 1초 후에 데이터 로드 (로딩 시간 추가)
@@ -318,15 +62,56 @@ class _SearchResultListState extends State<SearchResultList> {
         if (mounted) {
           setState(() {
             _displayCount = _displayCount + _loadMoreCount;
-            if (_displayCount >= _filteredRestaurants.length) {
-              _displayCount = _filteredRestaurants.length;
+            if (_displayCount >= filteredResults.length) {
+              _displayCount = filteredResults.length;
               _isAllLoaded = true;
             }
-            _isLoading = false; // 로딩 완료
+            _isLoading = false;
           });
         }
       });
     }
+  }
+
+  // 필터 적용된 결과 가져오기
+  List<RestaurantResponse> _getFilteredResults(List<RestaurantResponse> results) {
+    if (widget.filter != null && widget.filter!.isNotEmpty) {
+      // 카테고리 기준으로 필터링
+      return results.where((restaurant) {
+        final category = restaurant.category ?? "";
+        return category.contains(widget.filter!);
+      }).toList();
+    }
+    return List.from(results);
+  }
+
+  // 카테고리 텍스트를 해시태그로 변환
+  List<Widget> _getCategoryTags(String? category) {
+    if (category == null || category.isEmpty) {
+      return [
+        Text(
+          "#식당",
+          style: TextStyle(
+            fontFamily: 'Anemone_air',
+            fontSize: 12,
+            color: AppColors.darkGray,
+          ),
+        ),
+      ];
+    }
+    
+    // "음식점 > 한식 > 육류,고기" 형태에서 태그 추출
+    final parts = category.split(' > ');
+    return parts.skip(1).map((tag) => 
+      Text(
+        "#$tag",
+        style: TextStyle(
+          fontFamily: 'Anemone_air',
+          fontSize: 12,
+          color: AppColors.darkGray,
+        ),
+      )
+    ).toList();
   }
 
   // 로딩 인디케이터 위젯
@@ -335,10 +120,7 @@ class _SearchResultListState extends State<SearchResultList> {
       padding: EdgeInsets.symmetric(vertical: 16),
       color: Colors.white,
       child: Center(
-        child: CircularProgressIndicator(
-          color: AppColors.primary,
-          strokeWidth: 3,
-        ),
+        child: CloverLoadingSpinner(size: 50),
       ),
     );
   }
@@ -387,25 +169,62 @@ class _SearchResultListState extends State<SearchResultList> {
 
   @override
   Widget build(BuildContext context) {
-    // 현재 표시할 항목 수 (더보기 버튼 또는 로딩 인디케이터 때문에 +1)
-    int itemCount = _displayCount;
+    final searchProvider = Provider.of<SearchProvider>(context);
+    final allResults = searchProvider.searchResults;
+    final filteredResults = _getFilteredResults(allResults);
+    
+    // 검색 중인 경우 로딩 스피너 표시
+    if (searchProvider.isLoading) {
+      return Center(
+        child: CloverLoadingSpinner(size: 80),
+      );
+    }
+    
+    // 오류가 있는 경우 오류 메시지 표시
+    if (searchProvider.error != null) {
+      return Center(
+        child: Text(
+          "검색 결과를 가져오는데 문제가 발생했습니다.\n${searchProvider.error}",
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: 'Anemone_air',
+            fontSize: 16,
+            color: AppColors.darkGray,
+          ),
+        ),
+      );
+    }
+    
+    // 결과가 없는 경우
+    if (filteredResults.isEmpty) {
+      return Center(
+        child: Text(
+          "검색 결과가 없습니다.",
+          style: TextStyle(
+            fontFamily: 'Anemone_air',
+            fontSize: 16,
+            color: AppColors.darkGray,
+          ),
+        ),
+      );
+    }
+
+    // 현재 표시할 항목 수
+    int itemCount = Math.min(_displayCount, filteredResults.length);
     
     // 아직 모든 항목을 로드하지 않았으면 더보기 버튼 또는 로딩 인디케이터 위한 공간 추가
-    if (!_isAllLoaded) {
+    if (!_isAllLoaded && filteredResults.length > _displayCount) {
       itemCount += 1;
     }
     
     return ListView.builder(
-      // 부모 NestedScrollView와 통합하기 위한 설정
-      primary: true, // PrimaryScrollController 사용 (NestedScrollView에서 제공)
+      primary: true, 
       physics: AlwaysScrollableScrollPhysics(),
-      
-      // 아이템 목록 + 버튼 또는 로딩 인디케이터
       itemCount: itemCount,
       
       itemBuilder: (context, index) {
         // 마지막 항목인 경우 더보기 버튼 또는 로딩 인디케이터 표시
-        if (index == _displayCount) {
+        if (index == _displayCount && index < filteredResults.length) {
           if (_isLoading) {
             return _buildLoadingIndicator();
           } else {
@@ -414,11 +233,11 @@ class _SearchResultListState extends State<SearchResultList> {
         }
 
         // 인덱스가 범위를 벗어나는 경우 빈 위젯 반환 (안전장치)
-        if (index >= _filteredRestaurants.length) {
+        if (index >= filteredResults.length) {
           return SizedBox.shrink();
         }
 
-        final restaurant = _filteredRestaurants[index];
+        final restaurant = filteredResults[index];
 
         // 음식점 아이템 UI 구성
         return Column(
@@ -432,7 +251,7 @@ class _SearchResultListState extends State<SearchResultList> {
               ),
             GestureDetector(
               onTap: () {
-                // 음식점 상세 페이지로 이동
+                // 음식점 상세 페이지로 이동 (나중에 구현)
               },
               child: Container(
                 color: Colors.white,
@@ -472,7 +291,7 @@ class _SearchResultListState extends State<SearchResultList> {
                               children: [
                                 // 식당명
                                 Text(
-                                  "${restaurant["name"]}",
+                                  "${restaurant.placeName ?? '이름 없음'}",
                                   style: TextStyle(
                                     fontFamily: 'Anemone_air',
                                     fontWeight: FontWeight.bold,
@@ -481,74 +300,44 @@ class _SearchResultListState extends State<SearchResultList> {
                                   ),
                                 ),
 
-                                // 해시태그
+                                // 해시태그 - 카테고리를 기반으로 해시태그 생성
                                 SizedBox(height: 2),
                                 Wrap(
                                   spacing: 8,
-                                  children: (restaurant["tags"] as List)
-                                      .map(
-                                        (tag) => Text(
-                                          "#$tag",
-                                          style: TextStyle(
-                                            fontFamily: 'Anemone_air',
-                                            fontSize: 12,
-                                            color: AppColors.darkGray,
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
+                                  children: _getCategoryTags(restaurant.category),
                                 ),
 
                                 SizedBox(height: 6),
-                                // 점수, 거리, 리뷰수
+                                // 거리 (있는 경우)
                                 Row(
                                   children: [
-                                    // 점수
-                                    Text(
-                                      "${restaurant["score"]}점",
-                                      style: TextStyle(
-                                        fontFamily: 'Anemone',
-                                        color: AppColors.primary,
-                                        fontSize: 12,
+                                    if (restaurant.distance != null)
+                                      Text(
+                                        "${restaurant.distance!.toStringAsFixed(1)}km",
+                                        style: TextStyle(
+                                          fontFamily: 'Anemone_air',
+                                          color: AppColors.darkGray,
+                                          fontSize: 12,
+                                        ),
                                       ),
-                                    ),
                                     SizedBox(width: 10),
-                                    // 거리
-                                    Text(
-                                      "${restaurant["distance"]}",
-                                      style: TextStyle(
-                                        fontFamily: 'Anemone_air',
-                                        color: AppColors.darkGray,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    SizedBox(width: 10),
-                                    // 리뷰 수 추가
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.rate_review_outlined,
-                                          size: 14,
+                                    // 전화번호가 있는 경우
+                                    if (restaurant.phone != null && restaurant.phone!.isNotEmpty)
+                                      Text(
+                                        "${restaurant.phone}",
+                                        style: TextStyle(
+                                          fontFamily: 'Anemone_air',
                                           color: AppColors.mediumGray,
+                                          fontSize: 12,
                                         ),
-                                        SizedBox(width: 2),
-                                        Text(
-                                          "${restaurant["reviewCount"]}",
-                                          style: TextStyle(
-                                            fontFamily: 'Anemone_air',
-                                            color: AppColors.mediumGray,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
                                   ],
                                 ),
 
                                 SizedBox(height: 4),
-                                // 주소 추가
+                                // 주소
                                 Text(
-                                  "${restaurant["address"]}",
+                                  "${restaurant.addressName ?? restaurant.roadAddressName ?? '주소 정보 없음'}",
                                   style: TextStyle(
                                     fontFamily: 'Anemone_air',
                                     color: AppColors.mediumGray,
@@ -563,7 +352,7 @@ class _SearchResultListState extends State<SearchResultList> {
                       ),
                     ),
 
-                    // 이미지
+                    // 이미지 (실제 이미지는 아직 없으므로 임시 UI)
                     SizedBox(width: 12),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
