@@ -13,7 +13,7 @@ class MatchingCreateService {
 
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('accessToken');
+    return prefs.getString('jwtToken');
   }
 
   Future<Map<String, dynamic>> createMatching({

@@ -94,8 +94,9 @@ class _MatchingConfirmBottomSheetState
   @override
   Widget build(BuildContext context) {
     final formatter = NumberFormat('#,###');
-    final totalAmount = widget.matchData['total_amount'] as int;
-    final orderId = widget.matchData['orderId'];
+    final totalAmount = int.parse(widget.matchData['total_amount'].toString());
+    final orderId = widget.matchData['orderId'] as String;
+    final mobileUrl = widget.matchData['next_redirect_mobile_url'] as String;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -216,6 +217,7 @@ class _MatchingConfirmBottomSheetState
               ),
             ],
           ),
+
           const SizedBox(height: 20),
 
           ElevatedButton(
