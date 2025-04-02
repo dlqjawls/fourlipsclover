@@ -118,7 +118,7 @@ public class LocalsElasticsearchService {
 					.collect(Collectors.toList());
 
 			// 지역명 정규화 (특별시, 광역시, 도 단위로)
-			String regionName = cert.getLocalRegion().getRegionName();
+			String regionName = cert.getLocalRegion().getRegion().getName();
 
 			// LocalsDocument 생성
 			LocalsDocument localsDocument = LocalsDocument.builder()
