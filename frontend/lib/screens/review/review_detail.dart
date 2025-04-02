@@ -3,10 +3,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:frontend/config/theme.dart';
 import '../../models/review_model.dart';
 import '../review/review_write.dart';
-import 'widgets/review_options_modal.dart';
 import 'widgets/delete_confirmation_modal.dart';
-import '../../services/review_service.dart'; // ✅ 좋아요 기능을 위해 추가
-import 'package:shared_preferences/shared_preferences.dart'; // ✅ 토큰 가져오기 위해 필요
+import '../../services/review_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ReviewDetail extends StatefulWidget {
   final Review review;
@@ -20,9 +19,9 @@ class ReviewDetail extends StatefulWidget {
 
 class _ReviewDetailState extends State<ReviewDetail> {
   late Review _review;
-  Offset? tapPosition;
   String? accessToken;
-  int memberId = 0; // ✅ 실제 로그인한 사용자 ID
+  int memberId = 0;
+  bool _isUpdated = false; // ✅ 수정 여부
 
   @override
   void initState() {
@@ -33,19 +32,14 @@ class _ReviewDetailState extends State<ReviewDetail> {
 
   Future<void> _loadAuthInfo() async {
     final prefs = await SharedPreferences.getInstance();
-
     final token = prefs.getString("jwtToken");
     final userIdStr = prefs.getString("userId");
     final parsedId = int.tryParse(userIdStr ?? '');
-
-    print("🪪 저장된 userId: $userIdStr → int 변환: $parsedId");
-
     setState(() {
       accessToken = token;
       memberId = parsedId ?? 0;
     });
   }
-
 
   Future<void> _toggleLike(String likeStatus) async {
     try {
@@ -71,7 +65,6 @@ class _ReviewDetailState extends State<ReviewDetail> {
     }
   }
 
-
   Future<void> _editReview() async {
     final updatedReview = await Navigator.push(
       context,
@@ -86,6 +79,7 @@ class _ReviewDetailState extends State<ReviewDetail> {
     if (updatedReview != null && updatedReview is Review) {
       setState(() {
         _review = updatedReview;
+        _isUpdated = true; // ✅ 수정됨 표시
       });
     }
   }
@@ -93,64 +87,59 @@ class _ReviewDetailState extends State<ReviewDetail> {
   void _deleteReview() {
     showDeleteConfirmationModal(context, _review.id).then((result) {
       if (result == true) {
-        Navigator.pop(context, true);
+        Navigator.pop(context, true); // ✅ 삭제 후 갱신
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("리뷰 상세"),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: IconThemeData(color: Colors.black),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context, _isUpdated); // ✅ 수정됐으면 true 넘김
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text("리뷰 상세"),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          iconTheme: IconThemeData(color: Colors.black),
+          actions: [
+            if (_review.memberId == memberId)
+              PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'edit') {
+                    await _editReview();
+                  } else if (value == 'delete') {
+                    _deleteReview();
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: Icon(Icons.edit, color: AppColors.primary),
+                      title: Text("수정"),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: ListTile(
+                      leading: Icon(Icons.delete, color: Colors.redAccent),
+                      title: Text("삭제"),
+                    ),
+                  ),
+                ],
+                icon: const Icon(Icons.more_vert, color: Colors.black),
+              ),
+          ],
+        ),
+        body: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (_review.title != null && _review.title!.isNotEmpty)
-                    Expanded(
-                      child: Text(
-                        _review.title!,
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  GestureDetector(
-                    onTapDown: (TapDownDetails details) {
-                      tapPosition = details.globalPosition;
-                    },
-                    child: IconButton(
-                      icon: Icon(Icons.more_vert, color: Colors.black),
-                      onPressed: () {
-                        if (tapPosition != null) {
-                          showReviewOptionsModal(
-                            context,
-                            _review,
-                            widget.restaurantId,
-                            tapPosition!,
-                          ).then((result) {
-                            if (result == true) {
-                              _deleteReview();
-                            }
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              /// ✅ 프로필 + 유저명 + 방문 정보 + 좋아요
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -196,14 +185,10 @@ class _ReviewDetailState extends State<ReviewDetail> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 12),
               Divider(color: Colors.grey[300], thickness: 1),
               const SizedBox(height: 12),
-
-              /// ✅ 리뷰 이미지 표시
               _buildReviewImage(_review.imageUrl, int.parse(_review.id)),
-
               const SizedBox(height: 12),
               Text(
                 _review.content,

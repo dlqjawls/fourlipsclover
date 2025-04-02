@@ -77,8 +77,8 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
       if (authProvider.currentPosition != null) {
         final categoryRestaurants =
             await NearbyRestaurantService.findNearbyRestaurantsByCategory(
-              latitude: authProvider.currentPosition!.longitude,
-              longitude: authProvider.currentPosition!.latitude,
+              latitude: authProvider.currentPosition!.latitude,
+              longitude: authProvider.currentPosition!.longitude,
             );
 
         if (mounted) {  // mounted 체크 추가

@@ -1,15 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart'; // ✅ Provider 추가
+import 'package:provider/provider.dart';
 import '../../models/review_model.dart';
 import '../../services/review_service.dart';
 import '../../config/theme.dart';
-import '../../providers/app_provider.dart'; // ✅ AppProvider import
+import '../../providers/app_provider.dart';
 
 class ReviewWriteScreen extends StatefulWidget {
   final Review? review; // 수정할 리뷰 (null이면 새 리뷰 작성)
-  final String kakaoPlaceId; // 식당 고유 ID
+  final String kakaoPlaceId;
 
   const ReviewWriteScreen({Key? key, this.review, required this.kakaoPlaceId})
       : super(key: key);
@@ -20,6 +20,8 @@ class ReviewWriteScreen extends StatefulWidget {
 
 class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
   final TextEditingController _contentController = TextEditingController();
+  final TextEditingController _visitedAtController = TextEditingController();
+  DateTime? _visitedAt;
   File? _image;
   bool isSubmitting = false;
 
@@ -28,7 +30,17 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
     super.initState();
     if (widget.review != null) {
       _contentController.text = widget.review!.content;
+      _visitedAt = widget.review!.date;
+      _visitedAtController.text = _formatDate(_visitedAt!);
     }
+  }
+
+  String _formatDate(DateTime date) {
+    return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  }
+
+  String _formatVisitedAtForApi(DateTime date) {
+    return date.toIso8601String().split('.').first;
   }
 
   Future<void> _pickImage() async {
@@ -58,6 +70,13 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
       return;
     }
 
+    if (_visitedAt == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("방문일자를 선택해주세요.")),
+      );
+      return;
+    }
+
     setState(() {
       isSubmitting = true;
     });
@@ -74,29 +93,31 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
         await ReviewService.createReview(
           memberId: int.parse(appProvider.user!.id.toString()),
           kakaoPlaceId: widget.kakaoPlaceId,
-          content: _contentController.text.trim(),
-          visitedAt: DateTime.now(),
+          content: content,
+          visitedAt: _visitedAt!,
           imageFile: _image,
-          accessToken: accessToken, // ✅ 토큰 전달
-        );
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("리뷰가 등록되었습니다.")));
-      } else {
-        // ✅ 리뷰 수정
-        await ReviewService.updateReview(
-          reviewId: int.parse(widget.review!.id),
-          content: _contentController.text.trim(),
-          visitedAt: DateTime.now(),
           accessToken: accessToken,
         );
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("리뷰가 수정되었습니다.")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("리뷰가 등록되었습니다.")),
+        );
+      } else {
+        // ✅ 리뷰 수정
+        final updated = await ReviewService.updateReview(
+          reviewId: int.parse(widget.review!.id),
+          content: content,
+          visitedAt: _visitedAt!,
+          accessToken: accessToken,
+        );
+        Navigator.pop(context, Review.fromResponse(updated));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("리뷰가 수정되었습니다.")),
+        );
       }
-
-      Navigator.pop(context, true);
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("오류 발생: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("오류 발생: $e")),
+      );
     } finally {
       setState(() {
         isSubmitting = false;
@@ -125,9 +146,34 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
               color: Colors.grey.shade300,
               margin: EdgeInsets.only(bottom: 16),
             ),
+
+            /// ✅ 방문일자 선택
+            TextFormField(
+              controller: _visitedAtController,
+              readOnly: true,
+              decoration: InputDecoration(
+                labelText: "방문일자",
+                suffixIcon: Icon(Icons.calendar_today),
+              ),
+              onTap: () async {
+                DateTime? picked = await showDatePicker(
+                  context: context,
+                  initialDate: _visitedAt ?? DateTime.now(),
+                  firstDate: DateTime(2022),
+                  lastDate: DateTime.now(),
+                );
+                if (picked != null) {
+                  setState(() {
+                    _visitedAt = picked;
+                    _visitedAtController.text = _formatDate(picked);
+                  });
+                }
+              },
+            ),
+
             const SizedBox(height: 16),
 
-            /// 이미지 선택 UI (작성 시에만 보이도록)
+            /// 이미지 선택 UI (작성 시에만)
             if (!isEditMode)
               GestureDetector(
                 onTap: _pickImage,
