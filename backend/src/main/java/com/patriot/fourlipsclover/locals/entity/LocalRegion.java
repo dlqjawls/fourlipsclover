@@ -21,7 +21,7 @@ public class LocalRegion {
 
 	@Id
 	private String localRegionId;
-
+	
 	@Column(name = "region_name")
 	private String regionName;
 }
