@@ -1,7 +1,11 @@
 package com.patriot.fourlipsclover.restaurant.service;
 
 import com.patriot.fourlipsclover.config.CustomUserDetails;
-import com.patriot.fourlipsclover.exception.*;
+import com.patriot.fourlipsclover.exception.DeletedResourceAccessException;
+import com.patriot.fourlipsclover.exception.InvalidDataException;
+import com.patriot.fourlipsclover.exception.ReviewNotFoundException;
+import com.patriot.fourlipsclover.exception.UnauthorizedAccessException;
+import com.patriot.fourlipsclover.exception.UserNotFoundException;
 import com.patriot.fourlipsclover.image.service.ReviewImageService;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberJpaRepository;
@@ -13,12 +17,26 @@ import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
 import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
-import com.patriot.fourlipsclover.restaurant.entity.*;
+import com.patriot.fourlipsclover.restaurant.entity.City;
+import com.patriot.fourlipsclover.restaurant.entity.FoodCategory;
+import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
+import com.patriot.fourlipsclover.restaurant.entity.Review;
+import com.patriot.fourlipsclover.restaurant.entity.ReviewLike;
+import com.patriot.fourlipsclover.restaurant.entity.ReviewLikePK;
 import com.patriot.fourlipsclover.restaurant.mapper.RestaurantMapper;
 import com.patriot.fourlipsclover.restaurant.mapper.ReviewMapper;
-import com.patriot.fourlipsclover.restaurant.repository.*;
+import com.patriot.fourlipsclover.restaurant.repository.CityRepository;
+import com.patriot.fourlipsclover.restaurant.repository.FoodCategoryRepository;
+import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
+import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
+import com.patriot.fourlipsclover.restaurant.repository.ReviewLikeJpaRepository;
 import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
 import com.patriot.fourlipsclover.tag.service.TagService;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -26,12 +44,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -113,7 +125,7 @@ public class RestaurantService {
 
     @Transactional
     public ReviewResponse update(Integer reviewId,
-                                 ReviewUpdate reviewUpdate) {
+            ReviewUpdate reviewUpdate) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ReviewNotFoundException(reviewId));
         checkReviewerIsCurrentUser(review.getMember().getMemberId());
@@ -171,9 +183,28 @@ public class RestaurantService {
         return restaurantResponse;
     }
 
+<<<<<<<HEAD
+	@Transactional(readOnly = true)
+	public List<RestaurantResponse> findNearbyRestaurants(Double latitude, Double longitude,
+			Integer radius) {
+		List<RestaurantResponse> response = new ArrayList<>();
+		List<Restaurant> nearbyRestaurants = restaurantRepository.findNearbyRestaurants(
+				latitude, longitude, radius);
+		for (Restaurant data : nearbyRestaurants) {
+			RestaurantResponse restaurantResponse = restaurantMapper.toDto(data);
+			List<RestaurantTagResponse> tags = tagService.findRestaurantTagByRestaurantId(
+					data.getKakaoPlaceId());
+			restaurantResponse.setTags(tags);
+
+			response.add(restaurantResponse);
+		}
+		return response;
+	}
+=======
+
     @Transactional(readOnly = true)
     public List<RestaurantResponse> findNearbyRestaurants(Double latitude, Double longitude,
-                                                          Integer radius) {
+            Integer radius) {
         List<RestaurantResponse> response = new ArrayList<>();
         List<Restaurant> nearbyRestaurants = restaurantRepository.findNearbyRestaurants(
                 latitude, longitude, radius);
@@ -182,6 +213,7 @@ public class RestaurantService {
             List<RestaurantTagResponse> tags = tagService.findRestaurantTagByRestaurantId(
                     data.getKakaoPlaceId());
             restaurantResponse.setTags(tags);
+>>>>>>>b1c6eee398288b2c20181f1f019738c007f14f81
 
             response.add(restaurantResponse);
         }
@@ -292,14 +324,23 @@ public class RestaurantService {
             return;
         }
 
+<<<<<<<HEAD
+        if (dto.getFoodCategoryId() != null) {
+            FoodCategory foodCategory = foodCategoryRepository.findById(dto.getFoodCategoryId())
+                    .orElse(null);
+            restaurant.setFoodCategory(foodCategory);
+        }
+=======
         // 연관 엔티티 설정 (City와 FoodCategory 레퍼런스를 찾아서 설정)
         if (dto.getCityId() != null) {
             City city = cityRepository.findById(dto.getCityId()).orElse(null);
             restaurant.setCity(city);
         }
+>>>>>>>b1c6eee398288b2c20181f1f019738c007f14f81
 
         if (dto.getFoodCategoryId() != null) {
-            FoodCategory foodCategory = foodCategoryRepository.findById(dto.getFoodCategoryId()).orElse(null);
+            FoodCategory foodCategory = foodCategoryRepository.findById(dto.getFoodCategoryId())
+                    .orElse(null);
             restaurant.setFoodCategory(foodCategory);
         }
 
