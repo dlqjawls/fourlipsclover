@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'widgets/logo_section.dart';
-import 'widgets/search_bar.dart';
+import 'widgets/tagged_search_bar.dart'; // CustomSearchBar 대신 TaggedSearchBar import
 import 'widgets/hashtag_selector.dart';
 import 'widgets/local_favorites.dart';
 import 'widgets/category_recommendations.dart';
@@ -19,6 +19,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
+  // TaggedSearchBar에 접근하기 위한 GlobalKey 추가
+  final GlobalKey<TaggedSearchBarState> _taggedSearchBarKey = GlobalKey<TaggedSearchBarState>();
 
   @override
   void initState() {
@@ -50,6 +52,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  // 기존 검색 핸들러
   void _handleSearch(String query) {
     print('검색어: $query');
 
@@ -66,6 +69,42 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         context,
         MaterialPageRoute(
           builder: (context) => SearchResultsScreen(searchQuery: query),
+        ),
+      );
+    }
+  }
+
+  // 태그 포함 검색 핸들러 추가
+  void _handleSearchWithTags(String query, List<String> tags) {
+    print('검색어: $query, 태그: $tags');
+
+    // 검색 기록에 추가
+    if (query.trim().isNotEmpty) {
+      final searchProvider = Provider.of<SearchProvider>(
+        context,
+        listen: false,
+      );
+      searchProvider.addSearchHistory(query);
+
+      // 검색 결과 페이지로 이동
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SearchResultsScreen(
+            searchQuery: query,
+            selectedTags: tags,
+          ),
+        ),
+      );
+    } else if (tags.isNotEmpty) {
+      // 검색어 없이 태그만 있는 경우
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SearchResultsScreen(
+            searchQuery: "맛집",
+            selectedTags: tags,
+          ),
         ),
       );
     }
@@ -89,19 +128,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
-          child:
-              searchProvider.isSearchMode
-                  ? SearchModeView(
-                    controller: _searchController,
-                    searchHistory: searchProvider.searchHistory,
-                    onBack: () => searchProvider.toggleSearchMode(false, null),
-                    onSearch: _handleSearch,
-                    onClearHistory: () => searchProvider.clearSearchHistory(),
-                    onRemoveHistoryItem:
-                        (index) =>
-                            searchProvider.removeSearchHistoryItem(index),
-                  )
-                  : _buildNormalModeUI(screenHeight, searchProvider),
+          child: searchProvider.isSearchMode
+              ? SearchModeView(
+                  controller: _searchController,
+                  searchHistory: searchProvider.searchHistory,
+                  selectedTags: searchProvider.selectedTags, // 태그 목록 전달
+                  onBack: () => searchProvider.toggleSearchMode(false, null),
+                  onSearch: _handleSearch,
+                  onSearchWithTags: _handleSearchWithTags, // 태그 검색 콜백 추가
+                  onClearHistory: () => searchProvider.clearSearchHistory(),
+                  onRemoveHistoryItem: (index) =>
+                      searchProvider.removeSearchHistoryItem(index),
+                )
+              : _buildNormalModeUI(screenHeight, searchProvider),
         ),
       ),
     );
@@ -123,23 +162,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
           const SizedBox(height: 50),
 
-          // 검색창 - 탭하면 검색 모드로 전환
-          CustomSearchBar(
-            onSearch: (query) {
-              _searchController.text = query;
-              _handleSearch(query);
+          // TaggedSearchBar로 교체
+          TaggedSearchBar(
+            key: _taggedSearchBarKey,
+            selectedTags: searchProvider.selectedTags,
+            onSearch: (query, tags) {
+              _handleSearchWithTags(query, tags);
             },
             onTap: () {
-              final searchProvider = Provider.of<SearchProvider>(
-                context,
-                listen: false,
-              );
               searchProvider.toggleSearchMode(true, _searchController);
             },
           ),
 
           // 해시태그 선택기
-          const HashtagSelector(),
+          HashtagSelector(
+            // 태그 선택 콜백 추가
+            onTagSelected: (tag) {
+              // SearchProvider에 태그 추가
+              searchProvider.addTag(tag);
+              
+              // TaggedSearchBar에 태그 추가
+              if (_taggedSearchBarKey.currentState != null) {
+                _taggedSearchBarKey.currentState!.addTag(tag);
+              }
+            },
+          ),
 
           SizedBox(height: screenHeight * 0.05),
 

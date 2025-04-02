@@ -143,4 +143,36 @@ Future<List<RestaurantResponse>> fetchSearchResults(String query) async {
   void initialize() {
     loadSearchHistory();
   }
+
+  // 클래스 내부에 태그 관련 변수 추가
+List<String> _selectedTags = [];
+
+// getter 추가
+List<String> get selectedTags => _selectedTags;
+
+// 태그 설정 메소드 추가
+void setSelectedTags(List<String> tags) {
+  _selectedTags = List.from(tags);
+  notifyListeners();
+}
+
+// 태그 추가 메소드
+void addTag(String tag) {
+  if (!_selectedTags.contains(tag)) {
+    _selectedTags.add(tag);
+    notifyListeners();
+  }
+}
+
+// 태그 제거 메소드
+void removeTag(String tag) {
+  _selectedTags.remove(tag);
+  notifyListeners();
+}
+
+// 태그 초기화 메소드
+void clearTags() {
+  _selectedTags.clear();
+  notifyListeners();
+}
 }

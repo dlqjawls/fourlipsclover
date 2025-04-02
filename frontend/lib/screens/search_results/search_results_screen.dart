@@ -1,4 +1,5 @@
 // lib/screens/search_results/search_results_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
@@ -13,12 +14,12 @@ import '../../utils/map_utils.dart';
 
 class SearchResultsScreen extends StatefulWidget {
   final String searchQuery;
-  final String? selectedTag;
+  final List<String> selectedTags; // 해시태그 목록으로 변경 (추가)
 
   const SearchResultsScreen({
     Key? key,
     required this.searchQuery,
-    this.selectedTag,
+    this.selectedTags = const [], // 기본값은 빈 목록 (추가)
   }) : super(key: key);
 
   @override
@@ -28,6 +29,7 @@ class SearchResultsScreen extends StatefulWidget {
 class _SearchResultsScreenState extends State<SearchResultsScreen> {
   late String _currentQuery;
   String? _selectedFilter;
+  List<String> _selectedTags = []; // 선택된 태그 목록 (추가)
   final TextEditingController _searchController = TextEditingController();
   int _resultCount = 0;
   bool _isLoading = false;
@@ -36,7 +38,9 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
   void initState() {
     super.initState();
     _currentQuery = widget.searchQuery;
-    _selectedFilter = widget.selectedTag;
+    _selectedFilter =
+        widget.selectedTags.isNotEmpty ? widget.selectedTags.first : null; // 수정
+    _selectedTags = List.from(widget.selectedTags); // 태그 목록 복사 (추가)
     _searchController.text = _currentQuery;
 
     // 빌드 사이클 완료 후 검색 실행
@@ -63,7 +67,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     final searchProvider = Provider.of<SearchProvider>(context, listen: false);
     final mapProvider = Provider.of<MapProvider>(context, listen: false);
 
-    // 검색 실행
+    // 검색 실행 (태그는 아직 사용하지 않음)
     final results = await searchProvider.fetchSearchResults(_currentQuery);
 
     if (mounted) {
@@ -79,86 +83,109 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     }
   }
 
-  void _addLabelsToMap(List<RestaurantResponse> restaurants, MapProvider mapProvider) {
-  // 기존 라벨 모두 제거
-  mapProvider.clearLabels();
+  // 기존 _addLabelsToMap 메소드는 그대로 유지
 
-  print('지도에 라벨 추가: 총 ${restaurants.length}개 식당 검색됨');
+  void _addLabelsToMap(
+    List<RestaurantResponse> restaurants,
+    MapProvider mapProvider,
+  ) {
+    // 기존 라벨 모두 제거
+    mapProvider.clearLabels();
 
-  // 각 레스토랑 정보 로깅
-  for (var restaurant in restaurants) {
-    print('식당: ${restaurant.placeName}, 좌표: x=${restaurant.x}, y=${restaurant.y}');
-  }
+    print('지도에 라벨 추가: 총 ${restaurants.length}개 식당 검색됨');
 
-  // 유효한 좌표가 있는 식당만 필터링
-  final validRestaurants = restaurants.where(
-    (r) => r.y != null && r.x != null,
-  ).toList();
-
-  print('유효한 좌표가 있는 식당: ${validRestaurants.length}개');
-
-  // 바운딩 박스 계산을 위한 변수들
-  double minLat = double.infinity;
-  double maxLat = -double.infinity;
-  double minLng = double.infinity;
-  double maxLng = -double.infinity;
-
-  // 각 식당마다 라벨 추가
-  int addedCount = 0;
-  for (var restaurant in validRestaurants) {
-    try {
-      print('라벨 추가 시도: ${restaurant.placeName}, y=${restaurant.y}, x=${restaurant.x}');
-      
-      mapProvider.addLabel(
-        id: restaurant.kakaoPlaceId,
-        latitude: restaurant.y!,  // 중요: 여기서 y가 위도
-        longitude: restaurant.x!, // 중요: 여기서 x가 경도
-        text: restaurant.placeName ?? "식당",
-        imageAsset: 'clover',
-        textSize: 24.0,
-        zIndex: 1,
-        isClickable: false,
+    // 각 레스토랑 정보 로깅
+    for (var restaurant in restaurants) {
+      print(
+        '식당: ${restaurant.placeName}, 좌표: x=${restaurant.x}, y=${restaurant.y}',
       );
-      
-      addedCount++;
-
-      // 바운딩 박스 업데이트
-      if (restaurant.y! < minLat) minLat = restaurant.y!;
-      if (restaurant.y! > maxLat) maxLat = restaurant.y!;
-      if (restaurant.x! < minLng) minLng = restaurant.x!;
-      if (restaurant.x! > maxLng) maxLng = restaurant.x!;
-    } catch (e) {
-      print('라벨 추가 실패: ${restaurant.placeName}, 오류: $e');
     }
+
+    // 유효한 좌표가 있는 식당만 필터링
+    final validRestaurants =
+        restaurants.where((r) => r.y != null && r.x != null).toList();
+
+    print('유효한 좌표가 있는 식당: ${validRestaurants.length}개');
+
+    // 바운딩 박스 계산을 위한 변수들
+    double minLat = double.infinity;
+    double maxLat = -double.infinity;
+    double minLng = double.infinity;
+    double maxLng = -double.infinity;
+
+    // 각 식당마다 라벨 추가
+    int addedCount = 0;
+    for (var restaurant in validRestaurants) {
+      try {
+        print(
+          '라벨 추가 시도: ${restaurant.placeName}, y=${restaurant.y}, x=${restaurant.x}',
+        );
+
+        mapProvider.addLabel(
+          id: restaurant.kakaoPlaceId,
+          latitude: restaurant.y!, // 중요: 여기서 y가 위도
+          longitude: restaurant.x!, // 중요: 여기서 x가 경도
+          text: restaurant.placeName ?? "식당",
+          imageAsset: 'clover',
+          textSize: 24.0,
+          zIndex: 1,
+          isClickable: false,
+        );
+
+        addedCount++;
+
+        // 바운딩 박스 업데이트
+        if (restaurant.y! < minLat) minLat = restaurant.y!;
+        if (restaurant.y! > maxLat) maxLat = restaurant.y!;
+        if (restaurant.x! < minLng) minLng = restaurant.x!;
+        if (restaurant.x! > maxLng) maxLng = restaurant.x!;
+      } catch (e) {
+        print('라벨 추가 실패: ${restaurant.placeName}, 오류: $e');
+      }
+    }
+
+    print('라벨 추가 완료: $addedCount개');
+
+    // 라벨이 추가된 식당이 있으면 지도 중심 설정
+    if (addedCount > 0) {
+      final centerLat = (minLat + maxLat) / 2;
+      final centerLng = (minLng + maxLng) / 2;
+
+      print('지도 중심 설정: lat=$centerLat, lng=$centerLng');
+
+      mapProvider.setMapCenter(
+        latitude: centerLat,
+        longitude: centerLng,
+        zoomLevel: 14,
+      );
+    }
+
+    print('지도에 ${mapProvider.labels.length}개 라벨 추가 완료');
   }
 
-  print('라벨 추가 완료: $addedCount개');
-
-  // 라벨이 추가된 식당이 있으면 지도 중심 설정
-  if (addedCount > 0) {
-    final centerLat = (minLat + maxLat) / 2;
-    final centerLng = (minLng + maxLng) / 2;
-
-    print('지도 중심 설정: lat=$centerLat, lng=$centerLng');
-
-    mapProvider.setMapCenter(
-      latitude: centerLat,
-      longitude: centerLng,
-      zoomLevel: 14,
-    );
+  // 태그 제거 처리 (추가)
+  void _removeTag(String tag) {
+    setState(() {
+      _selectedTags.remove(tag);
+      // 선택된 필터 업데이트
+      _selectedFilter = _selectedTags.isNotEmpty ? _selectedTags.first : null;
+    });
+    // 실제 검색은 태그와 관계없이 수행하므로 여기서는 재검색 안 함
   }
 
-  print('지도에 ${mapProvider.labels.length}개 라벨 추가 완료');
-}
-
-  // 필터 변경 처리
+  // 필터 변경 처리 (수정)
   void _handleFilterChanged(String filter) {
     setState(() {
       if (_selectedFilter == filter) {
         // 이미 선택된 필터를 다시 탭하면 해제
         _selectedFilter = null;
+        _selectedTags.remove(filter);
       } else {
         _selectedFilter = filter;
+        // 태그 목록에 추가 (중복 방지)
+        if (!_selectedTags.contains(filter)) {
+          _selectedTags.add(filter);
+        }
       }
     });
   }
@@ -326,6 +353,37 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                           ),
                         ),
 
+                        // 선택된 태그가 있으면 표시 (추가)
+                        if (_selectedTags.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '선택된 태그:',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.darkGray,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children:
+                                      _selectedTags
+                                          .map((tag) => _buildTagChip(tag))
+                                          .toList(),
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                            ),
+                          ),
+
                         // 지도 미리보기
                         MapPreview(
                           location: _currentQuery,
@@ -357,6 +415,36 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // 태그 칩 위젯 빌드 (추가)
+  Widget _buildTagChip(String tag) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.mediumGray.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.darkGray.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            tag,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.darkGray,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: () => _removeTag(tag),
+            child: Icon(Icons.close, size: 12, color: AppColors.mediumGray),
+          ),
+        ],
       ),
     );
   }
