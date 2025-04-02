@@ -21,11 +21,12 @@ class _MatchingChatScreenState extends State<MatchingChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final List<ChatMessage> _messages = [];
   // WebSocket 연결을 위한 변수 추가 예정
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         title: Row(
           children: [
             CircleAvatar(
@@ -71,9 +72,8 @@ class _MatchingChatScreenState extends State<MatchingChatScreen> {
 
   Widget _buildMessageBubble(ChatMessage message) {
     return Align(
-      alignment: message.isSentByMe
-          ? Alignment.centerRight
-          : Alignment.centerLeft,
+      alignment:
+          message.isSentByMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
         padding: EdgeInsets.all(12.0),
@@ -82,9 +82,10 @@ class _MatchingChatScreenState extends State<MatchingChatScreen> {
           borderRadius: BorderRadius.circular(20.0),
         ),
         child: Column(
-          crossAxisAlignment: message.isSentByMe
-              ? CrossAxisAlignment.end
-              : CrossAxisAlignment.start,
+          crossAxisAlignment:
+              message.isSentByMe
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
           children: [
             Text(message.message),
             Text(
@@ -148,15 +149,17 @@ class _MatchingChatScreenState extends State<MatchingChatScreen> {
     if (_messageController.text.trim().isEmpty) return;
 
     setState(() {
-      _messages.add(ChatMessage(
-        message: _messageController.text,
-        isSentByMe: true,
-        time: '${DateTime.now().hour}:${DateTime.now().minute}',
-      ));
+      _messages.add(
+        ChatMessage(
+          message: _messageController.text,
+          isSentByMe: true,
+          time: '${DateTime.now().hour}:${DateTime.now().minute}',
+        ),
+      );
     });
 
     // WebSocket으로 메시지 전송 로직 추가 예정
-    
+
     _messageController.clear();
   }
 
