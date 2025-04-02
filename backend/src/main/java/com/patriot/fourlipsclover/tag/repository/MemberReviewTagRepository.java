@@ -1,5 +1,6 @@
 package com.patriot.fourlipsclover.tag.repository;
 
+import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.entity.MemberReviewTag;
 import java.util.List;
 import java.util.Optional;
@@ -17,4 +18,6 @@ public interface MemberReviewTagRepository extends JpaRepository<MemberReviewTag
 
 	@Query("select mrt from MemberReviewTag mrt where mrt.member.memberId =:memberId")
 	List<MemberReviewTag> findByMemberId(@Param("memberId") long memberId);
+
+	List<MemberReviewTag> findByMember(Member member);
 }
