@@ -6,9 +6,9 @@ import 'kakao_map_native_view.dart';
 import '../config/theme.dart';
 import 'package:frontend/widgets/full_map_screen.dart';
 
-class MapPreview extends StatelessWidget {
+class MapPreview extends StatefulWidget {
   final String location;
-  final VoidCallback? onTapViewMap; // nullable로 변경
+  final VoidCallback? onTapViewMap;
   final double? latitude;
   final double? longitude;
   final int? zoomLevel;
@@ -16,51 +16,69 @@ class MapPreview extends StatelessWidget {
   const MapPreview({
     Key? key,
     required this.location,
-    this.onTapViewMap, // 선택적으로 변경
+    this.onTapViewMap,
     this.latitude,
     this.longitude,
     this.zoomLevel,
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    // Provider 사용
-    final mapProvider = Provider.of<MapProvider>(context);
+  State<MapPreview> createState() => _MapPreviewState();
+}
 
-    // 라벨이 있는지 확인
-    print("MapPreview - 라벨 수: ${mapProvider.labels.length}");
+class _MapPreviewState extends State<MapPreview> {
+  @override
+  void initState() {
+    super.initState();
+    _updateMapCenter();
+  }
 
-    // 위도/경도 값 결정 (위젯 속성 → Provider)
-    final lat = latitude ?? mapProvider.centerLatitude;
-    final lng = longitude ?? mapProvider.centerLongitude;
-    final zoom = zoomLevel ?? mapProvider.zoomLevel;
+  @override
+  void didUpdateWidget(MapPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // 위젯 속성이 변경되었을 때만 업데이트
+    if (oldWidget.latitude != widget.latitude || 
+        oldWidget.longitude != widget.longitude ||
+        oldWidget.zoomLevel != widget.zoomLevel) {
+      _updateMapCenter();
+    }
+  }
 
-    // 맵 프리뷰에 들어오면 Provider 값 업데이트
-    // 하지만 위젯 속성이 제공된 경우에만
-    if (latitude != null && longitude != null) {
-      // build에서 호출 (하지만 실제 상태가 변경될 때만 업데이트)
+  // 지도 중심 위치 업데이트 - 빌드 사이클 밖에서 처리
+  void _updateMapCenter() {
+    if (widget.latitude != null && widget.longitude != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mapProvider.centerLatitude != lat ||
-            mapProvider.centerLongitude != lng ||
-            mapProvider.zoomLevel != zoom) {
+        final mapProvider = Provider.of<MapProvider>(context, listen: false);
+        
+        // 현재 값과 다를 때만 업데이트 (불필요한 상태 변경 방지)
+        if (mapProvider.centerLatitude != widget.latitude ||
+            mapProvider.centerLongitude != widget.longitude ||
+            (widget.zoomLevel != null && mapProvider.zoomLevel != widget.zoomLevel)) {
+          
           mapProvider.setMapCenter(
-            latitude: lat,
-            longitude: lng,
-            zoomLevel: zoom,
+            latitude: widget.latitude!,
+            longitude: widget.longitude!,
+            zoomLevel: widget.zoomLevel,
           );
         }
       });
     }
+  }
 
-    // 전체 지도 화면으로 이동하는 함수
-    void _navigateToFullMap() {
-      print("지도로 보기 버튼 클릭됨");
-      Navigator.pushNamed(
-        context,
-        '/full_map',
-        arguments: {'locationName': location},
-      );
-    }
+  // 전체 지도 화면으로 이동하는 함수
+  void _navigateToFullMap() {
+    Navigator.pushNamed(
+      context,
+      '/full_map',
+      arguments: {'locationName': widget.location},
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Provider에서 읽기만 하고, 쓰기는 하지 않음
+    final mapProvider = Provider.of<MapProvider>(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -80,7 +98,7 @@ class MapPreview extends StatelessWidget {
               if (mapProvider.loadingState == MapLoadingState.loading)
                 Center(
                   child: Text(
-                    "$location 지역 지도 로딩 중...",
+                    "${widget.location} 지역 지도 로딩 중...",
                     style: TextStyle(
                       fontFamily: 'Anemone_air',
                       color: AppColors.mediumGray,
@@ -101,12 +119,12 @@ class MapPreview extends StatelessWidget {
                   ),
                 ),
 
-              // 카카오맵 뷰 적용 - 인터랙션 방지를 위한 AbsorbPointer 대신 IgnorePointer ? ? 
+              // 카카오맵 뷰 적용 - 인터랙션 방지를 위한 IgnorePointer
               IgnorePointer(
                 child: KakaoMapNativeView(
-                  latitude: latitude,
-                  longitude: longitude,
-                  zoomLevel: zoomLevel,
+                  latitude: widget.latitude,
+                  longitude: widget.longitude,
+                  zoomLevel: widget.zoomLevel,
                   listenToProvider: true,
                 ),
               ),
@@ -124,7 +142,7 @@ class MapPreview extends StatelessWidget {
                 right: 8,
                 bottom: 4,
                 child: ElevatedButton(
-                  onPressed: _navigateToFullMap, // 네비게이션 함수 연결
+                  onPressed: widget.onTapViewMap ?? _navigateToFullMap,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.background,
                     foregroundColor: AppColors.darkGray,
