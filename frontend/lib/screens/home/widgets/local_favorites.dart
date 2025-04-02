@@ -72,8 +72,8 @@ class _LocalFavoritesState extends State<LocalFavorites> {
 
       if (authProvider.currentPosition != null) {
         final restaurants = await NearbyRestaurantService.findNearbyRestaurants(
-          latitude: authProvider.currentPosition!.longitude,
-          longitude: authProvider.currentPosition!.latitude,
+          latitude: authProvider.currentPosition!.latitude,
+          longitude: authProvider.currentPosition!.longitude,
         );
 
         // 각 식당마다 거리 계산

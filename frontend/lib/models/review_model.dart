@@ -6,7 +6,6 @@ class Review {
   final String restaurantId;
   final int memberId;
   final String username;
-  final String? title;
   final String content;
   final String? imageUrl;
   final String? profileImageUrl;
@@ -25,7 +24,6 @@ class Review {
     required this.restaurantId,
     required this.memberId,
     required this.username,
-    this.title,
     required this.content,
     this.imageUrl,
     this.profileImageUrl,
@@ -58,7 +56,6 @@ class Review {
       restaurantId: response.restaurant?.restaurantId?.toString() ?? '',
       memberId: response.reviewer?.memberId ?? 0,
       username: response.reviewer?.nickname ?? '익명',
-      title: '리뷰',
       content: response.content,
       imageUrl: imageUrl,
       profileImageUrl: profileImageUrl ?? 'assets/default_profile.png',
@@ -67,7 +64,7 @@ class Review {
       localRank: 0,
       likes: response.likedCount,
       dislikes: response.dislikedCount,
-      date: response.createdAt ?? DateTime.now(),
+      date: response.visitedAt ?? DateTime.now(),
       menu: [],
       isLiked: false,
       isDisliked: false,
@@ -80,7 +77,6 @@ class Review {
       restaurantId: json['restaurant_id'],
       memberId: json['member_id'] ?? 0,
       username: json['username'],
-      title: json['title'],
       content: json['content'],
       imageUrl: json['image_url'],
       profileImageUrl: json['profile_image_url'] ?? 'assets/default_profile.png',
@@ -104,7 +100,6 @@ class Review {
       'restaurant_id': restaurantId,
       'member_id': memberId,
       'username': username,
-      'title': title,
       'content': content,
       'image_url': imageUrl,
       'profile_image_url': profileImageUrl,
