@@ -664,6 +664,7 @@ class _MatchingResistScreenState extends State<MatchingResistScreen> {
             selectedFoodCategory: _selectedFoodCategory,
             selectedTaste: _selectedTaste,
             request: _requestController.text,
+             requestController: _requestController, 
             guide: widget.guide,
             regionId: widget.guide['regionId'],
             tagIds: widget.guide['tagIds'],
