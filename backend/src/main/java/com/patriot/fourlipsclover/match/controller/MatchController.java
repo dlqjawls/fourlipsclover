@@ -46,7 +46,7 @@ public class MatchController {
 
         // 최초 결제하기 버튼 (아이템명, 가격 등의 정보가 들어있는 결제하는 URL을 리턴해줌)
         PaymentReadyResponse paymentReadyResponse = paymentService.readyForMatch(
-                String.valueOf(currentMemberId),
+                currentMemberId,
                 PAYMENT_ITEM_ID
         );
 

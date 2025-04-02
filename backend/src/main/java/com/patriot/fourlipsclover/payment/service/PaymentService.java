@@ -67,7 +67,7 @@ public class PaymentService {
     }
 
     @Transactional
-    public PaymentReadyResponse readyForMatch(String userId,
+    public PaymentReadyResponse readyForMatch(Long currentMemberId,
                                               Integer itemId) {
         RestTemplate restTemplate = new RestTemplate();
         String orderId = UUID.randomUUID().toString();
@@ -86,7 +86,7 @@ public class PaymentService {
         Map<String, Object> params = new HashMap<>();
         params.put("cid", CID);
         params.put("partner_order_id", orderId);
-        params.put("partner_user_id", userId);
+        params.put("partner_user_id", currentMemberId);
         params.put("item_name", itemName);
         params.put("quantity", quantity);
         params.put("total_amount", totalAmount);
