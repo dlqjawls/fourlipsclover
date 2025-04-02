@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -98,7 +97,7 @@ public class TagService {
 
 
 		}
-		CompletableFuture.runAsync(() -> updateElasticsearchTags(review.getMember().getMemberId()));
+//		CompletableFuture.runAsync(() -> updateElasticsearchTags(review.getMember().getMemberId()));
 
 		updateElasticsearchTags(review.getMember().getMemberId());
 
@@ -161,7 +160,7 @@ public class TagService {
 						.build())
 				.toList();
 		localsDocumentOpt.setTags(tagDataList);
-
+		System.out.println(localsDocumentOpt);
 // 엘라스틱서치에 업데이트
 		try {
 			elasticsearchClient.update(u -> u
