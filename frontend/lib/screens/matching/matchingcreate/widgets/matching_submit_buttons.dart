@@ -16,6 +16,7 @@ class MatchingSubmitButtons extends StatefulWidget {
   final String? startDate;
   final String? endDate;
   final VoidCallback onCancel;
+  final TextEditingController requestController;
 
   const MatchingSubmitButtons({
     Key? key,
@@ -30,6 +31,7 @@ class MatchingSubmitButtons extends StatefulWidget {
     required this.startDate,
     required this.endDate,
     required this.onCancel,
+    required this.requestController,
   }) : super(key: key);
 
   @override
@@ -39,27 +41,42 @@ class MatchingSubmitButtons extends StatefulWidget {
 class _MatchingSubmitButtonsState extends State<MatchingSubmitButtons> {
   final MatchingCreateService _matchingCreateService = MatchingCreateService();
   bool _isLoading = false;
+  late String _currentRequest;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentRequest = widget.requestController.text;
+    widget.requestController.addListener(_updateRequest);
+  }
+
+  @override
+  void dispose() {
+    widget.requestController.removeListener(_updateRequest);
+    super.dispose();
+  }
+
+  void _updateRequest() {
+    setState(() {
+      _currentRequest = widget.requestController.text;
+    });
+    debugPrint('현재 요청사항: $_currentRequest'); // 디버깅용
+  }
 
   Future<void> _handleSubmit() async {
+    FocusScope.of(context).unfocus();
+
     if (widget.startDate == null || widget.endDate == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('여행 일정을 선택해주세요.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('여행 일정을 선택해주세요.')),
+      );
       return;
     }
+
     debugPrint('가이드 정보: ${widget.guide}');
-    // 가이드 ID가 없는 경우 임시로 3 사용
     final guideId = widget.guide['id'] ?? 3962115782;
     debugPrint('사용할 가이드 ID: $guideId');
-
-    setState(() => _isLoading = true);
-
-    if (guideId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('가이드 정보가 올바르지 않습니다.')));
-      return;
-    }
+    debugPrint('전송할 요청사항: ${widget.requestController.text}'); // 디버깅용
 
     setState(() => _isLoading = true);
 
@@ -71,7 +88,7 @@ class _MatchingSubmitButtonsState extends State<MatchingSubmitButtons> {
         transportation: widget.selectedTransport ?? '',
         foodPreference: widget.selectedFoodCategory ?? '',
         tastePreference: widget.selectedTaste ?? '',
-        requirements: widget.request ?? '',
+        requirements: widget.requestController.text, // 컨트롤러에서 직접 값을 가져옴
         startDate: widget.startDate!,
         endDate: widget.endDate!,
       );
@@ -82,26 +99,25 @@ class _MatchingSubmitButtonsState extends State<MatchingSubmitButtons> {
         context: context,
         backgroundColor: Colors.transparent,
         isScrollControlled: true,
-        builder:
-            (context) => MatchingConfirmBottomSheet(
-              selectedGroup: widget.selectedGroup,
-              selectedTransport: widget.selectedTransport,
-              selectedFoodCategory: widget.selectedFoodCategory,
-              selectedTaste: widget.selectedTaste,
-              request: widget.request ?? '',
-              guide: widget.guide,
-              regionId: widget.regionId,
-              tagIds: widget.tagIds,
-              startDate: widget.startDate!,
-              endDate: widget.endDate!,
-              matchData: matchData, // API 응답 데이터 전달
-            ),
+        builder: (context) => MatchingConfirmBottomSheet(
+          selectedGroup: widget.selectedGroup,
+          selectedTransport: widget.selectedTransport,
+          selectedFoodCategory: widget.selectedFoodCategory,
+          selectedTaste: widget.selectedTaste,
+          request: widget.requestController.text, // 컨트롤러의 현재 값 사용
+          guide: widget.guide,
+          regionId: widget.regionId,
+          tagIds: widget.tagIds,
+          startDate: widget.startDate!,
+          endDate: widget.endDate!,
+          matchData: matchData,
+        ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('매칭 생성 중 오류가 발생했습니다: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('매칭 생성 중 오류가 발생했습니다: $e')),
+      );
       debugPrint('매칭 생성 중 오류: $e');
     } finally {
       setState(() => _isLoading = false);
@@ -155,25 +171,22 @@ class _MatchingSubmitButtonsState extends State<MatchingSubmitButtons> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: 0,
               ),
-              child:
-                  _isLoading
-                      ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                      : const Text(
-                        '신청하기',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
+                    )
+                  : const Text(
+                      '신청하기',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
         ],
