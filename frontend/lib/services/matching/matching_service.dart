@@ -44,23 +44,30 @@ class MatchingService {
   }
 
   Future<Map<String, int>> getMatchingCounts() async {
+    int confirmedCount = 0;
+    int pendingCount = 0;
+
+    // 확정된 매칭 조회
+    final List<MatchRequest> confirmedMatches = await getConfirmedMatches();
+    confirmedCount = confirmedMatches.length;
+    debugPrint('확정된 매칭: $confirmedCount');
+
+    // 대기중인 매칭 조회
     try {
-      final List<MatchRequest> confirmedMatches = await getConfirmedMatches();
       final List<MatchRequest> pendingMatches = await getGuideMatchRequests();
-
-      final int confirmedCount = confirmedMatches.length;
-      final int pendingCount =
-          pendingMatches.where((m) => m.status == 'PENDING').length;
-
-      debugPrint('=== 매칭 카운트 조회 결과 ===');
-      debugPrint('확정된 매칭: $confirmedCount');
-      debugPrint('대기중인 매칭: $pendingCount');
-
-      return {'confirmedCount': confirmedCount, 'pendingCount': pendingCount};
+      pendingCount = pendingMatches.where((m) => m.status == 'PENDING').length;
     } catch (e) {
-      debugPrint('매칭 카운트 조회 중 오류: $e');
-      rethrow;
+      debugPrint('대기중인 매칭 조회 실패: $e');
+      // 404는 정상적인 "데이터 없음" 상황이므로 0으로 처리
+      pendingCount = 0;
     }
+
+    debugPrint('=== 매칭 카운트 조회 결과 ===');
+    debugPrint('확정된 매칭: $confirmedCount');
+    debugPrint('대기중인 매칭: $pendingCount');
+
+    // 항상 데이터 반환
+    return {'confirmedCount': confirmedCount, 'pendingCount': pendingCount};
   }
 
   Future<List<MatchRequest>> getGuideMatchRequests() async {
@@ -233,7 +240,7 @@ class MatchingService {
   Future<List<MatchRequest>> getConfirmedMatches() async {
     try {
       final token = await _getToken();
-      debugPrint('=== 접수된 매칭 목록 조회 시작 ===');
+      debugPrint('=== 확정된 매칭 목록 조회 시작 ===');
 
       final response = await http.get(
         Uri.parse('$baseUrl/api/match/guide/confirmed'),
@@ -253,13 +260,8 @@ class MatchingService {
         final List<MatchRequest> matches = [];
 
         for (var item in data) {
-          try {
-            matches.add(MatchRequest.fromJson(item));
-            debugPrint('매칭 데이터 변환 성공: ${matches.last.matchId}');
-          } catch (e) {
-            debugPrint('데이터 변환 실패: $e');
-            debugPrint('실패한 데이터: $item');
-          }
+          matches.add(MatchRequest.fromJson(item));
+          debugPrint('매칭 데이터 변환 성공: ${matches.last.matchId}');
         }
 
         debugPrint('확정된 매칭 수: ${matches.length}');
@@ -268,11 +270,11 @@ class MatchingService {
         debugPrint('확정된 매칭이 없습니다.');
         return []; // 빈 리스트 반환
       } else {
-        throw Exception('접수된 매칭 목록 조회 실패 (${response.statusCode})');
+        throw Exception('확정된 매칭 목록 조회 실패 (${response.statusCode})');
       }
     } catch (e) {
-      debugPrint('접수된 매칭 목록 조회 중 오류: $e');
-      throw Exception('접수된 매칭 목록 조회 실패: $e');
+      debugPrint('확정된 매칭 목록 조회 중 오류: $e');
+      throw Exception('확정된 매칭 목록 조회 실패: $e');
     }
   }
 
@@ -283,7 +285,7 @@ class MatchingService {
       debugPrint('매칭 ID: $matchId');
 
       final response = await http.put(
-        Uri.parse('$baseUrl/api/match/guide/confirm/$matchId'),
+        Uri.parse('$baseUrl/api/match/guide/confirmed'),
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           'Authorization': 'Bearer $token',

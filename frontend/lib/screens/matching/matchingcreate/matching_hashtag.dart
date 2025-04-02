@@ -146,12 +146,23 @@ class _MatchingCreateHashtagScreenState
             child: ElevatedButton(
               onPressed:
                   selectedHashtags.isNotEmpty
-                      ? () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const MatchingLocationScreen(),
-                        ),
-                      )
+                      ? () {
+                        final selectedTagObjects =
+                            tags
+                                .where(
+                                  (tag) => selectedHashtags.contains(tag.name),
+                                )
+                                .toList();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => MatchingLocationScreen(
+                                  selectedTags: selectedTagObjects,
+                                ),
+                          ),
+                        );
+                      }
                       : null,
               style: MatchingStyles.buttonStyle,
               child: Text('다음', style: MatchingStyles.buttonTextStyle),
