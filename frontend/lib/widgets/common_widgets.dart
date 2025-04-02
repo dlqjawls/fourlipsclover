@@ -10,36 +10,40 @@ class BottomNavBar extends StatelessWidget {
       : super(key: key);
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // ✅ 맛집 버튼 선택 시만 둥근 보더 적용
         if (currentIndex == 2)
           Positioned.fill(
             child: CustomPaint(
               painter: RoundedBorderPainter(),
             ),
           ),
-        Container(
-          height: 75,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: currentIndex == 2
-                ? null // ✅ 맛집 선택 시 기존 보더 제거
-                : const Border(top: BorderSide(
-                color: Color(0xFFF3F3F3), width: 0.5)), // 기본 직선 보더 유지
+        SafeArea( // ✅ SafeArea 열고
+          top: false,
+          child: Container(
+            height: 75,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: currentIndex == 2
+                  ? null
+                  : const Border(
+                top: BorderSide(color: Color(0xFFF3F3F3), width: 0.5),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround, // 여긴 유지해도 됨
+              children: [
+                Flexible(child: _buildNavItem(0, 'assets/icons/group', '그룹')),
+                Flexible(child: _buildNavItem(1, 'assets/icons/matching', '매칭')),
+                Flexible(child: _buildAiItem(2, 'assets/icons/recommendation', '맛집')),
+                Flexible(child: _buildNavItem(3, 'assets/icons/daily_log', '스토리')),
+                Flexible(child: _buildNavItem(4, 'assets/icons/mypage', '마이')),
+              ],
+            ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(0, 'assets/icons/group', '그룹'),
-              _buildNavItem(1, 'assets/icons/matching', '매칭'),
-              _buildAiItem(2, 'assets/icons/recommendation', '맛집'),
-              _buildNavItem(3, 'assets/icons/daily_log', '스토리'),
-              _buildNavItem(4, 'assets/icons/mypage', '마이'),
-            ],
-          ),
-        ),
+        ), // ✅ SafeArea 닫기
       ],
     );
   }
