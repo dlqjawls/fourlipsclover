@@ -247,8 +247,8 @@ class MapProvider extends ChangeNotifier {
 
   // 라벨 추가 메서드 - 최종 수정
 void addLabel({
-  required double latitude, // y 값 (경도)
-  required double longitude, // x 값 (위도)
+  required double latitude, // y 값
+  required double longitude, // x 값
   String? text,
   String? imageAsset,
   double? textSize,
