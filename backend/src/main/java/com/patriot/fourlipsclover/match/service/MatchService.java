@@ -1,7 +1,6 @@
 package com.patriot.fourlipsclover.match.service;
 
 import com.patriot.fourlipsclover.exception.*;
-import com.patriot.fourlipsclover.group.repository.GroupRepository;
 import com.patriot.fourlipsclover.group.service.GroupService;
 import com.patriot.fourlipsclover.match.dto.request.LocalsProposalRequest;
 import com.patriot.fourlipsclover.match.dto.request.MatchCreateRequest;
@@ -35,7 +34,6 @@ public class MatchService {
     private final MatchRepository matchRepository;
     private final MemberRepository memberRepository;
     private final GuideRequestFormRepository guideRequestFormRepository;
-    private final GroupRepository groupRepository;
     private final PaymentService paymentService;
     private final PaymentApprovalRepository paymentApprovalRepository;
     private final LocalsProposalRepository localsProposalRepository;
@@ -271,7 +269,7 @@ public class MatchService {
         }
 
         // 2. 해당 가이드로 신청된 매칭 목록 조회
-        List<Match> matches = matchRepository.findByGuide_MemberId(guideId);
+        List<Match> matches = matchRepository.findByGuide_MemberIdAndStatus(guideId, ApprovalStatus.PENDING);
         if (matches.isEmpty()) {
             throw new MatchNotFoundException("신청된 매칭 내역이 없습니다.");
         }
@@ -387,15 +385,13 @@ public class MatchService {
                 .map(Restaurant::getRestaurantId)
                 .collect(Collectors.toList());
 
-        LocalsProposalResponse response = new LocalsProposalResponse(
+        return new LocalsProposalResponse(
                 savedProposal.getProposalId(),
                 savedProposal.getMatch().getMatchId(),
                 restaurantIds,
                 savedProposal.getRecommendMenu(),
                 savedProposal.getDescription()
         );
-
-        return response;
     }
 
     // 현지인 - 매칭 거절
