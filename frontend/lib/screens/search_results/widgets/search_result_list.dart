@@ -7,6 +7,7 @@ import '../../../config/theme.dart';
 import '../../../providers/search_provider.dart';
 import '../../../models/restaurant_model.dart';
 import '../../../widgets/clover_loading_spinner.dart';
+import '../../review/restaurant_detail.dart';
 
 class SearchResultList extends StatefulWidget {
   final String query;
@@ -251,7 +252,14 @@ class _SearchResultListState extends State<SearchResultList> {
               ),
             GestureDetector(
               onTap: () {
-                // 음식점 상세 페이지로 이동 (나중에 구현)
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => RestaurantDetailScreen(
+                      restaurantId: restaurant.kakaoPlaceId,
+                    ),
+                  ),
+                );
               },
               child: Container(
                 color: Colors.white,

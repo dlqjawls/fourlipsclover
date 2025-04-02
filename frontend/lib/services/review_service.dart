@@ -62,7 +62,6 @@ class ReviewService {
         restaurantId: restaurantId,
         memberId: 123456789,
         username: '맛집탐험가',
-        title: '순대국밥 정말 맛있어요!',
         content: '국물이 진하고 면발이 쫄깃해요. 강력 추천합니다!',
         imageUrl: 'assets/images/review_image3.jpg',
         profileImageUrl: 'https://randomuser.me/api/portraits/men/1.jpg',
@@ -81,7 +80,6 @@ class ReviewService {
         // 광주 하남촌 kakaoPlaceId
         memberId: 123456789,
         username: '한식러버',
-        title: '하남촌 순대국밥 최고!',
         content: '국물이 얼큰하고 깊은 맛이 납니다. 한식 좋아하시면 강추!',
         imageUrl: 'assets/images/review_image2.jpg',
         profileImageUrl: 'https://randomuser.me/api/portraits/men/5.jpg',
@@ -214,7 +212,8 @@ class ReviewService {
       );
 
       if (response.statusCode == 200) {
-        return ReviewResponse.fromJson(jsonDecode(response.body));
+        final decodedBody = utf8.decode(response.bodyBytes);
+        return ReviewResponse.fromJson(jsonDecode(decodedBody));
       } else {
         throw Exception('Failed to update review: ${response.statusCode}');
       }

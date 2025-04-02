@@ -149,8 +149,10 @@ class _ReviewListState extends State<ReviewList> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       InkWell(
-                        onTap: () async {
-                          bool? updated = await Navigator.push(
+                        onTap: review.memberId != memberId
+                            ? null
+                            : () async {
+                          final updated = await Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => ReviewDetail(
@@ -159,7 +161,10 @@ class _ReviewListState extends State<ReviewList> {
                               ),
                             ),
                           );
-                          if (updated == true) _fetchReviews();
+
+                          if (updated == true) {
+                            _fetchReviews(); // ✅ 무조건 다시 불러오기
+                          }
                         },
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
