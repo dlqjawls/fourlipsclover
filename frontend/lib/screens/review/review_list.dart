@@ -26,12 +26,6 @@ class _ReviewListState extends State<ReviewList> {
   String? accessToken;
   int memberId = 0;
 
-  final List<String> defaultImages = [
-    "assets/images/review_image.jpg",
-    "assets/images/review_image2.jpg",
-    "assets/images/review_image3.jpg"
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -274,10 +268,8 @@ class _ReviewListState extends State<ReviewList> {
   }
 
   Widget _buildReviewImage(String? imageUrl, int index) {
-    String assignedImage = defaultImages[index % defaultImages.length];
-
     if (imageUrl == null || imageUrl.isEmpty) {
-      imageUrl = assignedImage;
+      return const SizedBox.shrink(); // 👉 이미지가 없으면 아무 것도 안 보임
     }
 
     return Container(
@@ -294,6 +286,7 @@ class _ReviewListState extends State<ReviewList> {
       ),
     );
   }
+
 
   String _formatDate(DateTime date) {
     return "${date.month}.${date.day}";
