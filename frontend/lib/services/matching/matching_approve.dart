@@ -25,7 +25,7 @@ class MatchingApproveService {
     required String tid,
     required String pgToken,
     required String orderId,
-    required int amount,
+    required String amount,
     required List<int> tagIds,
     required int regionId,
     required int guideMemberId,
@@ -59,7 +59,7 @@ class MatchingApproveService {
         "region": {"regionId": regionId},
         "guide": {"memberId": guideMemberId},
         "guideRequestForm": {
-          "guideRequestFormId": 1,
+          // "guideRequestFormId": 5,
           "transportation": transportation,
           "foodPreference": foodPreference,
           "tastePreference": tastePreference,
