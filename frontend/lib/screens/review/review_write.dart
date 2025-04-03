@@ -90,7 +90,7 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
 
       if (widget.review == null) {
         // ✅ 리뷰 작성
-        await ReviewService.createReview(
+        final response = await ReviewService.createReview(
           memberId: int.parse(appProvider.user!.id.toString()),
           kakaoPlaceId: widget.kakaoPlaceId,
           content: content,
@@ -98,9 +98,18 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
           imageFile: _image,
           accessToken: accessToken,
         );
+
+        // 🔥 작성 직후 reviewId로 다시 조회해서 full URL 포함된 데이터 받아옴
+        final refreshed = await ReviewService.getReviewDetail(
+          kakaoPlaceId: widget.kakaoPlaceId,
+          reviewId: response.reviewId!,
+        );
+        final createdReview = Review.fromResponse(refreshed);
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("리뷰가 등록되었습니다.")),
         );
+        Navigator.pop(context, createdReview); // ✅ 이미지까지 포함된 상태로 되돌아감
       } else {
         // ✅ 리뷰 수정
         final updated = await ReviewService.updateReview(
