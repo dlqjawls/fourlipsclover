@@ -14,4 +14,6 @@ public interface MatchRepository extends JpaRepository<Match, Integer> {
     List<Match> findByGuide_MemberId(Long guideId);
 
     List<Match> findByGuide_MemberIdAndStatus(long guideId, ApprovalStatus approvalStatus);
+
+    Match findByMatchId(Integer matchId);
 }
