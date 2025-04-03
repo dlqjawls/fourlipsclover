@@ -67,16 +67,16 @@ class _MatchingSubmitButtonsState extends State<MatchingSubmitButtons> {
     FocusScope.of(context).unfocus();
 
     if (widget.startDate == null || widget.endDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('여행 일정을 선택해주세요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('여행 일정을 선택해주세요.')));
       return;
     }
 
     debugPrint('가이드 정보: ${widget.guide}');
-    final guideId = widget.guide['id'] ?? 3962115782;
-    debugPrint('사용할 가이드 ID: $guideId');
-    debugPrint('전송할 요청사항: ${widget.requestController.text}'); // 디버깅용
+    final guideMemberId = widget.guide['memberId'];
+    debugPrint('사용할 가이드 ID: $guideMemberId');
+    debugPrint('전송할 요청사항: ${widget.requestController.text}');
 
     setState(() => _isLoading = true);
 
@@ -84,40 +84,41 @@ class _MatchingSubmitButtonsState extends State<MatchingSubmitButtons> {
       final matchData = await _matchingCreateService.createMatching(
         tagIds: widget.tagIds,
         regionId: widget.regionId,
-        guideMemberId: guideId,
+        guideMemberId: guideMemberId, // memberId 전달
         transportation: widget.selectedTransport ?? '',
         foodPreference: widget.selectedFoodCategory ?? '',
         tastePreference: widget.selectedTaste ?? '',
-        requirements: widget.requestController.text, // 컨트롤러에서 직접 값을 가져옴
+        requirements: widget.requestController.text,
         startDate: widget.startDate!,
         endDate: widget.endDate!,
       );
-
+      
       if (!mounted) return;
 
       showModalBottomSheet(
         context: context,
         backgroundColor: Colors.transparent,
         isScrollControlled: true,
-        builder: (context) => MatchingConfirmBottomSheet(
-          selectedGroup: widget.selectedGroup,
-          selectedTransport: widget.selectedTransport,
-          selectedFoodCategory: widget.selectedFoodCategory,
-          selectedTaste: widget.selectedTaste,
-          request: widget.requestController.text, // 컨트롤러의 현재 값 사용
-          guide: widget.guide,
-          regionId: widget.regionId,
-          tagIds: widget.tagIds,
-          startDate: widget.startDate!,
-          endDate: widget.endDate!,
-          matchData: matchData,
-        ),
+        builder:
+            (context) => MatchingConfirmBottomSheet(
+              selectedGroup: widget.selectedGroup,
+              selectedTransport: widget.selectedTransport,
+              selectedFoodCategory: widget.selectedFoodCategory,
+              selectedTaste: widget.selectedTaste,
+              request: widget.requestController.text, // 컨트롤러의 현재 값 사용
+              guide: widget.guide,
+              regionId: widget.regionId,
+              tagIds: widget.tagIds,
+              startDate: widget.startDate!,
+              endDate: widget.endDate!,
+              matchData: matchData,
+            ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('매칭 생성 중 오류가 발생했습니다: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('매칭 생성 중 오류가 발생했습니다: $e')));
       debugPrint('매칭 생성 중 오류: $e');
     } finally {
       setState(() => _isLoading = false);
@@ -171,22 +172,25 @@ class _MatchingSubmitButtonsState extends State<MatchingSubmitButtons> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: 0,
               ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              child:
+                  _isLoading
+                      ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                      : const Text(
+                        '신청하기',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    )
-                  : const Text(
-                      '신청하기',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
             ),
           ),
         ],
