@@ -4,7 +4,8 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patriot.fourlipsclover.locals.document.LocalsDocument;
-import com.patriot.fourlipsclover.locals.document.LocalsDocument.TagData;
+import com.patriot.fourlipsclover.locals.entity.LocalCertification;
+import com.patriot.fourlipsclover.locals.repository.LocalCertificationRepository;
 import com.patriot.fourlipsclover.locals.repository.LocalsElasticsearchRepository;
 import com.patriot.fourlipsclover.member.entity.MemberReviewTag;
 import com.patriot.fourlipsclover.restaurant.entity.RestaurantTag;
@@ -17,7 +18,6 @@ import com.patriot.fourlipsclover.tag.entity.Tag;
 import com.patriot.fourlipsclover.tag.repository.MemberReviewTagRepository;
 import com.patriot.fourlipsclover.tag.repository.RestaurantTagRepository;
 import com.patriot.fourlipsclover.tag.repository.TagRepository;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +41,7 @@ public class TagService {
 	private final WebClient webClient;
 	private final ElasticsearchClient elasticsearchClient;
 	private final LocalsElasticsearchRepository localsElasticsearchRepository;
+	private final LocalCertificationRepository localCertificationRepository;
 	@Value("${model.server.uri}")
 	private String MODEL_SERVER_URI;
 
@@ -143,35 +144,35 @@ public class TagService {
 
 
 	private void updateElasticsearchTags(Long memberId) {
+		LocalCertification cert = localCertificationRepository.findByMember_MemberId(
+				memberId);
 		// 멤버 태그 정보 조회
-		List<MemberReviewTag> memberTags = memberReviewTagRepository.findByMemberId(memberId);
-
-		// 엘라스틱서치 문서 조회 또는 생성
-		LocalsDocument localsDocumentOpt = localsElasticsearchRepository.findByMemberId(
-				memberId).orElseThrow();
-
-		// 태그 데이터 변환
-		List<TagData> tagDataList = memberTags.stream()
-				.map(tag -> TagData.builder()
+		List<MemberReviewTag> memberReviewTags = memberReviewTagRepository.findByMember(
+				cert.getMember());
+		List<LocalsDocument.TagData> tagDataList = memberReviewTags.stream()
+				.map(tag -> LocalsDocument.TagData.builder()
 						.tagName(tag.getTag().getName())
 						.category(tag.getTag().getCategory())
 						.frequency(tag.getFrequency())
 						.avgConfidence(tag.getAvgConfidence())
 						.build())
-				.toList();
-		localsDocumentOpt.setTags(tagDataList);
-		System.out.println(localsDocumentOpt);
-// 엘라스틱서치에 업데이트
-		try {
-			elasticsearchClient.update(u -> u
-							.index("locals")
-							.id(localsDocumentOpt.getId())
-							.doc(localsDocumentOpt),
-					Object.class
-			);
-		} catch (IOException e) {
-			throw new RuntimeException("Elasticsearch 문서 업데이트 실패", e);
-		}
-	}
+				.collect(Collectors.toList());
+		// 지역명 정규화 (특별시, 광역시, 도 단위로)
+		String regionName = cert.getLocalRegion().getRegion().getName();
 
+		// LocalsDocument 생성
+		LocalsDocument localsDocument = LocalsDocument.builder()
+				.id(cert.getLocalCertificationId() + "")
+				.memberId(cert.getMember().getMemberId())
+				.nickname(cert.getMember().getNickname())
+				.regionName(regionName)
+				.localRegionId(cert.getLocalRegion().getLocalRegionId())
+				.localGrade(cert.getLocalGrade().name())
+				.expiryAt(cert.getExpiryAt())
+				.tags(tagDataList)
+				.build();
+
+		// Elasticsearch에 저장
+		localsElasticsearchRepository.save(localsDocument);
+	}
 }
