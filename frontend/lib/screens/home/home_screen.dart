@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'widgets/logo_section.dart';
-import 'widgets/search_bar.dart';
+import 'widgets/tagged_search_bar.dart';
 import 'widgets/hashtag_selector.dart';
 import 'widgets/local_favorites.dart';
 import 'widgets/category_recommendations.dart';
@@ -17,8 +17,14 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   final TextEditingController _searchController = TextEditingController();
+  // TaggedSearchBar에 접근하기 위한 GlobalKey 추가
+  final GlobalKey<TaggedSearchBarState> _taggedSearchBarKey = GlobalKey<TaggedSearchBarState>();
+
+  // 상태 유지를 위한 오버라이드
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -50,6 +56,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  // 기존 검색 핸들러
   void _handleSearch(String query) {
     print('검색어: $query');
 
@@ -71,8 +78,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  // 태그 포함 검색 핸들러 추가
+void _handleSearchWithTags(String query, List<String> tags) {
+  print('HomeScreen: 검색 직전 태그 목록 - $tags');
+  
+  // 검색 기록에 추가
+  final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+  if (query.trim().isNotEmpty) {
+    searchProvider.addSearchHistory(query);
+  }
+  
+  print('HomeScreen: Provider에 저장된 태그 목록 - ${searchProvider.selectedTags}');
+  
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => SearchResultsScreen(
+        searchQuery: query.trim().isNotEmpty ? query : "맛집",
+        // IMPORTANT: Use the provider's tags directly
+        selectedTags: searchProvider.selectedTags,
+      ),
+    ),
+  );
+}
   @override
   Widget build(BuildContext context) {
+    super.build(context); // AutomaticKeepAliveClientMixin 요구사항
+    
     final screenHeight = MediaQuery.of(context).size.height;
 
     // Provider 사용
@@ -89,19 +121,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
-          child:
-              searchProvider.isSearchMode
-                  ? SearchModeView(
-                    controller: _searchController,
-                    searchHistory: searchProvider.searchHistory,
-                    onBack: () => searchProvider.toggleSearchMode(false, null),
-                    onSearch: _handleSearch,
-                    onClearHistory: () => searchProvider.clearSearchHistory(),
-                    onRemoveHistoryItem:
-                        (index) =>
-                            searchProvider.removeSearchHistoryItem(index),
-                  )
-                  : _buildNormalModeUI(screenHeight, searchProvider),
+          child: searchProvider.isSearchMode
+              ? SearchModeView(
+                  controller: _searchController,
+                  searchHistory: searchProvider.searchHistory,
+                  selectedTags: searchProvider.selectedTags,
+                  onBack: () => searchProvider.toggleSearchMode(false, null),
+                  onSearch: _handleSearch,
+                  onSearchWithTags: _handleSearchWithTags,
+                  onClearHistory: () => searchProvider.clearSearchHistory(),
+                  onRemoveHistoryItem: (index) =>
+                      searchProvider.removeSearchHistoryItem(index),
+                )
+              : _buildNormalModeUI(screenHeight, searchProvider),
         ),
       ),
     );
@@ -112,6 +144,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     SearchProvider searchProvider,
   ) {
     return SingleChildScrollView(
+      key: const PageStorageKey<String>('homeScrollPosition'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -123,23 +156,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
           const SizedBox(height: 50),
 
-          // 검색창 - 탭하면 검색 모드로 전환
-          CustomSearchBar(
-            onSearch: (query) {
-              _searchController.text = query;
-              _handleSearch(query);
+          // TaggedSearchBar
+          TaggedSearchBar(
+            key: _taggedSearchBarKey,
+            selectedTags: searchProvider.selectedTags,
+            onSearch: (query, tags) {
+              _handleSearchWithTags(query, tags);
             },
             onTap: () {
-              final searchProvider = Provider.of<SearchProvider>(
-                context,
-                listen: false,
-              );
               searchProvider.toggleSearchMode(true, _searchController);
             },
           ),
 
           // 해시태그 선택기
-          const HashtagSelector(),
+          HashtagSelector(
+            // 태그 선택 콜백은 SearchProvider에서 직접 처리
+            onTagSelected: (tag) {
+              // 이미 Provider에서 태그를 관리하므로 추가 작업 필요 없음
+            },
+          ),
 
           SizedBox(height: screenHeight * 0.05),
 
