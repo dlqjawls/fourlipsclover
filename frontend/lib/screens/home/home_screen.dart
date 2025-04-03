@@ -17,10 +17,12 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   final TextEditingController _searchController = TextEditingController();
   // TaggedSearchBar에 접근하기 위한 GlobalKey 추가
-  final GlobalKey<TaggedSearchBarState> _taggedSearchBarKey = GlobalKey<TaggedSearchBarState>();
+  final GlobalKey<TaggedSearchBarState> _taggedSearchBarKey =
+      GlobalKey<TaggedSearchBarState>();
 
   // 상태 유지를 위한 오버라이드
   @override
@@ -79,61 +81,65 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Au
   }
 
   // 태그 포함 검색 핸들러 추가
-void _handleSearchWithTags(String query, List<String> tags) {
-  print('HomeScreen: 검색 직전 태그 목록 - $tags');
-  
-  // 검색 기록에 추가
-  final searchProvider = Provider.of<SearchProvider>(context, listen: false);
-  if (query.trim().isNotEmpty) {
-    searchProvider.addSearchHistory(query);
-  }
-  
-  print('HomeScreen: Provider에 저장된 태그 목록 - ${searchProvider.selectedTags}');
-  
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => SearchResultsScreen(
-        searchQuery: query.trim().isNotEmpty ? query : "맛집",
-        // IMPORTANT: Use the provider's tags directly
-        selectedTags: searchProvider.selectedTags,
+  void _handleSearchWithTags(String query, List<String> tags) {
+    print('HomeScreen: 검색 직전 태그 목록 - $tags');
+
+    // 검색 기록에 추가
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    if (query.trim().isNotEmpty) {
+      searchProvider.addSearchHistory(query);
+    }
+
+    print('HomeScreen: Provider에 저장된 태그 목록 - ${searchProvider.selectedTags}');
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => SearchResultsScreen(
+              searchQuery: query.trim().isNotEmpty ? query : "맛집",
+              // IMPORTANT: Use the provider's tags directly
+              selectedTags: searchProvider.selectedTags,
+            ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context); // AutomaticKeepAliveClientMixin 요구사항
-    
+
     final screenHeight = MediaQuery.of(context).size.height;
 
     // Provider 사용
     final searchProvider = Provider.of<SearchProvider>(context);
 
-    return WillPopScope(
-      onWillPop: () async {
-        if (searchProvider.isSearchMode) {
+    return PopScope(
+      canPop: !searchProvider.isSearchMode,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          // Pop이 취소되면 검색 모드 비활성화
           searchProvider.toggleSearchMode(false, null);
-          return false;
         }
-        return true;
       },
       child: Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
-          child: searchProvider.isSearchMode
-              ? SearchModeView(
-                  controller: _searchController,
-                  searchHistory: searchProvider.searchHistory,
-                  selectedTags: searchProvider.selectedTags,
-                  onBack: () => searchProvider.toggleSearchMode(false, null),
-                  onSearch: _handleSearch,
-                  onSearchWithTags: _handleSearchWithTags,
-                  onClearHistory: () => searchProvider.clearSearchHistory(),
-                  onRemoveHistoryItem: (index) =>
-                      searchProvider.removeSearchHistoryItem(index),
-                )
-              : _buildNormalModeUI(screenHeight, searchProvider),
+          child:
+              searchProvider.isSearchMode
+                  ? SearchModeView(
+                    controller: _searchController,
+                    searchHistory: searchProvider.searchHistory,
+                    selectedTags: searchProvider.selectedTags,
+                    onBack: () => searchProvider.toggleSearchMode(false, null),
+                    onSearch: _handleSearch,
+                    onSearchWithTags: _handleSearchWithTags,
+                    onClearHistory: () => searchProvider.clearSearchHistory(),
+                    onRemoveHistoryItem:
+                        (index) =>
+                            searchProvider.removeSearchHistoryItem(index),
+                  )
+                  : _buildNormalModeUI(screenHeight, searchProvider),
         ),
       ),
     );
