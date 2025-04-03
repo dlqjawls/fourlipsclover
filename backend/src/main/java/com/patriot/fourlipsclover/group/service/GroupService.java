@@ -235,13 +235,17 @@ public class GroupService {
         return groupJoinRequestRepository.findByGroup_GroupId(groupId);
     }
 
-    public void handleGroupAssignment(GuideRequestForm guideRequestForm) {
+    public void handleGroupAssignment(GuideRequestForm guideRequestForm, long currentMemId) {
         // 그룹이 선택되지 않은 경우 (나홀로 여행 선택)
         if (guideRequestForm.getGroup() == null) {
+            Member member = memberRepository.findByMemberId(currentMemId);
             // 새로운 그룹을 생성하고, 해당 그룹에 매칭 신청자 추가
             Group newGroup = new Group();
             newGroup.setName("새로운 여행");  // 기본 이름 설정
+            newGroup.setDescription("가보자고");
+            newGroup.setIsPublic(false);
             newGroup.setCreatedAt(LocalDateTime.now());
+            newGroup.setMember(member);
 
             // 그룹 생성 후, 해당 그룹의 ID를 신청서에 설정
             groupRepository.save(newGroup);
