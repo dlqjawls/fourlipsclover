@@ -7,7 +7,14 @@ import 'package:android_intent_plus/android_intent.dart';
 import 'payment_success_screen.dart';
 
 class KakaoPayOfficialScreen extends StatefulWidget {
-  const KakaoPayOfficialScreen({super.key});
+  final Map<String, dynamic> matchData;
+  final Map<String, dynamic> matchingInfo;
+
+  const KakaoPayOfficialScreen({
+    Key? key,
+    required this.matchData, // matchData 파라미터 추가
+    required this.matchingInfo, // matchingInfo 파라미터 추가
+  }) : super(key: key);
 
   @override
   State<KakaoPayOfficialScreen> createState() => _KakaoPayOfficialScreenState();
@@ -25,13 +32,14 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onNavigationRequest: (request) => _handleNavigation(request),
-        ),
-      );
+    _controller =
+        WebViewController()
+          ..setJavaScriptMode(JavaScriptMode.unrestricted)
+          ..setNavigationDelegate(
+            NavigationDelegate(
+              onNavigationRequest: (request) => _handleNavigation(request),
+            ),
+          );
     _initPayment();
   }
 
@@ -70,7 +78,9 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
     }
 
     // 승인 리디렉션 감지
-    if (url.startsWith('https://fourlipsclover.duckdns.org/api/payment/approve')) {
+    if (url.startsWith(
+      'https://fourlipsclover.duckdns.org/api/payment/approve',
+    )) {
       final uri = Uri.parse(url);
       final pgToken = uri.queryParameters['pg_token'];
 
@@ -109,7 +119,8 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
         final match = regex.firstMatch(url);
         if (match != null) {
           final scheme = match.group(1);
-          final newUrl = url.replaceFirst('intent://', '$scheme://').split('#')[0];
+          final newUrl =
+              url.replaceFirst('intent://', '$scheme://').split('#')[0];
           final parsedUrl = Uri.parse(newUrl);
           if (await canLaunchUrl(parsedUrl)) {
             await launchUrl(parsedUrl);
@@ -135,7 +146,9 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
 
   Future<void> _tryExtractPgToken() async {
     try {
-      final result = await _controller.runJavaScriptReturningResult("window.location.href");
+      final result = await _controller.runJavaScriptReturningResult(
+        "window.location.href",
+      );
       final currentUrl = result.toString().replaceAll('"', '');
       final uri = Uri.parse(currentUrl);
       final pgToken = uri.queryParameters['pg_token'];
@@ -180,12 +193,13 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => PaymentSuccessScreen(
-            itemName: '현지인 매칭',
-            amount: amount,
-            tid: _tid!,
-            //orderId: orderId,
-          ),
+          builder:
+              (_) => PaymentSuccessScreen(
+                itemName: '현지인 매칭',
+                amount: amount,
+                tid: _tid!,
+                //orderId: orderId,
+              ),
         ),
       );
     } catch (e) {
@@ -193,13 +207,13 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : WebViewWidget(controller: _controller),
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : WebViewWidget(controller: _controller),
     );
   }
 }
