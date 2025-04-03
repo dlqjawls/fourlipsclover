@@ -92,17 +92,31 @@ class _ReviewListState extends State<ReviewList> {
   }
 
   Future<void> _onReviewWritten() async {
-    bool? updated = await Navigator.push(
+    final createdReview = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ReviewWriteScreen(kakaoPlaceId: widget.restaurantId),
       ),
     );
-    if (updated == true) {
-      await Future.delayed(const Duration(milliseconds: 500));
+
+    if (createdReview != null && createdReview is Review) {
+      // 리뷰 상세로 바로 이동
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ReviewDetail(
+            review: createdReview,
+            restaurantId: widget.restaurantId,
+          ),
+        ),
+      );
+
+      // 리스트도 갱신
+      await Future.delayed(const Duration(milliseconds: 300));
       _fetchReviews();
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

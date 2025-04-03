@@ -1,6 +1,8 @@
 package com.patriot.fourlipsclover.match.service;
 
 import com.patriot.fourlipsclover.exception.*;
+import com.patriot.fourlipsclover.group.entity.Group;
+import com.patriot.fourlipsclover.group.repository.GroupRepository;
 import com.patriot.fourlipsclover.group.service.GroupService;
 import com.patriot.fourlipsclover.match.dto.request.LocalsProposalRequest;
 import com.patriot.fourlipsclover.match.dto.request.MatchCreateRequest;
@@ -39,6 +41,7 @@ public class MatchService {
     private final LocalsProposalRepository localsProposalRepository;
     private final RestaurantJpaRepository restaurantJpaRepository;
     private final GroupService groupService;
+    private final GroupRepository groupRepository;
 
     public void validateMatchRequest(MatchCreateRequest request, long memberId) {
         boolean isMember = memberRepository.existsById(memberId);
@@ -92,45 +95,29 @@ public class MatchService {
             throw new MatchBusinessException("요청사항을 작성해야 합니다.");
         }
 
-//        // itemName 검증 (상품명이 비어있으면 안 됨)
-//        if (request.getItemName() == null || request.getItemName().isEmpty()) {
-//            throw new MatchBusinessException("상품명은 필수입니다.");
-//        }
-
-//        // quantity 검증 (수량은 1 이상이어야 함)
-//        try {
-//            int quantity = Integer.parseInt(request.getQuantity());
-//            if (quantity < 1) {
-//                throw new MatchBusinessException("수량은 1 이상이어야 합니다.");
-//            }
-//        } catch (NumberFormatException e) {
-//            throw new MatchBusinessException("수량은 유효한 숫자여야 합니다.");
-//        }
-
-//        // totalAmount 검증 (금액은 유효한 숫자여야 함)
-//        try {
-//            double totalAmount = Double.parseDouble(request.getTotalAmount().replace(",", ""));
-//            if (totalAmount <= 0) {
-//                throw new MatchBusinessException("결제 금액은 0보다 커야 합니다.");
-//            }
-//        } catch (NumberFormatException e) {
-//            throw new MatchBusinessException("금액은 유효한 숫자여야 합니다.");
-//        }
-
     }
 
-    // 결제 승인 후, Match 엔티티에 partnerOrderId와 다른 정보들까지 저장하는 메서드
     @Transactional
     public Match createMatchAfterPayment(String partnerOrderId, MatchCreateRequest request, long currentMemberId) {
-        // 결제 성공 시, Match 엔티티를 생성하고 partnerOrderId를 설정
-        Match match = new Match();
+        // 그룹이 선택되지 않았을 경우 새로운 그룹을 생성하고 할당
+        if (request.getGuideRequestForm().getGroup() == null) {
+            // 그룹 처리: 그룹이 선택되지 않으면 "나홀로 여행" 그룹을 생성하고 할당
+            groupService.handleGroupAssignment(request.getGuideRequestForm(), currentMemberId); // 그룹 생성 후 guideRequestForm에 그룹 설정
+        } else {
+            // 이미 그룹 정보가 존재하면 해당 groupId를 사용하여 그룹을 설정
+            Integer groupId = request.getGuideRequestForm().getGroup().getGroupId();  // 입력된 groupId로 그룹 정보 설정
+            Group existingGroup = groupRepository.findById(groupId)
+                    .orElseThrow(() -> new MatchBusinessException("유효하지 않은 그룹입니다."));  // 그룹이 존재하지 않으면 예외 처리
+            request.getGuideRequestForm().setGroup(existingGroup);  // 신청서에 기존 그룹 설정
+        }
 
-        // 회원 ID, 지역, 가이드, 기타 정보 설정
+        Match match = new Match();
         match.setMemberId(currentMemberId);  // 현재 로그인한 사용자의 ID를 사용
         match.setRegion(request.getRegion());    // 신청서에서 지역 정보 저장
         match.setGuide(request.getGuide());      // 신청서에서 가이드 정보 저장
         match.setStatus(ApprovalStatus.PENDING);
         match.setPartnerOrderId(partnerOrderId);  // 결제에서 받은 partnerOrderId 저장
+        match.setCreatedAt(LocalDateTime.now());
 
         // 가이드 신청서 (GuideRequestForm) 저장
         GuideRequestForm guideRequestForm = request.getGuideRequestForm();
@@ -138,9 +125,6 @@ public class MatchService {
             guideRequestForm.setCreatedAt(LocalDateTime.now());
             guideRequestFormRepository.save(guideRequestForm);  // 가이드 신청서 저장
             match.setGuideRequestForm(guideRequestForm);  // 매칭과 연결
-
-            // 그룹 처리: 그룹이 선택되지 않으면 "나홀로 여행" 그룹을 생성하고 할당
-            groupService.handleGroupAssignment(guideRequestForm);
         }
 
         // 태그 처리: MatchCreateRequest에서 받은 태그를 MatchTag로 변환하여 저장
@@ -169,7 +153,7 @@ public class MatchService {
 
         // 매칭 리스트가 비어 있으면 예외 처리
         if (matches.isEmpty()) {
-            throw new MatchNotFoundException("매칭 신청 내역이 없습니다.");
+            throw new MatchNotFoundException("사용자 - 수락 상태 상관x, 매칭 신청 내역이 없습니다.");
         }
 
         List<MatchListResponse> responseList = new ArrayList<>();
@@ -271,7 +255,7 @@ public class MatchService {
         // 2. 해당 가이드로 신청된 매칭 목록 조회
         List<Match> matches = matchRepository.findByGuide_MemberIdAndStatus(guideId, ApprovalStatus.PENDING);
         if (matches.isEmpty()) {
-            throw new MatchNotFoundException("신청된 매칭 내역이 없습니다.");
+            throw new MatchNotFoundException("현지인 - 신청 들어온 내역이 없습니다.");
         }
 
         // 조회된 Match 엔티티들을 LocalsMatchListResponse DTO로 변환
