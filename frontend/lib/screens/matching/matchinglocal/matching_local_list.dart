@@ -175,42 +175,36 @@ class _MatchingLocalListScreenState extends State<MatchingLocalListScreen>
     );
   }
 
-  Future<void> _loadMatches() async {
-    setState(() => isLoading = true);
-    try {
-      // 두 API를 병렬로 호출
-      final Future<List<MatchRequest>> confirmedFuture =
-          _matchingService.getConfirmedMatches();
-      final Future<List<MatchRequest>> pendingFuture =
-          _matchingService.getGuideMatchRequests();
-
-      // 두 결과를 동시에 기다림
-      final results = await Future.wait([confirmedFuture, pendingFuture]);
-
-      setState(() {
-        // 첫 번째 결과는 확정된 매칭 목록
-        acceptedRequests = results[0];
-        // 두 번째 결과에서 PENDING 상태인 것만 필터링
-        pendingRequests =
-            results[1].where((m) => m.status == 'PENDING').toList();
-
-        debugPrint('접수된 매칭 수: ${acceptedRequests.length}');
-        debugPrint('대기중인 매칭 수: ${pendingRequests.length}');
-      });
-    } catch (e) {
-      // 404 에러는 데이터가 없는 정상적인 상황일 수 있음
-      if (!e.toString().contains('404')) {
-        debugPrint('매칭 목록 로드 실패: $e');
-      }
-      // 에러가 발생해도 빈 리스트로 초기화
-      setState(() {
-        acceptedRequests = [];
-        pendingRequests = [];
-      });
-    } finally {
-      setState(() => isLoading = false);
-    }
+ Future<void> _loadMatches() async {
+  setState(() => isLoading = true);
+  
+  // 접수된 매칭 로드
+  try {
+    final confirmedMatches = await _matchingService.getConfirmedMatches();
+    setState(() {
+      acceptedRequests = confirmedMatches;
+      debugPrint('확정된 매칭 수: ${acceptedRequests.length}');
+    });
+  } catch (e) {
+    debugPrint('확정된 매칭 로드 중 오류: $e');
+    setState(() => acceptedRequests = []);
   }
+
+  // 대기중인 매칭 로드
+  try {
+    final pendingMatches = await _matchingService.getGuideMatchRequests();
+    setState(() {
+      pendingRequests = pendingMatches.where((m) => m.status == 'PENDING').toList();
+      debugPrint('대기중인 매칭 수: ${pendingRequests.length}');
+    });
+  } catch (e) {
+    debugPrint('대기중인 매칭 로드 중 오류: $e');
+    setState(() => pendingRequests = []);
+  }
+
+  setState(() => isLoading = false);
+}
+  
 
   @override
   Widget build(BuildContext context) {

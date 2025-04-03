@@ -144,17 +144,14 @@ class _MatchingScreenState extends State<MatchingScreen>
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (snapshot.hasError) {
-          debugPrint('매칭 카운트 로드 오류: ${snapshot.error}');
-          return const SizedBox.shrink();
-        }
-
+        // 에러가 있더라도 데이터가 있으면 표시
         final counts =
             snapshot.data ?? {'confirmedCount': 0, 'pendingCount': 0};
         final confirmedCount = counts['confirmedCount'] ?? 0;
         final pendingCount = counts['pendingCount'] ?? 0;
 
-        if (confirmedCount == 0 && pendingCount == 0) {
+        // confirmedCount가 0이 아니면 배너 표시
+        if (confirmedCount == 0) {
           return const SizedBox.shrink();
         }
 
@@ -187,14 +184,6 @@ class _MatchingScreenState extends State<MatchingScreen>
                       if (confirmedCount > 0)
                         Text(
                           '진행중인 매칭 ${confirmedCount}건',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      if (pendingCount > 0)
-                        Text(
-                          '미확인 매칭 ${pendingCount}건',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

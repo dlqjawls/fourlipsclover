@@ -4,9 +4,13 @@ import 'package:frontend/services/matching/region_service.dart';
 import 'package:frontend/screens/matching/matchingcreate/matching_select_local.dart';
 import 'package:frontend/config/theme.dart';
 import 'package:frontend/screens/matching/matchingcreate/styles/matching_styles.dart';
+import 'package:frontend/models/matching/matching_tag_model.dart';
 
 class MatchingLocationScreen extends StatefulWidget {
-  const MatchingLocationScreen({Key? key}) : super(key: key);
+  final List<Tag> selectedTags;
+
+  const MatchingLocationScreen({Key? key, required this.selectedTags})
+    : super(key: key);
 
   @override
   _MatchingLocationScreenState createState() => _MatchingLocationScreenState();
@@ -56,9 +60,10 @@ class _MatchingLocationScreenState extends State<MatchingLocationScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => MatchingSelectLocalScreen(
-            selectedRegion: selectedRegion!,
-          ),
+          builder:
+              (context) =>
+                  MatchingSelectLocalScreen(selectedRegion: selectedRegion!,
+                  selectedTags: widget.selectedTags,),
         ),
       );
     }
@@ -87,10 +92,7 @@ class _MatchingLocationScreenState extends State<MatchingLocationScreen> {
         children: [
           Text('어디로 여행을 떠나시나요?', style: MatchingStyles.titleStyle),
           SizedBox(height: 8),
-          Text(
-            '맛집 탐방을 위한 지역을 선택해주세요',
-            style: MatchingStyles.subtitleStyle,
-          ),
+          Text('맛집 탐방을 위한 지역을 선택해주세요', style: MatchingStyles.subtitleStyle),
         ],
       ),
     );
@@ -98,9 +100,7 @@ class _MatchingLocationScreenState extends State<MatchingLocationScreen> {
 
   Widget _buildContent() {
     if (_isLoading) {
-      return Expanded(
-        child: Center(child: CircularProgressIndicator()),
-      );
+      return Expanded(child: Center(child: CircularProgressIndicator()));
     }
 
     if (_error != null) {
@@ -111,10 +111,7 @@ class _MatchingLocationScreenState extends State<MatchingLocationScreen> {
             children: [
               Text(_error!),
               SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadRegions,
-                child: Text('다시 시도'),
-              ),
+              ElevatedButton(onPressed: _loadRegions, child: Text('다시 시도')),
             ],
           ),
         ),
@@ -156,13 +153,16 @@ class _MatchingLocationScreenState extends State<MatchingLocationScreen> {
               width: 1.5,
             ),
             borderRadius: BorderRadius.circular(12),
-            boxShadow: isSelected ? [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
-                blurRadius: 8,
-                offset: Offset(0, 2),
-              ),
-            ] : [],
+            boxShadow:
+                isSelected
+                    ? [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ]
+                    : [],
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

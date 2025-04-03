@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/map_provider.dart';
 import '../services/kakao_map_service.dart';
+import '../utils/map_utils.dart';
 
 class KakaoMapNativeView extends StatefulWidget {
   final double? latitude;
@@ -37,46 +38,57 @@ class _KakaoMapNativeViewState extends State<KakaoMapNativeView> {
   @override
   void initState() {
     super.initState();
-    print('카카오맵 뷰 초기화 시작');
     // Provider 초기화는 didChangeDependencies에서 처리
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+@override
+void didChangeDependencies() {
+  super.didChangeDependencies();
 
-    final mapProvider = Provider.of<MapProvider>(context);
+  final mapProvider = Provider.of<MapProvider>(context);
 
-    // 처음 Provider에 연결될 때만 초기화
-    if (_mapProvider == null) {
-      _mapProvider = mapProvider;
+  // 처음 Provider에 연결될 때만 초기화
+  if (_mapProvider == null) {
+    _mapProvider = mapProvider;
+    
+    // 프레임 완료 후 초기화 실행
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeMap();
-    }
+    });
   }
+}
 
   Future<void> _initializeMap() async {
   try {
+    // 초기 로딩 상태 설정은 build 메서드 외부에서 수행
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_mapProvider != null) {
+        _mapProvider!.setLoadingState(MapLoadingState.loading);
+      }
+    });
+
     // Provider에서 값 가져오기 (위젯 속성으로 오버라이드 가능)
     final latitude = widget.latitude ?? _mapProvider!.centerLatitude;
     final longitude = widget.longitude ?? _mapProvider!.centerLongitude;
     final zoomLevel = widget.zoomLevel ?? _mapProvider!.zoomLevel;
 
     // 좌표 유효성 검사 추가
-    if (!_isValidCoordinate(latitude, longitude)) {
-      print('잘못된 좌표: latitude=$latitude, longitude=$longitude');
-      _mapProvider!.setLoadingState(MapLoadingState.failure, '유효하지 않은 좌표');
+    if (!MapUtils.isValidKoreaCoordinate(latitude, longitude)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_mapProvider != null) {
+          _mapProvider!.setLoadingState(MapLoadingState.failure, '유효하지 않은 좌표');
+        }
+      });
       return;
     }
 
     // 맵 초기화
     final result = await KakaoMapPlatform.initializeMap();
-    print('카카오맵 초기화 결과: $result');
 
     // 맵 상태 설정
     if (result) {
-      // 라벨 레이어 명시적 초기화 시도 (이 부분 추가)
-      final labelLayerInitResult = await KakaoMapPlatform.initializeLabelLayer();
-      print('라벨 레이어 초기화 결과: $labelLayerInitResult');
+      // 라벨 레이어 명시적 초기화 시도
+      await KakaoMapPlatform.initializeLabelLayer();
 
       // 중심 위치 설정
       await KakaoMapPlatform.setMapCenter(
@@ -86,13 +98,20 @@ class _KakaoMapNativeViewState extends State<KakaoMapNativeView> {
       );
 
       // Provider 업데이트 (위젯에서 값을 전달받은 경우)
-      if (widget.latitude != null && widget.longitude != null) {
-        _mapProvider!.setMapCenter(
-          latitude: latitude,
-          longitude: longitude,
-          zoomLevel: zoomLevel,
-        );
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_mapProvider != null) {
+          if (widget.latitude != null && widget.longitude != null) {
+            _mapProvider!.setMapCenter(
+              latitude: latitude,
+              longitude: longitude,
+              zoomLevel: zoomLevel,
+            );
+          }
+          
+          // 로딩 상태 업데이트
+          _mapProvider!.setLoadingState(MapLoadingState.success);
+        }
+      });
 
       // 마커 설정
       for (var marker in _mapProvider!.markers) {
@@ -106,32 +125,24 @@ class _KakaoMapNativeViewState extends State<KakaoMapNativeView> {
       // 라벨 설정 추가
       await _updateLabels();
 
-      // 로딩 상태 업데이트
-      _mapProvider!.setLoadingState(MapLoadingState.success);
-
       // 맵 생성 콜백 호출
       if (widget.onMapCreated != null) {
         widget.onMapCreated!();
       }
     } else {
-      _mapProvider!.setLoadingState(MapLoadingState.failure, '지도 초기화 실패');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_mapProvider != null) {
+          _mapProvider!.setLoadingState(MapLoadingState.failure, '지도 초기화 실패');
+        }
+      });
     }
   } catch (e) {
-    print('카카오맵 초기화 오류: $e');
-    _mapProvider!.setLoadingState(MapLoadingState.failure, e.toString());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_mapProvider != null) {
+        _mapProvider!.setLoadingState(MapLoadingState.failure, e.toString());
+      }
+    });
   }
-}
-
-// 좌표 유효성 검사 메서드 추가
-bool _isValidCoordinate(double latitude, double longitude) {
-  // 한국 지역 대략적인 좌표 범위
-  const minLat = 33.0;
-  const maxLat = 43.0;
-  const minLng = 125.0;
-  const maxLng = 131.0;
-
-  return (latitude >= minLat && latitude <= maxLat) &&
-         (longitude >= minLng && longitude <= maxLng);
 }
 
   // 리스너 설정 메서드
@@ -192,36 +203,44 @@ bool _isValidCoordinate(double latitude, double longitude) {
   }
   
   // 라벨 업데이트 처리
-Future<void> _updateLabels() async {
-  print("라벨 업데이트 시작: 총 ${_mapProvider!.labels.length}개");
-  
-  // 중복 호출 방지를 위해 Set 사용
-  final uniqueLabels = _mapProvider!.labels.toSet();
-  
-  await KakaoMapPlatform.clearLabels();
-  
-  for (var label in uniqueLabels) {
+  Future<void> _updateLabels() async {
+    final labels = _mapProvider!.labels;
+    
+    if (labels.isEmpty) {
+      await KakaoMapPlatform.clearLabels();
+      return;
+    }
+    
+    // 중복 호출 방지를 위해 Set 사용
+    final uniqueLabels = labels.toSet();
+    
     try {
-      await KakaoMapPlatform.addLabel(
-        labelId: label.id,
-        latitude: label.longitude,
-        longitude: label.latitude,
-        text: label.text,
-        imageAsset: label.imageAsset,
-        textSize: label.textSize,
-        alpha: label.alpha ?? 1.0,
-        rotation: label.rotation ?? 0.0,
-        zIndex: label.zIndex,
-        isClickable: label.isClickable,
-      );
-      print("라벨 추가 성공: ${label.id} (${label.text})");
+      await KakaoMapPlatform.clearLabels();
+      
+      int successCount = 0;
+      for (var label in uniqueLabels) {
+        try {
+          await KakaoMapPlatform.addLabel(
+            labelId: label.id,
+            latitude: label.longitude,
+            longitude: label.latitude,
+            text: label.text,
+            imageAsset: label.imageAsset,
+            textSize: label.textSize,
+            alpha: label.alpha ?? 1.0,
+            rotation: label.rotation ?? 0.0,
+            zIndex: label.zIndex,
+            isClickable: label.isClickable,
+          );
+          successCount++;
+        } catch (e) {
+          print("라벨 추가 실패: ${label.id} - $e");
+        }
+      }
     } catch (e) {
-      print("라벨 추가 실패: ${label.id}, 오류: $e");
+      print("라벨 업데이트 중 오류 발생: $e");
     }
   }
-  
-  print("모든 라벨 업데이트 완료");
-}
 
   @override
   Widget build(BuildContext context) {

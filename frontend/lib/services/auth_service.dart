@@ -61,13 +61,13 @@ class AuthService {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $accessToken',
             },
-          )
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              throw Exception('서버 연결 시간 초과');
-            },
           );
+          // .timeout(
+          //   const Duration(seconds: 30),
+          //   onTimeout: () {
+          //     throw Exception('서버 연결 시간 초과');
+          //   },
+          // );
 
       switch (response.statusCode) {
         case 200:

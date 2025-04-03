@@ -13,6 +13,7 @@ import com.patriot.fourlipsclover.locals.entity.LocalCertification;
 import com.patriot.fourlipsclover.locals.repository.LocalCertificationRepository;
 import com.patriot.fourlipsclover.locals.repository.LocalsElasticsearchRepository;
 import com.patriot.fourlipsclover.member.entity.MemberReviewTag;
+import com.patriot.fourlipsclover.restaurant.repository.RegionRepository;
 import com.patriot.fourlipsclover.tag.repository.MemberReviewTagRepository;
 import java.io.IOException;
 import java.util.List;
@@ -29,10 +30,12 @@ public class LocalsElasticsearchService {
 	private final MemberReviewTagRepository memberReviewTagRepository;
 	private final LocalsElasticsearchRepository localsElasticsearchRepository;
 	private final ElasticsearchClient elasticsearchClient;
+	private final RegionRepository regionRepository;
 
-	public List<LocalsDocument> recommendSimilarUsers(Long currentUserId) {
+	public List<LocalsDocument> recommendSimilarUsers(Long currentUserId, Integer regionId) {
 		List<String> tags = memberReviewTagRepository.findByMemberId(
 				currentUserId).stream().map(t -> t.getTag().getName()).toList();
+		String regionName = regionRepository.findById(regionId).orElseThrow().getName();
 		SearchResponse<LocalsDocument> response = null;
 		try {
 			response = elasticsearchClient.search(s -> s
@@ -43,6 +46,8 @@ public class LocalsElasticsearchService {
 									// 현재 유저 제외
 									b.mustNot(mn -> mn.term(t -> t.field("memberId").value(currentUserId)));
 									// 태그 리스트를 순회하며 각 태그에 대해 nested 쿼리 추가
+									b.must(m -> m.term(
+											t -> t.field("regionName").value(regionName)));
 									for (String tag : tags) {
 										b.should(sh -> sh.nested(n -> n
 												.path("tags")
@@ -76,7 +81,7 @@ public class LocalsElasticsearchService {
 															"  } " +
 															"} " +
 															"return score;")
-													.params("tag_name", JsonData.fromJson(tag))
+													.params("tag_name", JsonData.of(tag))
 											))
 									);
 								}
@@ -128,7 +133,6 @@ public class LocalsElasticsearchService {
 					.regionName(regionName)
 					.localRegionId(cert.getLocalRegion().getLocalRegionId())
 					.localGrade(cert.getLocalGrade().name())
-					.expiryAt(cert.getExpiryAt())
 					.tags(tagDataList)
 					.build();
 

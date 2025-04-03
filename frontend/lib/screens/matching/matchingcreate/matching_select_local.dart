@@ -4,12 +4,16 @@ import 'package:frontend/screens/matching/matchingcreate/styles/matching_styles.
 import 'package:frontend/screens/matching/matchingcreate/matching_resist.dart';
 import 'package:frontend/widgets/skeleton_loading.dart';
 import 'package:frontend/models/matching/matching_region.dart';
+import 'package:frontend/models/matching/matching_tag_model.dart';
+
 class MatchingSelectLocalScreen extends StatefulWidget {
   final Region selectedRegion;
+  final List<Tag> selectedTags;
 
   const MatchingSelectLocalScreen({
     Key? key,
     required this.selectedRegion,
+    required this.selectedTags,
   }) : super(key: key);
   @override
   State<MatchingSelectLocalScreen> createState() =>
@@ -19,19 +23,21 @@ class MatchingSelectLocalScreen extends StatefulWidget {
 class _MatchingSelectLocalScreenState extends State<MatchingSelectLocalScreen> {
   String _selectedFilter = '전체';
   String? _selectedSort;
-  bool _isLoading = true; 
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _loadData();
   }
+
   Future<void> _loadData() async {
-    await Future.delayed(const Duration(seconds: 2)); // 테스트용 딜레이
+    await Future.delayed(const Duration(seconds: 1)); // 테스트용 딜레이
     setState(() {
       _isLoading = false;
     });
   }
+
   // 임시 데이터 (가이드 목록)
   final List<Map<String, dynamic>> guideList = [
     {
@@ -112,7 +118,16 @@ class _MatchingSelectLocalScreenState extends State<MatchingSelectLocalScreen> {
                   context,
                   MaterialPageRoute(
                     builder:
-                        (context) => MatchingResistScreen(guide: selectedGuide),
+                        (context) => MatchingResistScreen(
+                          guide: {
+                            ...selectedGuide,
+                            'regionId': widget.selectedRegion.regionId,
+                            'tagIds':
+                                widget.selectedTags
+                                    .map((tag) => tag.tagId)
+                                    .toList(),
+                          },
+                        ),
                   ),
                 );
               },
@@ -209,110 +224,117 @@ class _MatchingSelectLocalScreenState extends State<MatchingSelectLocalScreen> {
 
           // 가이드 리스트
           Expanded(
-             child: _isLoading
-      ? const SkeletonLoading()
-      : ListView.builder(
-              itemCount: guideList.length,
-              itemBuilder: (context, index) {
-                final guide = guideList[index];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Material(
-                    type: MaterialType.transparency, // splash 효과 제거
-                    child: InkWell(
-                      splashFactory: NoSplash.splashFactory, // splash 효과 제거
-                      highlightColor: Colors.transparent, // 하이라이트 효과 제거
-                      onTap: () => _showConfirmationDialog(guide),
-                      child: Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 2,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // 프로필 이미지
-                              CircleAvatar(
-                                backgroundColor: guide['iconColor'],
-                                radius: 25,
-                                child: Icon(
-                                  guide['imageAsset'],
-                                  color: Colors.white,
-                                  size: 30,
+            child:
+                _isLoading
+                    ? const SkeletonLoading()
+                    : ListView.builder(
+                      itemCount: guideList.length,
+                      itemBuilder: (context, index) {
+                        final guide = guideList[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: Material(
+                            type: MaterialType.transparency, // splash 효과 제거
+                            child: InkWell(
+                              splashFactory:
+                                  NoSplash.splashFactory, // splash 효과 제거
+                              highlightColor: Colors.transparent, // 하이라이트 효과 제거
+                              onTap: () => _showConfirmationDialog(guide),
+                              child: Card(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                              ),
-                              SizedBox(width: 16),
-                              // 정보 영역
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          guide['name'],
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                elevation: 2,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // 프로필 이미지
+                                      CircleAvatar(
+                                        backgroundColor: guide['iconColor'],
+                                        radius: 25,
+                                        child: Icon(
+                                          guide['imageAsset'],
+                                          color: Colors.white,
+                                          size: 30,
                                         ),
-                                        SizedBox(width: 8),
-                                        Row(
+                                      ),
+                                      SizedBox(width: 16),
+                                      // 정보 영역
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            Icon(
-                                              Icons.star,
-                                              size: 16,
-                                              color: Colors.amber,
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  guide['name'],
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                SizedBox(width: 8),
+                                                Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.star,
+                                                      size: 16,
+                                                      color: Colors.amber,
+                                                    ),
+                                                    Text(
+                                                      '${guide['rating']}',
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                        color:
+                                                            AppColors.darkGray,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
                                             ),
+                                            SizedBox(height: 8),
                                             Text(
-                                              '${guide['rating']}',
+                                              (guide['hashtags'] as List).join(
+                                                ' ',
+                                              ),
                                               style: TextStyle(
+                                                color: AppColors.mediumGray,
                                                 fontSize: 14,
-                                                color: AppColors.darkGray,
+                                              ),
+                                            ),
+                                            SizedBox(height: 4),
+                                            Text(
+                                              '${guide['reviews']}개의 리뷰',
+                                              style: TextStyle(
+                                                color: AppColors.mediumGray,
+                                                fontSize: 12,
                                               ),
                                             ),
                                           ],
                                         ),
-                                      ],
-                                    ),
-                                    SizedBox(height: 8),
-                                    Text(
-                                      (guide['hashtags'] as List).join(' '),
-                                      style: TextStyle(
-                                        color: AppColors.mediumGray,
-                                        fontSize: 14,
                                       ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      '${guide['reviews']}개의 리뷰',
-                                      style: TextStyle(
-                                        color: AppColors.mediumGray,
-                                        fontSize: 12,
+                                      // 선택 아이콘
+                                      Icon(
+                                        Icons.navigate_next,
+                                        color: AppColors.primary,
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
-                              // 선택 아이콘
-                              Icon(
-                                Icons.navigate_next,
-                                color: AppColors.primary,
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
-                  ),
-                );
-              },
-            ),
           ),
         ],
       ),

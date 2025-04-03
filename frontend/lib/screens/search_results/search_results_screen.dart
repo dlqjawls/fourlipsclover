@@ -9,6 +9,7 @@ import '../../models/restaurant_model.dart';
 import '../../widgets/clover_loading_spinner.dart';
 import 'widgets/search_filter_tags.dart';
 import 'widgets/search_result_list.dart';
+import '../../utils/map_utils.dart';
 
 class SearchResultsScreen extends StatefulWidget {
   final String searchQuery;
@@ -78,80 +79,77 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     }
   }
 
-  void _addLabelsToMap(
-    List<RestaurantResponse> restaurants,
-    MapProvider mapProvider,
-  ) {
-    // 기존 라벨 모두 제거
-    mapProvider.clearLabels();
+  void _addLabelsToMap(List<RestaurantResponse> restaurants, MapProvider mapProvider) {
+  // 기존 라벨 모두 제거
+  mapProvider.clearLabels();
 
-    print('지도에 라벨 추가 시작: 총 ${restaurants.length}개');
+  print('지도에 라벨 추가: 총 ${restaurants.length}개 식당 검색됨');
 
-    // 바운딩 박스 계산을 위한 변수들
-    double minLat = double.infinity;
-    double maxLat = -double.infinity;
-    double minLng = double.infinity;
-    double maxLng = -double.infinity;
+  // 각 레스토랑 정보 로깅
+  for (var restaurant in restaurants) {
+    print('식당: ${restaurant.placeName}, 좌표: x=${restaurant.x}, y=${restaurant.y}');
+  }
 
-    // 각 식당마다 라벨 추가
-    for (var restaurant in restaurants) {
-      // 좌표가 없는 경우 건너뛰기
-      if (restaurant.y == null || restaurant.x == null) continue;
+  // 유효한 좌표가 있는 식당만 필터링
+  final validRestaurants = restaurants.where(
+    (r) => r.y != null && r.x != null,
+  ).toList();
 
-      print(
-        '라벨 추가: ${restaurant.placeName} (${restaurant.y}, ${restaurant.x})',
-      );
+  print('유효한 좌표가 있는 식당: ${validRestaurants.length}개');
 
-      // 라벨 추가
+  // 바운딩 박스 계산을 위한 변수들
+  double minLat = double.infinity;
+  double maxLat = -double.infinity;
+  double minLng = double.infinity;
+  double maxLng = -double.infinity;
+
+  // 각 식당마다 라벨 추가
+  int addedCount = 0;
+  for (var restaurant in validRestaurants) {
+    try {
+      print('라벨 추가 시도: ${restaurant.placeName}, y=${restaurant.y}, x=${restaurant.x}');
+      
       mapProvider.addLabel(
         id: restaurant.kakaoPlaceId,
-        latitude: restaurant.y!, // y가 위도
-        longitude: restaurant.x!, // x가 경도
+        latitude: restaurant.y!,  // 중요: 여기서 y가 위도
+        longitude: restaurant.x!, // 중요: 여기서 x가 경도
         text: restaurant.placeName ?? "식당",
-        imageAsset: 'clover', // 네잎클로버 이미지
+        imageAsset: 'clover',
         textSize: 24.0,
         zIndex: 1,
-        isClickable: false, // 미리보기에서는 클릭 불가능
+        isClickable: false,
       );
+      
+      addedCount++;
 
       // 바운딩 박스 업데이트
       if (restaurant.y! < minLat) minLat = restaurant.y!;
       if (restaurant.y! > maxLat) maxLat = restaurant.y!;
       if (restaurant.x! < minLng) minLng = restaurant.x!;
       if (restaurant.x! > maxLng) maxLng = restaurant.x!;
-    }
-
-    // 모든 식당을 포함하는 지도 중심점 및 줌 레벨 설정
-    if (restaurants.isNotEmpty) {
-      final centerLat = (minLat + maxLat) / 2;
-      final centerLng = (minLng + maxLng) / 2;
-
-      print('지도 중심 설정: ($centerLat, $centerLng)');
-
-      mapProvider.setMapCenter(
-        latitude: centerLat,
-        longitude: centerLng,
-        zoomLevel: 14, // 적절한 줌 레벨
-      );
-    }
-
-    print('라벨 추가 완료: MapProvider에 ${mapProvider.labels.length}개의 라벨이 있습니다.');
-print('라벨 상세 정보 시작:');
-print('라벨 개수: ${mapProvider.labels.length}');
-if (mapProvider.labels.isEmpty) {
-  print('라벨 리스트가 비어 있습니다!');
-} else {
-  for (var i = 0; i < mapProvider.labels.length; i++) {
-    try {
-      final label = mapProvider.labels[i];
-      print('라벨 #$i - ID: ${label.id}, 위도: ${label.latitude}, 경도: ${label.longitude}, 텍스트: ${label.text}');
     } catch (e) {
-      print('라벨 #$i 출력 중 오류: $e');
+      print('라벨 추가 실패: ${restaurant.placeName}, 오류: $e');
     }
   }
-}
-print('라벨 상세 정보 끝');
+
+  print('라벨 추가 완료: $addedCount개');
+
+  // 라벨이 추가된 식당이 있으면 지도 중심 설정
+  if (addedCount > 0) {
+    final centerLat = (minLat + maxLat) / 2;
+    final centerLng = (minLng + maxLng) / 2;
+
+    print('지도 중심 설정: lat=$centerLat, lng=$centerLng');
+
+    mapProvider.setMapCenter(
+      latitude: centerLat,
+      longitude: centerLng,
+      zoomLevel: 14,
+    );
   }
+
+  print('지도에 ${mapProvider.labels.length}개 라벨 추가 완료');
+}
 
   // 필터 변경 처리
   void _handleFilterChanged(String filter) {
