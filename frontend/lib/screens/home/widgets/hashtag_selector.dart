@@ -1,10 +1,10 @@
 // lib/screens/home/widgets/hashtag_selector.dart
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Provider import 추가
+import 'package:provider/provider.dart';
 import '../../../config/theme.dart';
 import '../../../screens/search_results/search_results_screen.dart';
-import '../../../providers/search_provider.dart'; // SearchProvider import 추가
+import '../../../providers/search_provider.dart';
 
 class HashtagSelector extends StatefulWidget {
   // 태그 선택 콜백 추가 (필요한 경우)
@@ -16,10 +16,14 @@ class HashtagSelector extends StatefulWidget {
   _HashtagSelectorState createState() => _HashtagSelectorState();
 }
 
-class _HashtagSelectorState extends State<HashtagSelector> {
-  String? selectedHashtag;
-  bool isExpanded = false;
+class _HashtagSelectorState extends State<HashtagSelector> with AutomaticKeepAliveClientMixin {
+  
   String? selectedCategory;
+  bool isExpanded = false;
+
+  // AutomaticKeepAliveClientMixin 구현
+  @override
+  bool get wantKeepAlive => true;
 
   // 대분류 카테고리와 아이콘 정의
   final List<Map<String, dynamic>> categoriesWithIcons = [
@@ -32,9 +36,6 @@ class _HashtagSelectorState extends State<HashtagSelector> {
     {'name': '편의/서비스', 'icon': Icons.emoji_transportation, 'color': Color(0xFF00897B)}, // 청록색
     {'name': '작업', 'icon': Icons.laptop, 'color': Color(0xFF5E35B1)}, // 짙은 보라색
   ];
-
-  // 카테고리 이름만 추출하는 getter
-  List<String> get categories => categoriesWithIcons.map((c) => c['name'] as String).toList();
 
   // 카테고리별 해시태그 데이터
   final Map<String, List<String>> categoryTags = {
@@ -146,29 +147,9 @@ class _HashtagSelectorState extends State<HashtagSelector> {
   final int initialCategoryCount = 3;
 
   @override
-  void initState() {
-    super.initState();
-    // 위젯이 처음 생성될 때 초기 상태 설정
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _resetState();
-    });
-  }
-
-  // 상태 초기화 함수
-  void _resetState() {
-    setState(() {
-      selectedCategory = null;
-      selectedHashtag = null;
-      isExpanded = false;
-    });
-  }
-
-  // 다른 화면에서 돌아왔을 때 상태 초기화
-  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // 다른 화면에서 돌아왔을 때 상태 초기화
-    _resetState();
+    // 상태 유지
   }
 
   void _handleCategorySelection(String category) {
@@ -181,31 +162,24 @@ class _HashtagSelectorState extends State<HashtagSelector> {
     });
   }
 
-  void _handleTagSelection(String hashtag) {
-    setState(() {
-      selectedHashtag = hashtag;
-    });
-
-    // 태그 선택 콜백이 있으면 호출
-    if (widget.onTagSelected != null) {
-      widget.onTagSelected!(hashtag);
-    } else {
-      // SearchProvider에 태그 추가
-      final searchProvider = Provider.of<SearchProvider>(context, listen: false);
-      searchProvider.addTag(hashtag);
-      
-      // 검색 결과 페이지로 이동
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SearchResultsScreen(
-            searchQuery: "맛집", // 기본 검색어
-            selectedTags: [hashtag], // 선택된 해시태그를 리스트로 전달
-          ),
-        ),
-      );
-    }
+void _handleTagSelection(String hashtag) {
+  print('HashtagSelector: 태그 선택됨 - $hashtag');
+  
+  // SearchProvider에 태그 추가
+  final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+  print('HashtagSelector: 기존 태그 목록 - ${searchProvider.selectedTags}');
+  
+  // IMPORTANT: If tag is already in the list, don't add it again
+  if (!searchProvider.selectedTags.contains(hashtag)) {
+    searchProvider.addTag(hashtag);
+    print('HashtagSelector: 업데이트된 태그 목록 - ${searchProvider.selectedTags}');
   }
+  
+  // 태그 선택 콜백이 있으면 호출
+  if (widget.onTagSelected != null) {
+    widget.onTagSelected!(hashtag);
+  }
+}
 
   // 카테고리 아이콘 가져오기
   IconData _getCategoryIcon(String categoryName) {
@@ -227,96 +201,105 @@ class _HashtagSelectorState extends State<HashtagSelector> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 대분류 카테고리 Wrap
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+    super.build(context); // AutomaticKeepAliveClientMixin 요구사항
+    
+    return Consumer<SearchProvider>(
+      builder: (context, searchProvider, child) {
+        final selectedTags = searchProvider.selectedTags;
+        
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 초기에는 3개만 표시, 확장 시 전체 표시
-              ...isExpanded
-                  ? categoriesWithIcons.map((category) => _buildCategoryItem(category['name'], category['icon']))
-                  : categoriesWithIcons.take(initialCategoryCount).map((category) => _buildCategoryItem(category['name'], category['icon'])),
-
-              // 확장/축소 버튼
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    isExpanded = !isExpanded;
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+              // 대분류 카테고리 Wrap
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  // 초기에는 3개만 표시, 확장 시 전체 표시
+                  ...isExpanded
+                      ? categoriesWithIcons.map((category) => _buildCategoryItem(category['name'], category['icon']))
+                      : categoriesWithIcons.take(initialCategoryCount).map((category) => _buildCategoryItem(category['name'], category['icon'])),
+    
+                  // 확장/축소 버튼
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        isExpanded = !isExpanded;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.lightGray),
+                      ),
+                      child: Icon(
+                        isExpanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        size: 16,
+                        color: AppColors.darkGray,
+                      ),
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.lightGray),
-                  ),
-                  child: Icon(
-                    isExpanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    size: 16,
-                    color: AppColors.darkGray,
-                  ),
-                ),
+                ],
               ),
+    
+              // 선택된 카테고리가 있으면 해당 카테고리의 태그 표시 (화살표 상태와 관계없이)
+              if (selectedCategory != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 구분선 추가
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Divider(color: AppColors.lightGray, thickness: 1),
+                    ),
+    
+                    // 카테고리 제목 표시 (아이콘 포함)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _getCategoryIcon(selectedCategory!),
+                            size: 16,
+                            color: _getCategoryColor(selectedCategory!),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${selectedCategory} 태그',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.darkGray,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+    
+                    // 해당 카테고리의 태그들 표시 (이미 선택된 태그는 제외)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: categoryTags[selectedCategory!]!
+                          .where((tag) => !selectedTags.contains(tag)) // 이미 선택된 태그 제외
+                          .map((tag) => _buildHashtagItem(tag))
+                          .toList(),
+                    ),
+                  ],
+                ),
             ],
           ),
-
-          // 선택된 카테고리가 있으면 해당 카테고리의 태그 표시 (화살표 상태와 관계없이)
-          if (selectedCategory != null)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 구분선 추가
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 10),
-                  child: Divider(color: AppColors.lightGray, thickness: 1),
-                ),
-
-                // 카테고리 제목 표시 (아이콘 포함)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _getCategoryIcon(selectedCategory!),
-                        size: 16,
-                        color: _getCategoryColor(selectedCategory!),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${selectedCategory} 태그',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.darkGray,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // 해당 카테고리의 태그들 표시
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: categoryTags[selectedCategory!]!
-                      .map((tag) => _buildHashtagItem(tag))
-                      .toList(),
-                ),
-              ],
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -359,25 +342,21 @@ class _HashtagSelectorState extends State<HashtagSelector> {
   }
 
   Widget _buildHashtagItem(String hashtag) {
-    final isSelected = selectedHashtag == hashtag;
-
     return GestureDetector(
       onTap: () => _handleTagSelection(hashtag),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.white,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.lightGray,
-          ),
+          border: Border.all(color: AppColors.lightGray),
         ),
         child: Text(
           hashtag,
           style: TextStyle(
             fontSize: 12,
-            color: isSelected ? Colors.white : AppColors.darkGray,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: AppColors.darkGray,
+            fontWeight: FontWeight.normal,
           ),
         ),
       ),

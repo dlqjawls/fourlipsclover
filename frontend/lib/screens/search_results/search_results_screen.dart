@@ -37,15 +37,40 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
   @override
   void initState() {
     super.initState();
+
     _currentQuery = widget.searchQuery;
-    _selectedFilter =
-        widget.selectedTags.isNotEmpty ? widget.selectedTags.first : null; // 수정
-    _selectedTags = List.from(widget.selectedTags); // 태그 목록 복사 (추가)
     _searchController.text = _currentQuery;
 
-    // 빌드 사이클 완료 후 검색 실행
+    // CRITICAL FIX: Don't update the Provider immediately
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        final searchProvider = Provider.of<SearchProvider>(
+          context,
+          listen: false,
+        );
+
+        print(
+          'SearchResultsScreen PostFrameCallback - Provider 태그: ${searchProvider.selectedTags}',
+        );
+        print(
+          'SearchResultsScreen PostFrameCallback - Widget 태그: ${widget.selectedTags}',
+        );
+
+        // IMPORTANT: Only use widget.selectedTags if not empty, otherwise keep provider's tags
+        if (widget.selectedTags.isNotEmpty) {
+          _selectedTags = List<String>.from(widget.selectedTags);
+          _selectedFilter =
+              _selectedTags.isNotEmpty ? _selectedTags.first : null;
+        } else {
+          // Use the tags that are already in the provider
+          _selectedTags = List<String>.from(searchProvider.selectedTags);
+          _selectedFilter =
+              _selectedTags.isNotEmpty ? _selectedTags.first : null;
+        }
+
+        print('SearchResultsScreen - 결정된 태그 목록: $_selectedTags');
+
+        // Now execute the search with the correct tags
         _executeSearch();
       }
     });
@@ -163,13 +188,18 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     print('지도에 ${mapProvider.labels.length}개 라벨 추가 완료');
   }
 
-  // 태그 제거 처리 (추가)
+  // 태그 제거 처리 (수정)
   void _removeTag(String tag) {
     setState(() {
       _selectedTags.remove(tag);
       // 선택된 필터 업데이트
       _selectedFilter = _selectedTags.isNotEmpty ? _selectedTags.first : null;
     });
+
+    // 중요: SearchProvider에도 태그 제거 반영
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    searchProvider.removeTag(tag);
+
     // 실제 검색은 태그와 관계없이 수행하므로 여기서는 재검색 안 함
   }
 
@@ -180,11 +210,25 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
         // 이미 선택된 필터를 다시 탭하면 해제
         _selectedFilter = null;
         _selectedTags.remove(filter);
+
+        // SearchProvider에서도 제거
+        final searchProvider = Provider.of<SearchProvider>(
+          context,
+          listen: false,
+        );
+        searchProvider.removeTag(filter);
       } else {
         _selectedFilter = filter;
         // 태그 목록에 추가 (중복 방지)
         if (!_selectedTags.contains(filter)) {
           _selectedTags.add(filter);
+
+          // SearchProvider에도 추가
+          final searchProvider = Provider.of<SearchProvider>(
+            context,
+            listen: false,
+          );
+          searchProvider.addTag(filter);
         }
       }
     });
@@ -201,8 +245,8 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
 
   // 새 검색 화면으로 이동
   void _navigateToSearch() {
-    // TODO: 실제 구현 시 Navigator.push를 사용하여 검색 화면으로 이동
-    print('검색 화면으로 이동');
+    // 이전 화면으로 돌아가기 (검색 화면으로)
+    Navigator.pop(context);
   }
 
   @override
@@ -353,34 +397,21 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                           ),
                         ),
 
-                        // 선택된 태그가 있으면 표시 (추가)
+                        // 선택된 태그가 있으면 검색바 아래에 표시 (수정된 부분)
                         if (_selectedTags.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
+                            padding: const EdgeInsets.only(
+                              left: 16.0,
+                              right: 16.0,
+                              bottom: 16.0,
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '선택된 태그:',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.darkGray,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children:
-                                      _selectedTags
-                                          .map((tag) => _buildTagChip(tag))
-                                          .toList(),
-                                ),
-                                const SizedBox(height: 8),
-                              ],
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children:
+                                  _selectedTags
+                                      .map((tag) => _buildTagChip(tag))
+                                      .toList(),
                             ),
                           ),
 
@@ -419,32 +450,30 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     );
   }
 
-  // 태그 칩 위젯 빌드 (추가)
+  // 태그 칩 위젯 빌드 (수정)
   Widget _buildTagChip(String tag) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.mediumGray.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.darkGray.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            tag,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.darkGray,
-              fontWeight: FontWeight.w500,
+    return GestureDetector(
+      onTap: () => _removeTag(tag),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.mediumGray.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.darkGray.withOpacity(0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              tag,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.darkGray,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: () => _removeTag(tag),
-            child: Icon(Icons.close, size: 12, color: AppColors.mediumGray),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

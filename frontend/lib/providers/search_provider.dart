@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import '../models/search_history.dart';
 import '../models/restaurant_model.dart';  // 식당 모델 import
-import '../services/api/search_api.dart';      // 검색 API 서비스 import
+import '../services/api/search_api.dart';  // 검색 API 서비스 import
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -35,30 +35,30 @@ class SearchProvider extends ChangeNotifier {
   }
   
   // 검색 결과 가져오기
-Future<List<RestaurantResponse>> fetchSearchResults(String query) async {
-  _isLoading = true;
-  _error = null;
-  notifyListeners();
-  
-  try {
-    // 검색 API 호출
-    final results = await RestaurantSearchApi.searchRestaurants(query);
-    
-    // 비동기 작업 완료 후 상태 업데이트
-    _searchResults = results;
-    _isLoading = false;
+  Future<List<RestaurantResponse>> fetchSearchResults(String query) async {
+    _isLoading = true;
+    _error = null;
     notifyListeners();
     
-    return results;
-  } catch (e) {
-    _isLoading = false;
-    _error = e.toString();
-    notifyListeners();
-    
-    print('검색 결과 가져오기 오류: $e');
-    return [];
+    try {
+      // 검색 API 호출
+      final results = await RestaurantSearchApi.searchRestaurants(query);
+      
+      // 비동기 작업 완료 후 상태 업데이트
+      _searchResults = results;
+      _isLoading = false;
+      notifyListeners();
+      
+      return results;
+    } catch (e) {
+      _isLoading = false;
+      _error = e.toString();
+      notifyListeners();
+      
+      print('검색 결과 가져오기 오류: $e');
+      return [];
+    }
   }
-}
   
   // 검색 기록 추가
   void addSearchHistory(String query) {
@@ -142,37 +142,81 @@ Future<List<RestaurantResponse>> fetchSearchResults(String query) async {
   // Provider 초기화 시 호출
   void initialize() {
     loadSearchHistory();
+    loadSelectedTags(); // 태그 로드 추가
   }
 
   // 클래스 내부에 태그 관련 변수 추가
-List<String> _selectedTags = [];
+  List<String> _selectedTags = [];
 
-// getter 추가
-List<String> get selectedTags => _selectedTags;
+  // getter 추가
+  List<String> get selectedTags => _selectedTags;
 
-// 태그 설정 메소드 추가
+  // 태그 설정 메소드 추가
 void setSelectedTags(List<String> tags) {
-  _selectedTags = List.from(tags);
-  notifyListeners();
-}
-
-// 태그 추가 메소드
-void addTag(String tag) {
-  if (!_selectedTags.contains(tag)) {
-    _selectedTags.add(tag);
+  print('SearchProvider: 태그 설정 시작 - 기존: $_selectedTags, 새로운: $tags');
+  
+  // 중요: 명시적인 복사와 동등성 비교 추가
+  if (tags.length != _selectedTags.length || 
+      !tags.every((tag) => _selectedTags.contains(tag))) {
+    
+    // 깊은 복사를 사용하여 새 리스트 생성
+    _selectedTags = List<String>.from(tags);
+    
+    // 추가 로깅
+    print('SearchProvider: 태그 설정 완료 - $_selectedTags');
+    
+    // 저장과 알림 실행
+    saveSelectedTags();
     notifyListeners();
+  } else {
+    print('SearchProvider: 태그가 동일하여 변경 없음');
   }
 }
 
-// 태그 제거 메소드
-void removeTag(String tag) {
-  _selectedTags.remove(tag);
-  notifyListeners();
-}
+  // 태그 추가 메소드
+  void addTag(String tag) {
+    if (!_selectedTags.contains(tag)) {
+      _selectedTags.add(tag);
+      saveSelectedTags(); // 변경 내용 저장
+      notifyListeners();
+    }
+  }
 
-// 태그 초기화 메소드
-void clearTags() {
-  _selectedTags.clear();
-  notifyListeners();
-}
+  // 태그 제거 메소드
+  void removeTag(String tag) {
+    _selectedTags.remove(tag);
+    saveSelectedTags(); // 변경 내용 저장
+    notifyListeners();
+  }
+
+  // 태그 초기화 메소드
+  void clearTags() {
+    _selectedTags.clear();
+    saveSelectedTags(); // 변경 내용 저장
+    notifyListeners();
+  }
+  
+  // 선택된 태그 저장 (SharedPreferences 사용)
+  Future<void> saveSelectedTags() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('selectedTags', _selectedTags);
+    } catch (e) {
+      print('태그 저장 오류: $e');
+    }
+  }
+  
+  // 선택된 태그 불러오기 (SharedPreferences 사용)
+  Future<void> loadSelectedTags() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final tags = prefs.getStringList('selectedTags');
+      if (tags != null) {
+        _selectedTags = tags;
+        notifyListeners();
+      }
+    } catch (e) {
+      print('태그 불러오기 오류: $e');
+    }
+  }
 }

@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'widgets/logo_section.dart';
-import 'widgets/tagged_search_bar.dart'; // CustomSearchBar 대신 TaggedSearchBar import
+import 'widgets/tagged_search_bar.dart';
 import 'widgets/hashtag_selector.dart';
 import 'widgets/local_favorites.dart';
 import 'widgets/category_recommendations.dart';
@@ -17,10 +17,14 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   final TextEditingController _searchController = TextEditingController();
   // TaggedSearchBar에 접근하기 위한 GlobalKey 추가
   final GlobalKey<TaggedSearchBarState> _taggedSearchBarKey = GlobalKey<TaggedSearchBarState>();
+
+  // 상태 유지를 위한 오버라이드
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -75,43 +79,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   // 태그 포함 검색 핸들러 추가
-  void _handleSearchWithTags(String query, List<String> tags) {
-    print('검색어: $query, 태그: $tags');
-
-    // 검색 기록에 추가
-    if (query.trim().isNotEmpty) {
-      final searchProvider = Provider.of<SearchProvider>(
-        context,
-        listen: false,
-      );
-      searchProvider.addSearchHistory(query);
-
-      // 검색 결과 페이지로 이동
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SearchResultsScreen(
-            searchQuery: query,
-            selectedTags: tags,
-          ),
-        ),
-      );
-    } else if (tags.isNotEmpty) {
-      // 검색어 없이 태그만 있는 경우
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SearchResultsScreen(
-            searchQuery: "맛집",
-            selectedTags: tags,
-          ),
-        ),
-      );
-    }
+void _handleSearchWithTags(String query, List<String> tags) {
+  print('HomeScreen: 검색 직전 태그 목록 - $tags');
+  
+  // 검색 기록에 추가
+  final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+  if (query.trim().isNotEmpty) {
+    searchProvider.addSearchHistory(query);
   }
-
+  
+  print('HomeScreen: Provider에 저장된 태그 목록 - ${searchProvider.selectedTags}');
+  
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => SearchResultsScreen(
+        searchQuery: query.trim().isNotEmpty ? query : "맛집",
+        // IMPORTANT: Use the provider's tags directly
+        selectedTags: searchProvider.selectedTags,
+      ),
+    ),
+  );
+}
   @override
   Widget build(BuildContext context) {
+    super.build(context); // AutomaticKeepAliveClientMixin 요구사항
+    
     final screenHeight = MediaQuery.of(context).size.height;
 
     // Provider 사용
@@ -132,10 +125,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ? SearchModeView(
                   controller: _searchController,
                   searchHistory: searchProvider.searchHistory,
-                  selectedTags: searchProvider.selectedTags, // 태그 목록 전달
+                  selectedTags: searchProvider.selectedTags,
                   onBack: () => searchProvider.toggleSearchMode(false, null),
                   onSearch: _handleSearch,
-                  onSearchWithTags: _handleSearchWithTags, // 태그 검색 콜백 추가
+                  onSearchWithTags: _handleSearchWithTags,
                   onClearHistory: () => searchProvider.clearSearchHistory(),
                   onRemoveHistoryItem: (index) =>
                       searchProvider.removeSearchHistoryItem(index),
@@ -151,6 +144,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     SearchProvider searchProvider,
   ) {
     return SingleChildScrollView(
+      key: const PageStorageKey<String>('homeScrollPosition'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -162,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
           const SizedBox(height: 50),
 
-          // TaggedSearchBar로 교체
+          // TaggedSearchBar
           TaggedSearchBar(
             key: _taggedSearchBarKey,
             selectedTags: searchProvider.selectedTags,
@@ -176,15 +170,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
           // 해시태그 선택기
           HashtagSelector(
-            // 태그 선택 콜백 추가
+            // 태그 선택 콜백은 SearchProvider에서 직접 처리
             onTagSelected: (tag) {
-              // SearchProvider에 태그 추가
-              searchProvider.addTag(tag);
-              
-              // TaggedSearchBar에 태그 추가
-              if (_taggedSearchBarKey.currentState != null) {
-                _taggedSearchBarKey.currentState!.addTag(tag);
-              }
+              // 이미 Provider에서 태그를 관리하므로 추가 작업 필요 없음
             },
           ),
 

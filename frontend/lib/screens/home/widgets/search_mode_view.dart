@@ -1,7 +1,9 @@
 // lib/screens/home/widgets/search_mode_view.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../config/theme.dart';
 import '../../../models/search_history.dart';
+import '../../../providers/search_provider.dart'; // SearchProvider 추가
 import './search_history_item.dart';
 import 'package:geolocator/geolocator.dart'; // 위치 정보를 얻기 위한 패키지
 
@@ -14,7 +16,7 @@ class SearchModeView extends StatefulWidget {
   final VoidCallback onBack;
   final VoidCallback onClearHistory;
   final Function(int) onRemoveHistoryItem;
-  final List<String> selectedTags; // 선택된 태그 목록
+  final List<String> selectedTags; // 선택된 태그 목록 (참조용)
 
   const SearchModeView({
     Key? key,
@@ -33,9 +35,13 @@ class SearchModeView extends StatefulWidget {
   _SearchModeViewState createState() => _SearchModeViewState();
 }
 
-class _SearchModeViewState extends State<SearchModeView> {
+class _SearchModeViewState extends State<SearchModeView>
+    with AutomaticKeepAliveClientMixin {
   bool _hasText = false;
-  late List<String> _localSelectedTags;
+
+  // AutomaticKeepAliveClientMixin 구현
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -43,9 +49,6 @@ class _SearchModeViewState extends State<SearchModeView> {
     // 텍스트 변경 리스너 추가
     widget.controller.addListener(_onTextChanged);
     _hasText = widget.controller.text.isNotEmpty;
-
-    // 선택된 태그 목록 복사
-    _localSelectedTags = List.from(widget.selectedTags);
   }
 
   @override
@@ -69,9 +72,8 @@ class _SearchModeViewState extends State<SearchModeView> {
 
   // 태그 제거
   void _removeTag(String tag) {
-    setState(() {
-      _localSelectedTags.remove(tag);
-    });
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    searchProvider.removeTag(tag);
   }
 
   // 위치 기반 검색 실행
@@ -106,13 +108,20 @@ class _SearchModeViewState extends State<SearchModeView> {
       // 디버깅용 - 위치 정보 로그 출력
       print('현재 위치 - 위도: ${position.latitude}, 경도: ${position.longitude}');
 
+      // Provider에서 태그 목록 가져오기
+      final searchProvider = Provider.of<SearchProvider>(
+        context,
+        listen: false,
+      );
+      final selectedTags = searchProvider.selectedTags;
+
       // 위치 기반 검색 콜백 실행
       if (widget.onLocationSearch != null) {
         widget.onLocationSearch!(position.latitude, position.longitude);
       } else {
         // 태그 검색 콜백이 있다면 태그와 함께 검색
-        if (widget.onSearchWithTags != null && _localSelectedTags.isNotEmpty) {
-          widget.onSearchWithTags!("내 주변", _localSelectedTags);
+        if (widget.onSearchWithTags != null && selectedTags.isNotEmpty) {
+          widget.onSearchWithTags!("내 주변", selectedTags);
         } else {
           // 기본 검색어로 "내 주변" 사용
           widget.onSearch("내 주변");
@@ -125,9 +134,16 @@ class _SearchModeViewState extends State<SearchModeView> {
         context,
       ).showSnackBar(SnackBar(content: Text('위치를 가져오는데 실패했습니다: $e')));
 
+      // Provider에서 태그 목록 가져오기
+      final searchProvider = Provider.of<SearchProvider>(
+        context,
+        listen: false,
+      );
+      final selectedTags = searchProvider.selectedTags;
+
       // 태그 검색 콜백이 있다면 태그와 함께 검색
-      if (widget.onSearchWithTags != null && _localSelectedTags.isNotEmpty) {
-        widget.onSearchWithTags!("내 주변", _localSelectedTags);
+      if (widget.onSearchWithTags != null && selectedTags.isNotEmpty) {
+        widget.onSearchWithTags!("내 주변", selectedTags);
       } else {
         // 위치를 가져오지 못했을 때 기본 검색어 사용
         widget.onSearch("내 주변");
@@ -137,13 +153,17 @@ class _SearchModeViewState extends State<SearchModeView> {
 
   // 검색 수행
   void _performSearch() {
+    // Provider에서 태그 목록 가져오기
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    final selectedTags = searchProvider.selectedTags;
+
     if (widget.controller.text.isEmpty) {
       // 텍스트가 없으면 위치 기반 검색 실행
       _performLocationSearch();
     } else {
       // 태그 검색 콜백이 있다면 태그와 함께 검색
-      if (widget.onSearchWithTags != null && _localSelectedTags.isNotEmpty) {
-        widget.onSearchWithTags!(widget.controller.text, _localSelectedTags);
+      if (widget.onSearchWithTags != null && selectedTags.isNotEmpty) {
+        widget.onSearchWithTags!(widget.controller.text, selectedTags);
       } else {
         // 텍스트만 있으면 일반 검색 실행
         widget.onSearch(widget.controller.text);
@@ -151,172 +171,210 @@ class _SearchModeViewState extends State<SearchModeView> {
     }
   }
 
+  // 모든 태그 제거
+  void _clearAllTags() {
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    searchProvider.clearTags();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 검색 바 - CustomSearchBar와 동일한 스타일로 변경
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: widget.onBack,
-              ),
-              Expanded(
-                child: Container(
-                  constraints: const BoxConstraints(minHeight: 60),
-                  decoration: BoxDecoration(
-                    color: AppColors.verylightGray,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // 선택된 태그들 표시
-                        if (_localSelectedTags.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(
-                              left: 16,
-                              right: 60,
-                              top: 8,
-                              bottom: 4,
-                            ),
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children:
-                                  _localSelectedTags
-                                      .map((tag) => _buildTagChip(tag))
-                                      .toList(),
-                            ),
-                          ),
+    super.build(context); // AutomaticKeepAliveClientMixin 요구사항
 
-                        TextField(
-                          controller: widget.controller,
-                          autofocus: true,
-                          textAlignVertical: TextAlignVertical.center,
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            hintText: "식당의 이름을 입력해보세요",
-                            hintStyle: TextStyle(color: AppColors.mediumGray),
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: _localSelectedTags.isNotEmpty ? 8 : 0,
-                            ),
-                            suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: 16.0),
-                              child: GestureDetector(
-                                onTap: _hasText ? _clearText : _performSearch,
-                                child: Icon(
-                                  _hasText ? Icons.close : Icons.search,
-                                  color:
-                                      _hasText
-                                          ? AppColors.mediumGray
-                                          : AppColors.primary,
-                                  size: 28,
+    return Consumer<SearchProvider>(
+      builder: (context, searchProvider, child) {
+        final selectedTags = searchProvider.selectedTags;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 검색 바
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: widget.onBack,
+                  ),
+                  Expanded(
+                    child: Container(
+                      constraints: const BoxConstraints(minHeight: 60),
+                      decoration: BoxDecoration(
+                        color: AppColors.verylightGray,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // 선택된 태그들 표시
+                            if (selectedTags.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  left: 16,
+                                  right: 60,
+                                  top: 8,
+                                  bottom: 4,
+                                ),
+                                child: Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children:
+                                      selectedTags
+                                          .map((tag) => _buildTagChip(tag))
+                                          .toList(),
                                 ),
                               ),
+
+                            TextField(
+                              controller: widget.controller,
+                              autofocus: true,
+                              textAlignVertical: TextAlignVertical.center,
+                              decoration: InputDecoration(
+                                border: InputBorder.none,
+                                hintText: "식당의 이름을 입력해보세요",
+                                hintStyle: TextStyle(
+                                  color: AppColors.mediumGray,
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: selectedTags.isNotEmpty ? 8 : 0,
+                                ),
+                                suffixIcon: Padding(
+                                  padding: const EdgeInsets.only(right: 16.0),
+                                  child: GestureDetector(
+                                    onTap:
+                                        _hasText ? _clearText : _performSearch,
+                                    child: Icon(
+                                      _hasText ? Icons.close : Icons.search,
+                                      color:
+                                          _hasText
+                                              ? AppColors.mediumGray
+                                              : AppColors.primary,
+                                      size: 28,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              style: const TextStyle(fontSize: 16),
+                              onSubmitted: (_) => _performSearch(),
                             ),
-                          ),
-                          style: const TextStyle(fontSize: 16),
-                          onSubmitted: (_) => _performSearch(),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
+                ],
+              ),
+            ),
+
+            // 선택된 태그가 있을 경우 '모두 지우기' 버튼 표시
+            if (selectedTags.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: _clearAllTags,
+                      child: Text(
+                        "태그 모두 지우기",
+                        style: TextStyle(
+                          color: AppColors.darkGray,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
 
-        // 최근 검색어 헤더
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "최근 검색어",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              TextButton(
-                onPressed: widget.onClearHistory,
-                child: const Text(
-                  "모두 지우기",
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // 검색 기록 목록
-        Expanded(
-          child:
-              widget.searchHistory.isEmpty
-                  ? const Center(
-                    child: Text(
-                      "검색 기록이 없습니다",
+            // 최근 검색어 헤더
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "최근 검색어",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  TextButton(
+                    onPressed: widget.onClearHistory,
+                    child: const Text(
+                      "모두 지우기",
                       style: TextStyle(color: Colors.grey),
                     ),
-                  )
-                  : ListView.builder(
-                    itemCount: widget.searchHistory.length,
-                    itemBuilder: (context, index) {
-                      return SearchHistoryItem(
-                        searchHistory: widget.searchHistory[index],
-                        onTap: () {
-                          widget.controller.text =
-                              widget.searchHistory[index].query;
-                          widget.onSearch(widget.searchHistory[index].query);
-                        },
-                        onRemove: () => widget.onRemoveHistoryItem(index),
-                      );
-                    },
                   ),
-        ),
-      ],
+                ],
+              ),
+            ),
+
+            // 검색 기록 목록
+            Expanded(
+              child:
+                  widget.searchHistory.isEmpty
+                      ? const Center(
+                        child: Text(
+                          "검색 기록이 없습니다",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      )
+                      : ListView.builder(
+                        itemCount: widget.searchHistory.length,
+                        itemBuilder: (context, index) {
+                          return SearchHistoryItem(
+                            searchHistory: widget.searchHistory[index],
+                            onTap: () {
+                              widget.controller.text =
+                                  widget.searchHistory[index].query;
+                              widget.onSearch(
+                                widget.searchHistory[index].query,
+                              );
+                            },
+                            onRemove: () => widget.onRemoveHistoryItem(index),
+                          );
+                        },
+                      ),
+            ),
+          ],
+        );
+      },
     );
   }
 
   // 태그 칩 위젯 빌드
   Widget _buildTagChip(String tag) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.mediumGray.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.darkGray.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            tag,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.darkGray,
-              fontWeight: FontWeight.w500,
+    return GestureDetector(
+      onTap: () => _removeTag(tag),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.mediumGray.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.darkGray.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              tag,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.darkGray,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: () => _removeTag(tag),
-            child: Icon(Icons.close, size: 12, color: AppColors.mediumGray),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

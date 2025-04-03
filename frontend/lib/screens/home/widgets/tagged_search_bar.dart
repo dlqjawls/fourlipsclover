@@ -2,8 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:provider/provider.dart';
 import '../../../config/theme.dart';
 import '../../../utils/text_style_extensions.dart';
+import '../../../providers/search_provider.dart';
 
 class TaggedSearchBar extends StatefulWidget {
   // 검색 콜백 함수 (태그 포함)
@@ -24,16 +26,18 @@ class TaggedSearchBar extends StatefulWidget {
   TaggedSearchBarState createState() => TaggedSearchBarState();
 }
 
-class TaggedSearchBarState extends State<TaggedSearchBar> {
+class TaggedSearchBarState extends State<TaggedSearchBar>
+    with AutomaticKeepAliveClientMixin {
   int _currentHintIndex = 0;
   late Timer _timer;
   bool _showHint = true;
 
+  // 상태 유지를 위한 오버라이드
+  @override
+  bool get wantKeepAlive => true;
+
   // 텍스트 컨트롤러 추가
   final TextEditingController _textController = TextEditingController();
-
-  // 로컬 선택 태그 목록
-  late List<String> _localSelectedTags;
 
   final List<String> _hintTexts = [
     "어떤 음식을 찾으시나요?",
@@ -45,26 +49,25 @@ class TaggedSearchBarState extends State<TaggedSearchBar> {
   void initState() {
     super.initState();
 
-    // 부모 위젯에서 전달받은 태그 목록 복사
-    _localSelectedTags = List.from(widget.selectedTags);
-
     // 텍스트 컨트롤러 리스너 추가
     _textController.addListener(_onTextChanged);
 
     // 힌트 텍스트 순환 타이머
     _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      // 텍스트 필드에 입력값이 있거나 태그가 있으면 힌트를 표시하지 않음
-      if (_textController.text.isNotEmpty || _localSelectedTags.isNotEmpty)
+      if (!mounted) return;
+
+      // 태그 선택 여부와 관계없이 힌트 텍스트 표시
+      // 텍스트 필드에 입력값이 있으면 힌트를 표시하지 않음
+      if (_textController.text.isNotEmpty) {
         return;
+      }
 
       setState(() {
         _showHint = false;
       });
 
       Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted &&
-            _textController.text.isEmpty &&
-            _localSelectedTags.isEmpty) {
+        if (mounted && _textController.text.isEmpty) {
           setState(() {
             _currentHintIndex = (_currentHintIndex + 1) % _hintTexts.length;
             _showHint = true;
@@ -76,11 +79,14 @@ class TaggedSearchBarState extends State<TaggedSearchBar> {
 
   // 텍스트 변경 감지
   void _onTextChanged() {
+    if (!mounted) return;
+
     setState(() {
-      // 텍스트가 입력되면 힌트 숨기기
-      if (_textController.text.isNotEmpty || _localSelectedTags.isNotEmpty) {
+      // 텍스트가 입력되면 힌트 숨기기, 그렇지 않으면 힌트 표시
+      // 태그 선택 여부와 무관하게 처리
+      if (_textController.text.isNotEmpty) {
         _showHint = false;
-      } else if (_textController.text.isEmpty && _localSelectedTags.isEmpty) {
+      } else {
         _showHint = true;
       }
     });
@@ -88,31 +94,34 @@ class TaggedSearchBarState extends State<TaggedSearchBar> {
 
   // 태그 제거
   void _removeTag(String tag) {
-    setState(() {
-      _localSelectedTags.remove(tag);
-      _onTextChanged(); // 힌트 상태 업데이트
-    });
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    searchProvider.removeTag(tag);
   }
 
   // 태그 추가 (HashtagSelector에서 호출할 메서드)
   void addTag(String tag) {
-    if (!_localSelectedTags.contains(tag)) {
-      setState(() {
-        _localSelectedTags.add(tag);
-        _onTextChanged(); // 힌트 상태 업데이트
-      });
-    }
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    searchProvider.addTag(tag);
   }
 
   // 검색 실행 함수
   void _performSearch() {
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    final selectedTags = searchProvider.selectedTags;
+
     if (widget.onSearch != null) {
-      widget.onSearch!(_textController.text, _localSelectedTags);
+      widget.onSearch!(_textController.text, selectedTags);
     } else {
       // 기본 검색 동작 (콘솔에 출력)
-      print('검색어: ${_textController.text}, 태그: $_localSelectedTags');
+      print('검색어: ${_textController.text}, 태그: $selectedTags');
       // TODO: 실제 검색 로직 구현
     }
+  }
+
+  // 모든 태그 제거 함수
+  void _clearAllTags() {
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    searchProvider.clearTags();
   }
 
   @override
@@ -125,154 +134,178 @@ class TaggedSearchBarState extends State<TaggedSearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: '내 주변',
-                  style:
-                      Theme.of(context).textTheme.bodyMedium
-                          ?.copyWith(fontSize: 22, height: 1.3)
-                          .emphasized,
-                ),
-                TextSpan(
-                  text: '에서\n랭킹이 높은 곳은 어디일까요?',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontSize: 22, height: 1.3),
-                ),
-              ],
-            ),
-          ),
+    super.build(context); // AutomaticKeepAliveClientMixin 요구사항
 
-          const SizedBox(height: 80),
+    return Consumer<SearchProvider>(
+      builder: (context, searchProvider, child) {
+        final selectedTags = searchProvider.selectedTags;
 
-          GestureDetector(
-            onTap: widget.onTap,
-            behavior: HitTestBehavior.opaque, // 중요! 이 옵션을 추가
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 60),
-              decoration: BoxDecoration(
-                color: AppColors.verylightGray,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Stack(
-                  alignment: Alignment.center,
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              RichText(
+                text: TextSpan(
                   children: [
-                    // 선택된 태그들을 보여주는 영역
-                    if (_localSelectedTags.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          left: 16.0,
-                          right: 60.0,
-                          top: 10.0,
-                          bottom: 10.0,
+                    TextSpan(
+                      text: '내 주변',
+                      style:
+                          Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontSize: 22, height: 1.3)
+                              .emphasized,
+                    ),
+                    TextSpan(
+                      text: '맛집을\n찾아볼까요?',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 22,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 80),
+
+              // 검색바
+              GestureDetector(
+                onTap: widget.onTap,
+                behavior: HitTestBehavior.opaque, // 중요! 이 옵션을 추가
+                child: Container(
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: AppColors.verylightGray,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [
+                        // 힌트 텍스트 표시 - 태그 선택 상태와 관계없이 표시 (수정됨)
+                        if (_textController.text.isEmpty)
+                          Positioned(
+                            left: 20,
+                            child: AnimatedOpacity(
+                              opacity: _showHint ? 1.0 : 0.0,
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeInOut,
+                              child: Text(
+                                _hintTexts[_currentHintIndex],
+                                style: TextStyle(
+                                  color: AppColors.mediumGray,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                        // 검색 아이콘
+                        Positioned(
+                          right: 16,
+                          child: Icon(
+                            Icons.search,
+                            color: AppColors.primary,
+                            size: 28,
+                          ),
                         ),
+
+                        // TextField는 원래 코드와 비슷하게 유지
+                        AbsorbPointer(
+                          absorbing: true,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                            ),
+                            child: TextField(
+                              controller: _textController,
+                              enabled: false,
+                              textAlignVertical: TextAlignVertical.center,
+                              decoration: InputDecoration(
+                                border: InputBorder.none,
+                                hintText: "",
+                                contentPadding: EdgeInsets.only(
+                                  left: 0,
+                                  right: 20,
+                                ),
+                              ),
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // 선택된 태그들을 검색바 아래에 표시
+              if (selectedTags.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
                         child: Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children:
-                              _localSelectedTags
+                              selectedTags
                                   .map((tag) => _buildTagChip(tag))
                                   .toList(),
                         ),
                       ),
-
-                    AbsorbPointer(
-                      // 추가: TextField의 탭 이벤트 차단
-                      absorbing: true, // TextField의 터치 이벤트를 흡수
-                      child: TextField(
-                        controller: _textController,
-                        enabled: false, // 비활성화하여 포커스 받지 않도록 설정
-                        textAlignVertical: TextAlignVertical.center,
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: "",
-                          contentPadding: EdgeInsets.only(
-                            left: 20,
-                            right: 20,
-                            top: _localSelectedTags.isNotEmpty ? 20 : 0,
-                            bottom: _localSelectedTags.isNotEmpty ? 10 : 0,
-                          ),
-                          suffixIcon: Padding(
-                            padding: const EdgeInsets.only(right: 16.0),
-                            child: Icon(
-                              Icons.search,
-                              color: AppColors.primary,
-                              size: 28,
-                            ),
-                          ),
-                        ),
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ),
-
-                    if (_textController.text.isEmpty &&
-                        _localSelectedTags.isEmpty)
-                      Positioned(
-                        left: 20,
-                        child: AnimatedOpacity(
-                          opacity: _showHint ? 1.0 : 0.0,
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeInOut,
+                      GestureDetector(
+                        onTap: _clearAllTags,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 8.0, top: 4.0),
                           child: Text(
-                            _hintTexts[_currentHintIndex],
+                            '모두 지우기',
                             style: TextStyle(
-                              color: AppColors.mediumGray,
-                              fontSize: 16,
+                              fontSize: 12,
+                              color: AppColors.darkGray,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
                       ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  // 태그 칩 위젯 빌드
+  // 태그 칩 위젯 빌드 - 클릭 시 제거
   Widget _buildTagChip(String tag) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.mediumGray.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.darkGray.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            tag,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.darkGray,
-              fontWeight: FontWeight.w500,
-            ),
+    return GestureDetector(
+      onTap: () => _removeTag(tag),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.mediumGray.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.darkGray.withOpacity(0.3)),
+        ),
+        child: Text(
+          tag,
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.darkGray,
+            fontWeight: FontWeight.w500,
           ),
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: () => _removeTag(tag),
-            child: Icon(Icons.close, size: 12, color: AppColors.mediumGray),
-          ),
-        ],
+        ),
       ),
     );
   }
