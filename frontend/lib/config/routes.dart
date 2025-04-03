@@ -31,7 +31,14 @@ class AppRoutes {
     '/user_profile': (context) => const MyConsumptionPatternScreen(),
 
     '/kakaopay_test': (context) => KakaoPayScreen(),
-    '/kakaopay_official': (context) => const KakaoPayOfficialScreen(),
+    '/kakaopay_official': (context) {
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>;
+      return KakaoPayOfficialScreen(
+        matchData: args['matchData'],
+        matchingInfo: args['matchingInfo'],
+      );
+    },
 
     '/group_detail': (context) {
       final arguments =
