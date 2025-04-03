@@ -9,4 +9,6 @@ import org.springframework.stereotype.Repository;
 public interface LocalCertificationRepository extends JpaRepository<LocalCertification, Integer> {
 
 	List<LocalCertification> findByCertificatedTrue();
+
+	LocalCertification findByMember_MemberId(Long memberId);
 }

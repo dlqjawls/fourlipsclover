@@ -1,7 +1,7 @@
 package com.patriot.fourlipsclover.locals.document;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Id;
-import java.time.LocalDateTime;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,6 +16,7 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class LocalsDocument {
 
 	@Id
@@ -27,7 +28,7 @@ public class LocalsDocument {
 	@Field(type = FieldType.Text, analyzer = "nori")
 	private String nickname;
 
-	@Field(type = FieldType.Text, analyzer = "nori")
+	@Field(type = FieldType.Keyword)
 	private String regionName;
 
 	@Field(type = FieldType.Keyword)
@@ -35,9 +36,6 @@ public class LocalsDocument {
 
 	@Field(type = FieldType.Keyword)
 	private String localGrade;
-
-	@Field(type = FieldType.Date)
-	private LocalDateTime expiryAt;
 
 	@Field(type = FieldType.Nested)
 	private List<TagData> tags;
