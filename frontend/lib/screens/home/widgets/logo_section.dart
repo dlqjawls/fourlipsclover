@@ -12,13 +12,12 @@ class LogoSection extends StatelessWidget {
       child: Row(
         children: [
           // 여기에는 실제 로고 이미지를 사용하세요
-          Image.asset('assets/images/logo.png', height: 40),
+          Image.asset('assets/images/clover.png', height: 30),
           const SizedBox(width: 8),
           Text(
             '네입클로버',
-            style: Theme.of(context).textTheme.bodyMedium?.large.emphasized.copyWith(
-              color: AppColors.primary,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium?.large.emphasized
+                .copyWith(color: AppColors.primary),
           ),
         ],
       ),

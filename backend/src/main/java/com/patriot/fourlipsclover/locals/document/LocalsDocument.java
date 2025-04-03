@@ -37,6 +37,9 @@ public class LocalsDocument {
 	@Field(type = FieldType.Keyword)
 	private String localGrade;
 
+	@Field(type = FieldType.Keyword)
+	private String profileUrl;
+	
 	@Field(type = FieldType.Nested)
 	private List<TagData> tags;
 

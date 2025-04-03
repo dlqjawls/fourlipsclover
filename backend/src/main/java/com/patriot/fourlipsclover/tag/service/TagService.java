@@ -169,6 +169,7 @@ public class TagService {
 				.localRegionId(cert.getLocalRegion().getLocalRegionId())
 				.localGrade(cert.getLocalGrade().name())
 				.tags(tagDataList)
+				.profileUrl(cert.getMember().getProfileUrl())
 				.build();
 
 		// Elasticsearch에 저장
