@@ -250,43 +250,43 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
   }
 
   void _handleBackPressed() {
-  // 홈 화면으로 돌아갈 때 태그 초기화
-  final searchProvider = Provider.of<SearchProvider>(context, listen: false);
-  searchProvider.clearTags(); // 태그 모두 지우기
-  
-  // 이전 화면으로 돌아가기
-  Navigator.pop(context);
-}
+    // 홈 화면으로 돌아갈 때 태그 초기화
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    searchProvider.clearTags(); // 태그 모두 지우기
 
-@override
-Widget build(BuildContext context) {
-  final searchProvider = Provider.of<SearchProvider>(context);
+    // 이전 화면으로 돌아가기
+    Navigator.pop(context);
+  }
 
-  return LoadingOverlay(
-    isLoading: _isLoading,
-    child: Scaffold(
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(70),
-        child: AppBar(
-          backgroundColor: AppColors.background,
-          elevation: 0.5,
-          scrolledUnderElevation: 0.5,
-          shadowColor: AppColors.mediumGray.withOpacity(0.05),
-          automaticallyImplyLeading: false,
-          titleSpacing: 0,
-          title: Center(
-            child: Row(
-              children: [
-                // 뒤로가기 버튼 - 함수 변경
-                Padding(
-                  padding: const EdgeInsets.only(left: 4.0),
-                  child: IconButton(
-                    icon: Icon(Icons.arrow_back, color: Colors.black),
-                    onPressed: _handleBackPressed, // 수정된 함수 사용
-                    padding: EdgeInsets.all(8),
-                    iconSize: 28,
+  @override
+  Widget build(BuildContext context) {
+    final searchProvider = Provider.of<SearchProvider>(context);
+
+    return LoadingOverlay(
+      isLoading: _isLoading,
+      child: Scaffold(
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(70),
+          child: AppBar(
+            backgroundColor: AppColors.background,
+            elevation: 0.5,
+            scrolledUnderElevation: 0.5,
+            shadowColor: AppColors.mediumGray.withOpacity(0.05),
+            automaticallyImplyLeading: false,
+            titleSpacing: 0,
+            title: Center(
+              child: Row(
+                children: [
+                  // 뒤로가기 버튼 - 함수 변경
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4.0),
+                    child: IconButton(
+                      icon: Icon(Icons.arrow_back, color: Colors.black),
+                      onPressed: _handleBackPressed, // 수정된 함수 사용
+                      padding: EdgeInsets.all(8),
+                      iconSize: 28,
+                    ),
                   ),
-                ),
 
                   // 검색 바
                   Expanded(
@@ -311,15 +311,6 @@ Widget build(BuildContext context) {
                                   color: AppColors.darkGray,
                                 ),
                                 overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            // X 버튼
-                            GestureDetector(
-                              onTap: _navigateToSearch,
-                              child: Icon(
-                                Icons.close,
-                                color: AppColors.mediumGray,
-                                size: 24,
                               ),
                             ),
                           ],
@@ -358,7 +349,7 @@ Widget build(BuildContext context) {
                                 text: TextSpan(
                                   children: [
                                     TextSpan(
-                                      text: "$_currentQuery",
+                                      text: "'$_currentQuery'",
                                       style: TextStyle(
                                         fontFamily: 'Anemone_air',
                                         fontSize: 18,
@@ -366,7 +357,7 @@ Widget build(BuildContext context) {
                                       ),
                                     ),
                                     TextSpan(
-                                      text: " 맛집 (",
+                                      text: " 검색결과 (",
                                       style: TextStyle(
                                         fontFamily: 'Anemone_air',
                                         fontSize: 18,

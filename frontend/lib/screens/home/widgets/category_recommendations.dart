@@ -6,7 +6,7 @@ import '../../../utils/text_style_extensions.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/nearby_restaurant_service.dart';
 import '../../../models/restaurant_model.dart';
-import '../../review/restaurant_detail.dart';
+import './restaurant_card.dart'; // 공통 RestaurantCard 임포트
 
 class CategoryRecommendations extends StatefulWidget {
   const CategoryRecommendations({Key? key}) : super(key: key);
@@ -80,6 +80,28 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
               latitude: authProvider.currentPosition!.latitude,
               longitude: authProvider.currentPosition!.longitude,
             );
+
+        // 각 카테고리의 식당마다 거리 계산 수정
+        for (var category in categoryRestaurants) {
+          for (var restaurant in category.restaurants) {
+            if (restaurant.x != null && restaurant.y != null) {
+              final dx = 111.3 *
+                  cos(authProvider.currentPosition!.latitude * pi / 180) *
+                  (authProvider.currentPosition!.longitude - restaurant.x!);
+              final dy = 111.3 *
+                  (authProvider.currentPosition!.latitude - restaurant.y!);
+              restaurant.distance = sqrt(dx * dx + dy * dy);
+            } else {
+              restaurant.distance = double.infinity; // 위치 정보가 없는 경우
+            }
+          }
+          
+          // 거리순으로 정렬
+          category.restaurants.sort(
+            (a, b) => (a.distance ?? double.infinity)
+                .compareTo(b.distance ?? double.infinity),
+          );
+        }
 
         if (mounted) {  // mounted 체크 추가
           setState(() {
@@ -175,212 +197,62 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      // 해시태그 아이콘
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.verylightGray,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          '#',
-                          style:
-                              baseStyle
-                                  ?.copyWith(
-                                    fontSize: 16,
-                                    color: AppColors.primary,
-                                  )
-                                  .emphasized,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // 카테고리명
-                      Text(
-                        '${category.name} 추천',
-                        style: baseStyle?.copyWith(fontSize: 18).emphasized,
-                      ),
-                    ],
-                  ),
-                  // 더보기 텍스트
-                  TextButton(
-                    onPressed: () {
-                      // TODO: 카테고리별 레스토랑 전체 목록 화면으로 이동
-                    },
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size(0, 0),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  // 해시태그 아이콘
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.verylightGray,
+                      shape: BoxShape.circle,
                     ),
                     child: Text(
-                      '더보기 >',
-                      style: baseStyle?.copyWith(
-                        fontSize: 12,
-                        color: AppColors.mediumGray,
-                      ),
+                      '#',
+                      style:
+                          baseStyle
+                              ?.copyWith(
+                                fontSize: 16,
+                                color: AppColors.primary,
+                              )
+                              .emphasized,
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  // 카테고리명
+                  Text(
+                    '${category.name} 추천',
+                    style: baseStyle?.copyWith(fontSize: 18).emphasized,
                   ),
                 ],
               ),
             ),
 
-            // 카테고리별 맛집 리스트
+            // 카테고리별 맛집 리스트 - 가로 스크롤
             SizedBox(
-              height: 210,
+              height: 240, // 카드 높이 조정
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.only(left: 16, right: 8),
                 itemCount: category.restaurants.length,
                 itemBuilder: (context, restaurantIndex) {
                   final restaurant = category.restaurants[restaurantIndex];
+                  
+                  // 카테고리 분리 (해시태그로 변환)
+                  final categories = restaurant.categoryName?.split(' > ') ?? [];
+                  final hashtags = categories.map((cat) => '#$cat').toList();
 
-                  return GestureDetector(
-                    onTap: () {
-                      // TODO: 식당 상세 페이지로 이동
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => RestaurantDetailScreen(
-                            restaurantId: restaurant.kakaoPlaceId ?? '',
-                          ),
-                        ),
-                      );
-                      print(
-                        '식당 클릭: ${restaurant.placeName} (ID: ${restaurant.kakaoPlaceId})',
-                      );
-                    },
-                    child: Container(
-                      width: 150,
-                      margin: const EdgeInsets.only(right: 12, bottom: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 맛집 이미지
-                          Stack(
-                            children: [
-                              Container(
-                                height: 120,
-                                decoration: BoxDecoration(
-                                  color: AppColors.lightGray,
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(12),
-                                    topRight: Radius.circular(12),
-                                  ),
-                                ),
-                              ),
-
-                              // 거리 표시
-                              Positioned(
-                                top: 8,
-                                left: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.location_on,
-                                        color: AppColors.lightGray,
-                                        size: 12,
-                                      ),
-                                      const SizedBox(width: 2),
-                                      Text(
-                                        '${restaurant.distance?.toStringAsFixed(1) ?? '?'}km',
-                                        style:
-                                            baseStyle
-                                                ?.copyWith(
-                                                  color: Colors.white,
-                                                  fontSize: 10,
-                                                )
-                                                .emphasized,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          // 맛집 정보
-                          Padding(
-                            padding: const EdgeInsets.all(10.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // 이름과 좋아요 수 (좋아요는 서버에서 제공하지 않으므로 임시로 0 처리)
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        restaurant.placeName ?? '이름 없음',
-                                        style:
-                                            baseStyle
-                                                ?.copyWith(fontSize: 14)
-                                                .emphasized,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.favorite,
-                                          color: Colors.red.shade300,
-                                          size: 12,
-                                        ),
-                                        const SizedBox(width: 2),
-                                        Text(
-                                          '0', // 좋아요 수는 서버에서 제공하지 않음
-                                          style: baseStyle?.copyWith(
-                                            fontSize: 10,
-                                            color: AppColors.mediumGray,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-
-                                // 위치
-                                const SizedBox(height: 4),
-                                Text(
-                                  restaurant.roadAddressName ??
-                                      restaurant.addressName ??
-                                      '위치 정보 없음',
-                                  style: baseStyle?.copyWith(
-                                    fontSize: 12,
-                                    color: AppColors.mediumGray,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                  // RestaurantCard 위젯 사용
+                  return Container(
+                    width: 170, // 카드 너비 조정
+                    margin: const EdgeInsets.only(right: 12, bottom: 8),
+                    child: RestaurantCard(
+                      name: restaurant.placeName ?? '이름 없음',
+                      address: restaurant.roadAddressName ?? '주소 없음',
+                      category: restaurant.category ?? '',
+                      phone: restaurant.phone ?? '전화번호 없음',
+                      likes: 0, // 서버에서 제공하지 않는 정보
+                      hashtags: hashtags,
+                      distance: restaurant.distance ?? 0.0,
+                      kakaoPlaceId: restaurant.kakaoPlaceId ?? '',
                     ),
                   );
                 },
@@ -391,7 +263,7 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
             if (index < _categoryRestaurants.length - 1)
               Column(
                 children: [
-                  SizedBox(height: 30),
+                  SizedBox(height: 20),
                   Divider(
                     color: AppColors.verylightGray,
                     thickness: 10,
@@ -399,7 +271,7 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
                   ),
                 ],
               ),
-            SizedBox(height: 24),
+            SizedBox(height: 16),
           ],
         );
       },

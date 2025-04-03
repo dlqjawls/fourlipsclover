@@ -45,6 +45,7 @@ class SearchFilterTags extends StatelessWidget {
           child: RichText(
             text: TextSpan(
               children: [
+                TextSpan(text: "👨🏻‍🍳 ", style: TextStyle(fontSize: 14)),
                 TextSpan(
                   text: "$locationName",
                   style: TextStyle(
@@ -52,10 +53,14 @@ class SearchFilterTags extends StatelessWidget {
                     fontSize: 14,
                     color: AppColors.primary,
                     fontWeight: FontWeight.bold,
+                    decoration: TextDecoration.underline,
+                    decorationColor: AppColors.primary, // 밑줄 색상 설정
+                    decorationThickness: 2, // 밑줄 두께 설정
+                    decorationStyle: TextDecorationStyle.solid, // 밑줄 스타일 설정
                   ),
                 ),
                 TextSpan(
-                  text: "에서 많이 검색한 키워드",
+                  text: " 에서 많이 검색된 해시태그",
                   style: TextStyle(
                     fontFamily: 'Anemone_air',
                     fontSize: 14,

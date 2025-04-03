@@ -96,8 +96,8 @@ class NearbyRestaurantService {
     double apiLng, // API에 보낸 경도 값 (실제는 위도)
   ) {
     // 실제 계산에서는 올바른 위치 값 사용
-    final userLat = apiLng; // 실제 위도
-    final userLng = apiLat; // 실제 경도
+    final userLat = apiLat; // 실제 위도
+    final userLng = apiLng; // 실제 경도
 
     for (var restaurant in restaurants) {
       if (restaurant.x != null && restaurant.y != null) {
@@ -148,8 +148,7 @@ class NearbyRestaurantService {
     final List<CategoryRestaurants> result = [];
 
     categoryMap.forEach((category, restaurantList) {
-      // 각 카테고리별로 상위 4개만 선택
-      final topRestaurants = restaurantList.take(4).toList();
+      final topRestaurants = restaurantList.take(8).toList();
 
       result.add(
         CategoryRestaurants(name: category, restaurants: topRestaurants),

@@ -182,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen>
             },
           ),
 
-          SizedBox(height: screenHeight * 0.05),
+          SizedBox(height: screenHeight * 0.13),
 
           // 지역 인기 장소
           const LocalFavorites(),
