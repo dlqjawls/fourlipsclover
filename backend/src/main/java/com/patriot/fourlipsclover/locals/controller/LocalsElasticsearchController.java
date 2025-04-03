@@ -18,9 +18,11 @@ public class LocalsElasticsearchController {
 
 	private final LocalsElasticsearchService localsElasticsearchService;
 
-	@GetMapping("/{memberId}/find-locals")
-	public ResponseEntity<List<LocalsDocument>> findLocals(@PathVariable Long memberId) {
-		return ResponseEntity.ok(localsElasticsearchService.recommendSimilarUsers(memberId));
+	@GetMapping("/{memberId}/find-locals/{regionId}")
+	public ResponseEntity<List<LocalsDocument>> findLocals(@PathVariable Long memberId,
+			@PathVariable(value = "regionId") Integer regionId) {
+		return ResponseEntity.ok(
+				localsElasticsearchService.recommendSimilarUsers(memberId, regionId));
 	}
 
 	@PostMapping("/upload-index")

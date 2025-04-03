@@ -168,7 +168,6 @@ public class TagService {
 				.regionName(regionName)
 				.localRegionId(cert.getLocalRegion().getLocalRegionId())
 				.localGrade(cert.getLocalGrade().name())
-				.expiryAt(cert.getExpiryAt())
 				.tags(tagDataList)
 				.build();
 
