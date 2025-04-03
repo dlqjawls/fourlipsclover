@@ -29,8 +29,13 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
   void initState() {
     super.initState();
     if (widget.review != null) {
+      // 수정 모드
       _contentController.text = widget.review!.content;
       _visitedAt = widget.review!.date;
+      _visitedAtController.text = _formatDate(_visitedAt!);
+    } else {
+      // 작성 모드 → 오늘 날짜 기본 설정
+      _visitedAt = DateTime.now();
       _visitedAtController.text = _formatDate(_visitedAt!);
     }
   }

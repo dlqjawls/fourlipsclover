@@ -21,9 +21,9 @@ class RestaurantService {
         final jsonData = jsonDecode(utf8Decoded);
 
         // ✅ menu가 없으면 기본값 추가
-        if (!jsonData.containsKey('menu') || jsonData['menu'] == null) {
-          jsonData['menu'] = ["설렁탕", "순대국밥"]; // 기본 메뉴 설정
-        }
+        // if (!jsonData.containsKey('menu') || jsonData['menu'] == null) {
+        //   jsonData['menu'] = ["설렁탕", "순대국밥"]; // 기본 메뉴 설정
+        // }
 
         print("JSON 데이터 확인: $jsonData");
         return jsonData;
