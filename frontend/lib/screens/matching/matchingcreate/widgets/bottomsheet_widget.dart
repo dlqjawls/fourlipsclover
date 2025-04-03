@@ -220,13 +220,16 @@ class _MatchingConfirmBottomSheetState
     return Row(
       children: [
         CircleAvatar(
-          backgroundColor: widget.guide['iconColor'],
+          backgroundImage: NetworkImage(widget.guide['profileUrl']),
           radius: 24,
-          child: Icon(
-            widget.guide['imageAsset'],
-            color: Colors.white,
-            size: 24,
-          ),
+          backgroundColor: Colors.grey[200],
+          onBackgroundImageError: (e, s) {
+            debugPrint('이미지 로드 실패: $e');
+          },
+          child:
+              widget.guide['profileUrl'].isEmpty
+                  ? Icon(Icons.person, size: 30, color: Colors.grey[600])
+                  : null,
         ),
         const SizedBox(width: 12),
         Column(
