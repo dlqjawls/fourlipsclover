@@ -93,6 +93,21 @@ class ReviewService {
       ),
     ];
   }
+  static Future<ReviewResponse> getReviewDetail({
+    required String kakaoPlaceId,
+    required int reviewId,
+  }) async {
+    final url = Uri.parse('$baseUrl$apiPrefix/$kakaoPlaceId/reviews/$reviewId');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final decodedBody = utf8.decode(response.bodyBytes);
+      return ReviewResponse.fromJson(jsonDecode(decodedBody));
+    } else {
+      throw Exception('리뷰 상세 조회 실패: ${response.statusCode}');
+    }
+  }
+
 
   /// ✅ 특정 장소의 리뷰 목록 조회 (API 데이터만 사용)
   static Future<List<ReviewResponse>> getReviewList(String kakaoPlaceId) async {
@@ -164,7 +179,8 @@ class ReviewService {
     print('📦 응답본문: ${response.body}');
 
     if (response.statusCode == 200) {
-      return ReviewResponse.fromJson(jsonDecode(response.body));
+      final decodedBody = utf8.decode(response.bodyBytes);
+      return ReviewResponse.fromJson(jsonDecode(decodedBody));
     } else {
       throw Exception('리뷰 등록 실패: ${response.statusCode} ${response.body}');
     }
@@ -198,6 +214,10 @@ class ReviewService {
         dislikedCount: 0,
       );
     }
+    print("📦 수정 요청 reviewId: $reviewId");
+    print("✏️ 수정 내용: $content");
+    print("📅 방문일시: ${visitedAt.toIso8601String()}");
+    print("🔐 토큰: $accessToken");
 
     try {
       final url = Uri.parse('$baseUrl$apiPrefix/reviews/$reviewId');
