@@ -49,7 +49,7 @@ public class GuideRequestForm {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
