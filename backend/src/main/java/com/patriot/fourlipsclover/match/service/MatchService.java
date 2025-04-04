@@ -19,6 +19,8 @@ import com.patriot.fourlipsclover.payment.repository.PaymentApprovalRepository;
 import com.patriot.fourlipsclover.payment.service.PaymentService;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
+import com.patriot.fourlipsclover.tag.entity.Tag;
+import com.patriot.fourlipsclover.tag.repository.TagRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +48,7 @@ public class MatchService {
     private final GroupRepository groupRepository;
     private static final Logger logger = LoggerFactory.getLogger(MatchService.class);
     private final MatchTagRepository matchTagRepository;
+    private final TagRepository tagRepository;
 
     public void validateMatchRequest(MatchCreateRequest request, long memberId) {
         boolean isMember = memberRepository.existsById(memberId);
@@ -129,14 +132,19 @@ public class MatchService {
         guideRequestFormRepository.save(guideRequestForm);  // 가이드 신청서 저장
         match.setGuideRequestForm(guideRequestForm);  // 매칭과 연결
 
-        // 먼저 매칭을 저장
         Match savedMatch = matchRepository.save(match);
 
         // 태그 처리: MatchCreateRequest에서 받은 태그를 MatchTag로 변환하여 저장
         List<MatchTag> matchTags = new ArrayList<>();
-        for (MatchTag matchTag : request.getTags()) {
-            // match_id를 설정하여 태그와 매칭 연결
+        for (Integer tagId : request.getTags()) {  // getTags()에서 tagId만 넘어오므로, Long 타입으로 받아옴
+            // tagId로 Tag 객체 조회
+            Tag tag = tagRepository.findById(tagId)
+                    .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 tagId입니다. tagId: " + tagId));
+
+            // Tag 객체를 MatchTag에 설정
+            MatchTag matchTag = new MatchTag();
             matchTag.setMatch(savedMatch);  // 저장된 매칭을 연결
+            matchTag.setTag(tag);  // 조회된 Tag 객체를 설정
             matchTags.add(matchTag);  // 생성한 MatchTag를 리스트에 추가
         }
 
