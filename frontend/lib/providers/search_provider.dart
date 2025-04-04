@@ -139,11 +139,18 @@ class SearchProvider extends ChangeNotifier {
     }
   }
   
-  // Provider 초기화 시 호출
-  void initialize() {
-    loadSearchHistory();
-    loadSelectedTags(); // 태그 로드 추가
+  // 앱이 시작될 때 호출되는 초기화 메소드 확장
+  Future<void> initialize({bool resetTags = false}) async {
+    print('SearchProvider: 초기화 (태그 초기화: $resetTags)');
+    await loadSearchHistory();
+    
+    if (resetTags) {
+      clearTags();
+    } else {
+      await loadSelectedTags();
+    }
   }
+
 
   // 클래스 내부에 태그 관련 변수 추가
   List<String> _selectedTags = [];
@@ -193,6 +200,14 @@ void setSelectedTags(List<String> tags) {
   void clearTags() {
     _selectedTags.clear();
     saveSelectedTags(); // 변경 내용 저장
+    notifyListeners();
+  }
+
+    // 검색 완료 후 홈 화면으로 돌아갈 때 호출되는 메소드 추가
+  void completeSearch() {
+    print('SearchProvider: 검색 완료 처리');
+    // 태그는 유지하고 검색 모드만 비활성화
+    _isSearchMode = false;
     notifyListeners();
   }
   
