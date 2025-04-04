@@ -27,5 +27,5 @@ public class SettlementResponse {
 
 	private LocalDateTime updatedAt;
 
-	private List<SettlementPaymentResponse> payments;
+	private List<ExpenseResponse> expenseResponses;
 }
