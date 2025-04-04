@@ -19,6 +19,7 @@ import com.patriot.fourlipsclover.payment.repository.PaymentApprovalRepository;
 import com.patriot.fourlipsclover.payment.service.PaymentService;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
+import com.patriot.fourlipsclover.tag.dto.request.TagRequest;
 import com.patriot.fourlipsclover.tag.entity.Tag;
 import com.patriot.fourlipsclover.tag.repository.TagRepository;
 import lombok.RequiredArgsConstructor;
@@ -136,7 +137,8 @@ public class MatchService {
 
         // 태그 처리: MatchCreateRequest에서 받은 태그를 MatchTag로 변환하여 저장
         List<MatchTag> matchTags = new ArrayList<>();
-        for (Integer tagId : request.getTags()) {  // getTags()에서 tagId만 넘어오므로, Long 타입으로 받아옴
+        for (TagRequest tagRequest : request.getTags()) {
+            Long tagId = tagRequest.getTagId();  // tagId를 추출
             // tagId로 Tag 객체 조회
             Tag tag = tagRepository.findById(tagId)
                     .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 tagId입니다. tagId: " + tagId));
