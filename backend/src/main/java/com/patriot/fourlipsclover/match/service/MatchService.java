@@ -11,6 +11,7 @@ import com.patriot.fourlipsclover.match.entity.*;
 import com.patriot.fourlipsclover.match.repository.GuideRequestFormRepository;
 import com.patriot.fourlipsclover.match.repository.LocalsProposalRepository;
 import com.patriot.fourlipsclover.match.repository.MatchRepository;
+import com.patriot.fourlipsclover.match.repository.MatchTagRepository;
 import com.patriot.fourlipsclover.member.repository.MemberRepository;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentCancelResponse;
 import com.patriot.fourlipsclover.payment.entity.PaymentApproval;
@@ -18,7 +19,6 @@ import com.patriot.fourlipsclover.payment.repository.PaymentApprovalRepository;
 import com.patriot.fourlipsclover.payment.service.PaymentService;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
-import com.patriot.fourlipsclover.tag.entity.Tag;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +45,7 @@ public class MatchService {
     private final GroupService groupService;
     private final GroupRepository groupRepository;
     private static final Logger logger = LoggerFactory.getLogger(MatchService.class);
+    private final MatchTagRepository matchTagRepository;
 
     public void validateMatchRequest(MatchCreateRequest request, long memberId) {
         boolean isMember = memberRepository.existsById(memberId);
@@ -128,17 +129,21 @@ public class MatchService {
         guideRequestFormRepository.save(guideRequestForm);  // 가이드 신청서 저장
         match.setGuideRequestForm(guideRequestForm);  // 매칭과 연결
 
+        // 먼저 매칭을 저장
+        Match savedMatch = matchRepository.save(match);
+
         // 태그 처리: MatchCreateRequest에서 받은 태그를 MatchTag로 변환하여 저장
         List<MatchTag> matchTags = new ArrayList<>();
         for (MatchTag matchTag : request.getTags()) {
-            Tag tag = matchTag.getTag();  // tag를 얻은 후
-            matchTag.setMatch(match);  // Match 객체와 연결
-            matchTag.setTag(tag);  // Tag와 연결
+            // match_id를 설정하여 태그와 매칭 연결
+            matchTag.setMatch(savedMatch);  // 저장된 매칭을 연결
             matchTags.add(matchTag);  // 생성한 MatchTag를 리스트에 추가
         }
-        match.setMatchTags(matchTags);  // matchTags 필드에 추가
 
-        return matchRepository.save(match);  // 매칭 저장
+        // MatchTag 저장
+        matchTagRepository.saveAll(matchTags);  // 모든 MatchTag 저장
+
+        return savedMatch;  // 저장된 매칭 반환
     }
 
     // 신청자 - 매칭 신청 내역 조회(현지인 수락 상태 상관없이 전체 신청 목록 조회)
