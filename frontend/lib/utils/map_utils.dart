@@ -2,23 +2,20 @@
 import '../providers/map_provider.dart';
 
 class MapUtils {
-  // 좌표 유효성 검사
-// 명확한 이름으로 된 함수로 리팩토링
-static bool isValidKoreaCoordinate(double yCoord, double xCoord) {
-  // yCoord는 경도(longitude), xCoord는 위도(latitude)임
+  static bool isValidKoreaCoordinate(double latitude, double longitude) {
+    // 한국 좌표 범위는 위도 33~43, 경도 124~132
+    const minLat = 33.0;
+    const maxLat = 43.0;
+    const minLng = 124.0;
+    const maxLng = 132.0;
 
-  // 한국 좌표 범위는 위도 33~43, 경도 124~132
-  const minLat = 33.0;
-  const maxLat = 43.0;
-  const minLng = 124.0;
-  const maxLng = 132.0;
+    // 위도/경도 범위 검사
+    bool isValid =
+        (latitude >= minLat && latitude <= maxLat) &&
+        (longitude >= minLng && longitude <= maxLng);
 
-  // 위도/경도 범위 검사 (매개변수 위치 바꿈)
-  bool isValid = (xCoord >= minLat && xCoord <= maxLat) &&
-                 (yCoord >= minLng && yCoord <= maxLng);
-  
-  return isValid;
-}
+    return isValid;
+  }
 
   // 바운딩 박스 계산
   static Map<String, double> calculateBoundingBox(List<MapLabel> labels) {
