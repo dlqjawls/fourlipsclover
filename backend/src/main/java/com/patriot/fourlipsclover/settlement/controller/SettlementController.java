@@ -53,4 +53,9 @@ public class SettlementController {
 		SettlementResponse response = settlementService.detail(planId);
 		return ResponseEntity.ok(response);
 	}
+
+	// 각 Expense 마다 사람 조절하게끔 한다.
+	// expenseId로 입력받기.
+	// 사람 수 보여주기,
+	// expenseId의 participantId를 입력받아서 더할지, 뺼지 결정한다.
 }
