@@ -124,8 +124,8 @@ public class MatchService {
 
         // 가이드 신청서 (GuideRequestForm) 저장
         GuideRequestForm guideRequestForm = request.getGuideRequestForm();
-        logger.info("test" + guideRequestForm.getGroup().getName());
-        logger.info("test" + guideRequestForm.getCreatedAt());
+        logger.info("test{}", guideRequestForm.getGroup().getName());
+        logger.info("test{}", guideRequestForm.getCreatedAt());
 
         guideRequestForm.setCreatedAt(LocalDateTime.now());
         guideRequestFormRepository.save(guideRequestForm);  // 가이드 신청서 저장
