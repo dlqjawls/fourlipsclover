@@ -1,4 +1,4 @@
-// lib/services/kakao_map_service.dart
+// lib/services/kakao_map_service.dart (리팩토링 버전)
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 
@@ -9,7 +9,10 @@ class KakaoMapPlatform {
   );
 
   // 안전한 API 호출을 위한 헬퍼 메서드
-  static Future<T> _safeApiCall<T>(String methodName, Future<T> Function() apiCall) async {
+  static Future<T> _safeApiCall<T>(
+    String methodName,
+    Future<T> Function() apiCall,
+  ) async {
     try {
       return await apiCall();
     } catch (e) {
@@ -26,11 +29,13 @@ class KakaoMapPlatform {
     });
   }
 
-  /// 라벨 레이어 초기화 - 새 메서드 추가
+  /// 라벨 레이어 초기화
   static Future<bool> initializeLabelLayer() async {
     return _safeApiCall('initializeLabelLayer', () async {
       try {
-        final result = await _channel.invokeMethod<bool>('initializeLabelLayer');
+        final result = await _channel.invokeMethod<bool>(
+          'initializeLabelLayer',
+        );
         return result ?? false;
       } catch (e) {
         // 메서드가 구현되지 않은 경우 기본적으로 성공으로 간주
@@ -41,16 +46,16 @@ class KakaoMapPlatform {
 
   // 라벨 클릭 콜백 변수
   static Function(String labelId)? _labelClickCallback;
-  
+
   // 라벨 클릭 리스너 설정 메서드
   static void setLabelClickListener(Function(String labelId) callback) {
     _labelClickCallback = callback;
-    
+
     // 채널 핸들러 설정
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'onLabelClick') {
         final String labelId = call.arguments['labelId'];
-        
+
         if (_labelClickCallback != null) {
           _labelClickCallback!(labelId);
         }
@@ -59,7 +64,7 @@ class KakaoMapPlatform {
     });
   }
 
-/// 지도 중심 위치 설정
+  /// 지도 중심 위치 설정
   static Future<void> setMapCenter({
     required double latitude,
     required double longitude,
@@ -70,43 +75,6 @@ class KakaoMapPlatform {
         'latitude': latitude,
         'longitude': longitude,
         'zoomLevel': zoomLevel,
-      });
-    });
-  }
-
-  /// 마커 추가
-  static Future<void> addMarker({
-    required double latitude,
-    required double longitude,
-    String? title,
-    String? markerId,
-  }) async {
-    return _safeApiCall('addMarker', () async {
-      await _channel.invokeMethod<void>('addMarker', {
-        'latitude': latitude,
-        'longitude': longitude,
-        'title': title,
-        'markerId': markerId,
-      });
-    });
-  }
-
-  static Future<void> addLabelDirectly({
-    required String labelId,
-    required double latitude,
-    required double longitude,
-    String? text,
-    String? imageAsset,
-    double? textSize,
-  }) async {
-    return _safeApiCall('addLabelDirectly', () async {
-      await _channel.invokeMethod<void>('addLabelDirectly', {
-        'labelId': labelId,
-        'latitude': latitude,
-        'longitude': longitude,
-        'text': text,
-        'imageAsset': imageAsset,
-        'textSize': textSize,
       });
     });
   }
@@ -147,7 +115,7 @@ class KakaoMapPlatform {
     });
   }
 
-  /// 라벨 위치
+  /// 라벨 위치 업데이트
   static Future<void> updateLabelPosition({
     required String labelId,
     required double latitude,
@@ -218,7 +186,7 @@ class KakaoMapPlatform {
     return _safeApiCall('drawRoute', () async {
       // lineColor가 int32 범위를 넘어가지 않도록 확인
       final safeLineColor = lineColor != null ? (lineColor & 0xFFFFFFFF) : null;
-      
+
       final result = await _channel.invokeMethod<bool>('drawRoute', {
         'routeId': routeId,
         'coordinates': coordinates,
@@ -226,7 +194,7 @@ class KakaoMapPlatform {
         'lineWidth': lineWidth,
         'showArrow': showArrow,
       });
-      
+
       return result ?? false;
     });
   }
@@ -234,9 +202,7 @@ class KakaoMapPlatform {
   /// 경로 제거
   static Future<void> removeRoute(String routeId) async {
     return _safeApiCall('removeRoute', () async {
-      await _channel.invokeMethod<void>('removeRoute', {
-        'routeId': routeId,
-      });
+      await _channel.invokeMethod<void>('removeRoute', {'routeId': routeId});
     });
   }
 

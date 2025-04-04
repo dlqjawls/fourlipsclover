@@ -1,4 +1,4 @@
-// lib/providers/map_provider.dart
+// lib/providers/map_provider.dart (리팩토링 버전)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../services/kakao_route_service.dart';
@@ -6,39 +6,7 @@ import '../services/kakao_map_service.dart';
 import '../models/route_model.dart';
 import '../utils/map_utils.dart';
 
-class MapMarker {
-  final double latitude;
-  final double longitude;
-  final String? title;
-  final String? id;
-  final bool isSelected;
-
-  MapMarker({
-    required this.latitude,
-    required this.longitude,
-    this.title,
-    this.id,
-    this.isSelected = false,
-  });
-
-  MapMarker copyWith({
-    double? latitude,
-    double? longitude,
-    String? title,
-    String? id,
-    bool? isSelected,
-  }) {
-    return MapMarker(
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-      title: title ?? this.title,
-      id: id ?? this.id,
-      isSelected: isSelected ?? this.isSelected,
-    );
-  }
-}
-
-// 카카오맵 라벨(마커) 클래스 - 색상 속성 제거
+// 카카오맵 라벨(마커) 클래스
 class MapLabel {
   final String id;
   final double latitude;
@@ -109,16 +77,10 @@ class MapProvider extends ChangeNotifier {
   // 줌 레벨
   int _zoomLevel = 15;
 
-  // 마커 컬렉션
-  List<MapMarker> _markers = [];
-
-  // 라벨 컬렉션 추가
+  // 라벨 컬렉션
   List<MapLabel> _labels = [];
 
-  // 선택된 마커 ID
-  String? _selectedMarkerId;
-
-  // 선택된 라벨 ID 추가
+  // 선택된 라벨 ID
   String? _selectedLabelId;
 
   // 지도 로딩 상태
@@ -131,18 +93,13 @@ class MapProvider extends ChangeNotifier {
   bool _showLabels = true;
   bool _showCurrentLocation = false;
 
-  // 바운딩 박스 (현재 보이는 영역)
-  double? _northLatitude;
-  double? _southLatitude;
-  double? _eastLongitude;
-  double? _westLongitude;
-
   // 경로 관련 속성
   KakaoRouteResponse? _routeResponse;
   bool _isRouteFetching = false;
   String? _routeError;
   List<String> _routeLineIds = [];
-  // 출발지/목적지 위치 속성 추가
+  
+  // 출발지/목적지 위치 속성
   MapLabel? _originLabel;
   MapLabel? _destinationLabel;
   List<MapLabel> _waypointLabels = [];
@@ -151,42 +108,24 @@ class MapProvider extends ChangeNotifier {
   double get centerLatitude => _centerLatitude;
   double get centerLongitude => _centerLongitude;
   int get zoomLevel => _zoomLevel;
-  List<MapMarker> get markers => List.unmodifiable(_markers);
   List<MapLabel> get labels => List.unmodifiable(_labels);
-  String? get selectedMarkerId => _selectedMarkerId;
   String? get selectedLabelId => _selectedLabelId;
   MapLoadingState get loadingState => _loadingState;
   String? get lastError => _lastError;
   bool get showLabels => _showLabels;
   bool get showCurrentLocation => _showCurrentLocation;
-  //길찾기 게터
+  
+  // 길찾기 관련 getter
   KakaoRouteResponse? get routeResponse => _routeResponse;
   bool get isRouteFetching => _isRouteFetching;
   String? get routeError => _routeError;
   bool get hasRoute => _routeResponse != null;
   List<String> get routeLineIds => List.unmodifiable(_routeLineIds);
+  
   // 출발지/목적지 getter
   MapLabel? get originLabel => _originLabel;
   MapLabel? get destinationLabel => _destinationLabel;
   List<MapLabel> get waypointLabels => List.unmodifiable(_waypointLabels);
-
-  // 바운딩 박스 getter
-  Map<String, double?> get viewportBounds => {
-    'north': _northLatitude,
-    'south': _southLatitude,
-    'east': _eastLongitude,
-    'west': _westLongitude,
-  };
-
-  // 선택된 마커 getter
-  MapMarker? get selectedMarker {
-    if (_selectedMarkerId == null) return null;
-    try {
-      return _markers.firstWhere((marker) => marker.id == _selectedMarkerId);
-    } catch (e) {
-      return null;
-    }
-  }
 
   // 선택된 라벨 getter
   MapLabel? get selectedLabel {
@@ -218,100 +157,47 @@ class MapProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 마커 추가
-  void addMarker({
+  // 라벨 추가 메서드
+  void addLabel({
     required double latitude,
     required double longitude,
-    String? title,
-    String? id,
+    String? text,
+    String? imageAsset,
+    double? textSize,
+    double alpha = 1.0,
+    double rotation = 0.0,
+    int zIndex = 0,
+    bool isClickable = true,
+    bool isVisible = true,
     bool select = false,
+    String? id,
   }) {
-    final markerId = MapUtils.generateLabelId("marker", id);
+    // 좌표 유효성 검사 - 경고만 출력하고 진행
+    if (!MapUtils.isValidKoreaCoordinate(latitude, longitude)) {
+      print('유효하지 않은 좌표: lat=$latitude, lng=$longitude');
+    }
 
-    final newMarker = MapMarker(
+    final labelId = MapUtils.generateLabelId("label", id);
+
+    final newLabel = MapLabel(
+      id: labelId,
       latitude: latitude,
       longitude: longitude,
-      title: title,
-      id: markerId,
+      text: text,
+      imageAsset: imageAsset,
+      textSize: textSize,
+      alpha: alpha,
+      rotation: rotation,
+      zIndex: zIndex,
+      isClickable: isClickable,
+      isVisible: isVisible,
       isSelected: select,
     );
 
-    _markers.add(newMarker);
+    _labels.add(newLabel);
 
     if (select) {
-      _selectedMarkerId = markerId;
-    }
-
-    notifyListeners();
-  }
-
-  // 라벨 추가 메서드 - 최종 수정
-void addLabel({
-  required double latitude, // y 값
-  required double longitude, // x 값
-  String? text,
-  String? imageAsset,
-  double? textSize,
-  double alpha = 1.0,
-  double rotation = 0.0,
-  int zIndex = 0,
-  bool isClickable = true,
-  bool isVisible = true,
-  bool select = false,
-  String? id,
-}) {
-  // 좌표 유효성 검사 - 수정된 버전
-  if (!MapUtils.isValidKoreaCoordinate(latitude, longitude)) {
-    // 유효성 검사 실패 시 로그 추가
-    print('유효하지 않은 좌표: lat=$latitude, lng=$longitude');
-    // 검사 실패해도 계속 진행
-    // return; // 이 부분 제거 또는 주석 처리
-  }
-
-  final labelId = MapUtils.generateLabelId("label", id);
-
-  final newLabel = MapLabel(
-    id: labelId,
-    latitude: latitude,
-    longitude: longitude,
-    text: text,
-    imageAsset: imageAsset,
-    textSize: textSize,
-    alpha: alpha,
-    rotation: rotation,
-    zIndex: zIndex,
-    isClickable: isClickable,
-    isVisible: isVisible,
-    isSelected: select,
-  );
-
-  _labels.add(newLabel);
-
-  if (select) {
-    _selectedLabelId = labelId;
-  }
-
-  notifyListeners();
-}
-
-  // 마커 일괄 설정
-  void setMarkers(List<MapMarker> markers) {
-    _markers = List.from(markers);
-    notifyListeners();
-  }
-
-  // 라벨 일괄 설정
-  void setLabels(List<MapLabel> labels) {
-    _labels = List.from(labels);
-    notifyListeners();
-  }
-
-  // 마커 제거
-  void removeMarker(String id) {
-    _markers.removeWhere((marker) => marker.id == id);
-
-    if (_selectedMarkerId == id) {
-      _selectedMarkerId = null;
+      _selectedLabelId = labelId;
     }
 
     notifyListeners();
@@ -328,30 +214,10 @@ void addLabel({
     notifyListeners();
   }
 
-  // 모든 마커 제거
-  void clearMarkers() {
-    _markers.clear();
-    _selectedMarkerId = null;
-    notifyListeners();
-  }
-
   // 모든 라벨 제거
   void clearLabels() {
     _labels.clear();
     _selectedLabelId = null;
-    notifyListeners();
-  }
-
-  // 마커 선택
-  void selectMarker(String id) {
-    _selectedMarkerId = id;
-
-    // 마커 상태 업데이트
-    final updatedMarkers = _markers.map((marker) {
-      return marker.copyWith(isSelected: marker.id == id);
-    }).toList();
-
-    _markers = updatedMarkers;
     notifyListeners();
   }
 
@@ -366,41 +232,6 @@ void addLabel({
 
     _labels = updatedLabels;
     notifyListeners();
-  }
-
-  // 마커 선택 취소
-  void deselectMarker() {
-    _selectedMarkerId = null;
-
-    // 마커 상태 업데이트
-    final updatedMarkers = _markers.map((marker) {
-      return marker.copyWith(isSelected: false);
-    }).toList();
-
-    _markers = updatedMarkers;
-    notifyListeners();
-  }
-
-  // 라벨 선택 취소
-  void deselectLabel() {
-    _selectedLabelId = null;
-
-    // 라벨 상태 업데이트
-    final updatedLabels = _labels.map((label) {
-      return label.copyWith(isSelected: false);
-    }).toList();
-
-    _labels = updatedLabels;
-    notifyListeners();
-  }
-
-  // 라벨 업데이트
-  void updateLabel(MapLabel updatedLabel) {
-    final index = _labels.indexWhere((label) => label.id == updatedLabel.id);
-    if (index != -1) {
-      _labels[index] = updatedLabel;
-      notifyListeners();
-    }
   }
 
   // 라벨 위치 업데이트
@@ -424,15 +255,6 @@ void addLabel({
     }
   }
 
-  // 라벨 가시성 토글
-  void toggleLabelVisibility(String id, bool isVisible) {
-    final index = _labels.indexWhere((label) => label.id == id);
-    if (index != -1) {
-      _labels[index] = _labels[index].copyWith(isVisible: isVisible);
-      notifyListeners();
-    }
-  }
-
   // 지도 로딩 상태 설정
   void setLoadingState(MapLoadingState state, [String? error]) {
     _loadingState = state;
@@ -449,20 +271,6 @@ void addLabel({
   // 현재 위치 표시 전환
   void toggleCurrentLocation(bool show) {
     _showCurrentLocation = show;
-    notifyListeners();
-  }
-
-  // 현재 보이는 영역 설정
-  void setViewportBounds({
-    required double north,
-    required double south,
-    required double east,
-    required double west,
-  }) {
-    _northLatitude = north;
-    _southLatitude = south;
-    _eastLongitude = east;
-    _westLongitude = west;
     notifyListeners();
   }
 
@@ -734,18 +542,12 @@ void addLabel({
     _centerLatitude = 35.1958;
     _centerLongitude = 126.8149;
     _zoomLevel = 15;
-    _markers = [];
     _labels = [];
-    _selectedMarkerId = null;
     _selectedLabelId = null;
     _loadingState = MapLoadingState.loading;
     _lastError = null;
     _showLabels = true;
     _showCurrentLocation = false;
-    _northLatitude = null;
-    _southLatitude = null;
-    _eastLongitude = null;
-    _westLongitude = null;
 
     // 경로 관련 상태 초기화
     _routeResponse = null;

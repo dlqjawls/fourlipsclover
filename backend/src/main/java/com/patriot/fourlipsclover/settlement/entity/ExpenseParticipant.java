@@ -20,18 +20,18 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "settlement_participant")
+@Table(name = "expense_participant")
 @Getter
 @Setter
 @ToString
-public class SettlementParticipant {
+public class ExpenseParticipant {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long expenseParticipantId;
 
 	@ManyToOne
-	@JoinColumn(name = "member_member_id")
+	@JoinColumn(name = "member_id")
 	private Member member;
 
 	@ManyToOne
