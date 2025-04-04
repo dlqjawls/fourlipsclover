@@ -249,6 +249,15 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     Navigator.pop(context);
   }
 
+  void _handleBackPressed() {
+    // 홈 화면으로 돌아갈 때 태그 초기화
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    searchProvider.clearTags(); // 태그 모두 지우기
+
+    // 이전 화면으로 돌아가기
+    Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final searchProvider = Provider.of<SearchProvider>(context);
@@ -268,12 +277,12 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
             title: Center(
               child: Row(
                 children: [
-                  // 뒤로가기 버튼
+                  // 뒤로가기 버튼 - 함수 변경
                   Padding(
                     padding: const EdgeInsets.only(left: 4.0),
                     child: IconButton(
                       icon: Icon(Icons.arrow_back, color: Colors.black),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: _handleBackPressed, // 수정된 함수 사용
                       padding: EdgeInsets.all(8),
                       iconSize: 28,
                     ),
@@ -302,15 +311,6 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                                   color: AppColors.darkGray,
                                 ),
                                 overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            // X 버튼
-                            GestureDetector(
-                              onTap: _navigateToSearch,
-                              child: Icon(
-                                Icons.close,
-                                color: AppColors.mediumGray,
-                                size: 24,
                               ),
                             ),
                           ],
@@ -349,7 +349,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                                 text: TextSpan(
                                   children: [
                                     TextSpan(
-                                      text: "$_currentQuery",
+                                      text: "'$_currentQuery'",
                                       style: TextStyle(
                                         fontFamily: 'Anemone_air',
                                         fontSize: 18,
@@ -357,7 +357,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                                       ),
                                     ),
                                     TextSpan(
-                                      text: " 맛집 (",
+                                      text: " 검색결과 (",
                                       style: TextStyle(
                                         fontFamily: 'Anemone_air',
                                         fontSize: 18,

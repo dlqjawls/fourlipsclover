@@ -89,8 +89,10 @@ class RestaurantInfo extends StatelessWidget {
       return NetworkImage(original);
     }
 
-    return const AssetImage("assets/images/restaurant_image.jpg");
+    // ✅ 기본 이미지 → rice.png 사용
+    return const AssetImage("assets/images/rice.png");
   }
+
 
   Widget _buildInfoRow(IconData icon, String text) {
     return Padding(

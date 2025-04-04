@@ -6,7 +6,8 @@ import '../../../utils/text_style_extensions.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/nearby_restaurant_service.dart';
 import '../../../models/restaurant_model.dart';
-import '../../review/restaurant_detail.dart';
+import './restaurant_card.dart';
+import './local_favorite_detail.dart';
 
 class LocalFavorites extends StatefulWidget {
   const LocalFavorites({Key? key}) : super(key: key);
@@ -26,7 +27,8 @@ class _LocalFavoritesState extends State<LocalFavorites> {
 
     // 빌드 사이클 완료 후에 실행하도록 스케줄링
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) { // mounted 체크 추가
+      if (mounted) {
+        // mounted 체크 추가
         _initializeLocation();
       }
     });
@@ -99,14 +101,16 @@ class _LocalFavoritesState extends State<LocalFavorites> {
           ),
         );
 
-        if (mounted) { // mounted 체크 추가
+        if (mounted) {
+          // mounted 체크 추가
           setState(() {
             _restaurants = restaurants;
             _isLoading = false;
           });
         }
       } else {
-        if (mounted) { // mounted 체크 추가
+        if (mounted) {
+          // mounted 체크 추가
           setState(() {
             _errorMessage = '위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.';
             _isLoading = false;
@@ -115,7 +119,8 @@ class _LocalFavoritesState extends State<LocalFavorites> {
       }
     } catch (e) {
       print('주변 레스토랑 로딩 오류: $e');
-      if (mounted) { // mounted 체크 추가
+      if (mounted) {
+        // mounted 체크 추가
         setState(() {
           _errorMessage = '주변 레스토랑을 불러오는데 실패했습니다.';
           _isLoading = false;
@@ -130,7 +135,8 @@ class _LocalFavoritesState extends State<LocalFavorites> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.getCurrentLocation(context);
 
-    if (mounted) { // mounted 체크 추가
+    if (mounted) {
+      // mounted 체크 추가
       _loadNearbyRestaurants();
     }
   }
@@ -150,64 +156,62 @@ class _LocalFavoritesState extends State<LocalFavorites> {
 
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.gps_fixed,
-                      color: AppColors.primary,
-                      size: 18,
+                  Icon(Icons.gps_fixed, color: AppColors.primary, size: 14),
+                  Text(
+                    ' 내 주변',
+                    style: baseStyle?.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '내 주변',
-                        style: baseStyle?.copyWith(fontSize: 18).emphasized,
-                      ),
-                      Text(
-                        '현지인이 선호하는 맛집',
-                        style: baseStyle?.copyWith(
-                          fontSize: 13,
-                          color: AppColors.mediumGray,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 4),
+                  Text(
+                    '추천 맛집',
+                    style: baseStyle?.copyWith(
+                      fontSize: 14,
+                      color: AppColors.mediumGray,
+                    ),
                   ),
                 ],
               ),
-
-              TextButton(
-                onPressed: _refreshLocation,
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  backgroundColor: AppColors.verylightGray,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.refresh, color: AppColors.darkGray, size: 14),
-                    const SizedBox(width: 4),
-                    Text('지역 갱신', style: baseStyle?.copyWith(fontSize: 12)),
-                  ],
-                ),
+              SizedBox(height: 30),
+              Text(
+                '회원님만을 위해 준비했어요',
+                style:
+                    Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(fontSize: 16, height: 1.3)
+                        .emphasized,
               ),
+              SizedBox(height: 20),
+
+              // 현지인이 선호하는 맛집 + 새로고침 아이콘 (한 줄에 함께 표시)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '현지인이 선호하는 맛집',
+                    style: baseStyle?.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _refreshLocation,
+                    child: Icon(
+                      Icons.refresh,
+                      color: AppColors.mediumGray,
+                      size: 25,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10),
             ],
           ),
         ),
@@ -279,32 +283,6 @@ class _LocalFavoritesState extends State<LocalFavorites> {
                         final hashtags =
                             categories.map((cat) => '#$cat').toList();
 
-                        // 거리 계산 - 현재 위치와 식당 위치가 모두 있을 때만
-                        double distance = 0.0;
-                        final authProvider = Provider.of<AuthProvider>(
-                          context,
-                          listen: false,
-                        );
-
-                        if (authProvider.currentPosition != null &&
-                            restaurant.x != null &&
-                            restaurant.y != null) {
-                          final dx =
-                              111.3 *
-                              cos(
-                                authProvider.currentPosition!.latitude *
-                                    pi /
-                                    180,
-                              ) *
-                              (authProvider.currentPosition!.longitude -
-                                  restaurant.x!);
-                          final dy =
-                              111.3 *
-                              (authProvider.currentPosition!.latitude -
-                                  restaurant.y!);
-                          distance = sqrt(dx * dx + dy * dy);
-                        }
-
                         return RestaurantCard(
                           name: restaurant.placeName ?? '이름 없음',
                           address: restaurant.roadAddressName ?? '주소 없음',
@@ -312,7 +290,7 @@ class _LocalFavoritesState extends State<LocalFavorites> {
                           phone: restaurant.phone ?? '전화번호 없음',
                           likes: 0, // 서버에서 제공하지 않는 정보
                           hashtags: hashtags,
-                          distance: distance,
+                          distance: restaurant.distance ?? 0.0,
                           kakaoPlaceId: restaurant.kakaoPlaceId ?? '',
                         );
                       },
@@ -323,12 +301,19 @@ class _LocalFavoritesState extends State<LocalFavorites> {
             ),
           ),
 
+        // local_favorites.dart의 자세히 보기 버튼 부분 수정
         Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0),
             child: OutlinedButton(
               onPressed: () {
-                // TODO: 주변 레스토랑 전체 목록 화면으로 이동
+                // 자세히 보기 버튼 클릭 시 LocalFavoriteDetailScreen으로 이동
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LocalFavoriteDetailScreen(),
+                  ),
+                );
               },
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.darkGray,
@@ -353,221 +338,6 @@ class _LocalFavoritesState extends State<LocalFavorites> {
           ),
         ),
       ],
-    );
-  }
-}
-
-// RestaurantCard 위젯은 변경 없음
-class RestaurantCard extends StatelessWidget {
-  final String name;
-  final String address;
-  final String category;
-  final String phone;
-  final int likes;
-  final List<String> hashtags;
-  final double distance;
-  final String kakaoPlaceId;
-
-  const RestaurantCard({
-    Key? key,
-    required this.name,
-    required this.address,
-    required this.category,
-    required this.phone,
-    this.likes = 0,
-    this.hashtags = const [],
-    this.distance = 0.0,
-    required this.kakaoPlaceId,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final baseStyle = Theme.of(context).textTheme.bodyMedium;
-    return GestureDetector(
-      onTap: () {
-        // TODO: 식당 상세 페이지로 이동
-        print('식당 클릭: $name (ID: $kakaoPlaceId)');
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => RestaurantDetailScreen(
-              restaurantId: kakaoPlaceId,
-            ),
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min, // 내용에 맞게 최소 높이로 조정
-          children: [
-            // 식당 이미지 (임시로 회색 박스)
-            Stack(
-              children: [
-                Container(
-                  height: 120,
-                  width: double.infinity,
-                  color: AppColors.lightGray,
-                ),
-
-                // 거리 정보 (상단 왼쪽)
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          color: AppColors.lightGray,
-                          size: 12,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          '${distance.toStringAsFixed(1)}km',
-                          style:
-                              baseStyle
-                                  ?.copyWith(color: Colors.white, fontSize: 10)
-                                  .emphasized,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            // 식당 정보
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 식당 이름과 좋아요 수 한 줄에
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            name,
-                            style: baseStyle?.copyWith(fontSize: 15).emphasized,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        // 좋아요 수
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.favorite,
-                              color: Colors.red.shade300,
-                              size: 14,
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              '$likes',
-                              style: baseStyle?.copyWith(
-                                fontSize: 12,
-                                color: AppColors.mediumGray,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-
-                    // 추가 정보
-                    const SizedBox(height: 6),
-                    Text(
-                      address,
-                      style: baseStyle?.copyWith(
-                        fontSize: 11,
-                        color: AppColors.darkGray,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      category,
-                      style: baseStyle?.copyWith(
-                        fontSize: 10,
-                        color: AppColors.darkGray,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      phone,
-                      style: baseStyle?.copyWith(
-                        fontSize: 10,
-                        color: AppColors.darkGray,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
-                    // 해시태그
-                    if (hashtags.isNotEmpty)
-                      Container(
-                        margin: const EdgeInsets.only(top: 6),
-                        height: 22,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          children:
-                              hashtags
-                                  .take(3)
-                                  .map((tag) => _buildHashtagChip(context, tag))
-                                  .toList(),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 회색 해시태그 디자인
-  Widget _buildHashtagChip(BuildContext context, String tag) {
-    final baseStyle = Theme.of(context).textTheme.bodyMedium;
-    return Container(
-      margin: const EdgeInsets.only(right: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.verylightGray, // 회색 배경
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        tag,
-        style: baseStyle?.copyWith(
-          fontSize: 10,
-          color: AppColors.mediumGray, // 회색 텍스트
-        ),
-      ),
     );
   }
 }

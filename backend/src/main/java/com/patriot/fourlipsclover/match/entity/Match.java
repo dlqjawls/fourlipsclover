@@ -56,7 +56,7 @@ public class Match {
     @Column(name = "partner_order_id")
     private String partnerOrderId;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")

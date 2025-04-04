@@ -74,6 +74,10 @@ dependencies {
 
     // Kafka 의존성 추가
     implementation 'org.springframework.kafka:spring-kafka'
+
+    // MapStruct 의존성
+    implementation 'org.mapstruct:mapstruct:1.5.5.Final'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
 }
 
 tasks.named('test') {

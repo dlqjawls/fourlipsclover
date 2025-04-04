@@ -20,6 +20,8 @@ import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
 import com.patriot.fourlipsclover.tag.entity.Tag;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +44,7 @@ public class MatchService {
     private final RestaurantJpaRepository restaurantJpaRepository;
     private final GroupService groupService;
     private final GroupRepository groupRepository;
+    private static final Logger logger = LoggerFactory.getLogger(MatchService.class);
 
     public void validateMatchRequest(MatchCreateRequest request, long memberId) {
         boolean isMember = memberRepository.existsById(memberId);
@@ -121,11 +124,12 @@ public class MatchService {
 
         // 가이드 신청서 (GuideRequestForm) 저장
         GuideRequestForm guideRequestForm = request.getGuideRequestForm();
-        if (guideRequestForm != null) {
-            guideRequestForm.setCreatedAt(LocalDateTime.now());
-            guideRequestFormRepository.save(guideRequestForm);  // 가이드 신청서 저장
-            match.setGuideRequestForm(guideRequestForm);  // 매칭과 연결
-        }
+        logger.info("test" + guideRequestForm.getGroup().getName());
+        logger.info("test" + guideRequestForm.getCreatedAt());
+
+        guideRequestForm.setCreatedAt(LocalDateTime.now());
+        guideRequestFormRepository.save(guideRequestForm);  // 가이드 신청서 저장
+        match.setGuideRequestForm(guideRequestForm);  // 매칭과 연결
 
         // 태그 처리: MatchCreateRequest에서 받은 태그를 MatchTag로 변환하여 저장
         List<MatchTag> matchTags = new ArrayList<>();

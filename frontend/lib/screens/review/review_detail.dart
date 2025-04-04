@@ -218,23 +218,16 @@ class _ReviewDetailState extends State<ReviewDetail> {
   Widget _buildReviewImage(String? imageUrl, int reviewId) {
     final baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://your-api.com';
 
-    List<String> defaultImages = [
-      "assets/images/review_image.jpg",
-      "assets/images/review_image2.jpg",
-      "assets/images/review_image3.jpg"
-    ];
+    // 이미지 없으면 아무것도 렌더링하지 않음
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return const SizedBox.shrink(); // 👈 완전 빈 위젯 반환
+    }
 
-    String selectedImage;
-
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      if (!imageUrl.startsWith('http') && !imageUrl.startsWith('assets/')) {
-        selectedImage = '$baseUrl/uploads/review/$imageUrl';
-      } else {
-        selectedImage = imageUrl;
-      }
+    String fullUrl;
+    if (!imageUrl.startsWith('http') && !imageUrl.startsWith('assets/')) {
+      fullUrl = '$baseUrl/uploads/review/$imageUrl';
     } else {
-      int imageIndex = reviewId % defaultImages.length;
-      selectedImage = defaultImages[imageIndex];
+      fullUrl = imageUrl;
     }
 
     return Container(
@@ -244,9 +237,9 @@ class _ReviewDetailState extends State<ReviewDetail> {
         color: Colors.grey[300],
         borderRadius: BorderRadius.circular(8),
         image: DecorationImage(
-          image: selectedImage.startsWith("http")
-              ? NetworkImage(selectedImage)
-              : AssetImage(selectedImage) as ImageProvider,
+          image: fullUrl.startsWith("http")
+              ? NetworkImage(fullUrl)
+              : AssetImage(fullUrl) as ImageProvider,
           fit: BoxFit.cover,
         ),
       ),

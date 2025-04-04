@@ -358,13 +358,23 @@ class _MatchingResistScreenState extends State<MatchingResistScreen> {
                           Hero(
                             tag: 'guide_${widget.guide['name']}',
                             child: CircleAvatar(
-                              backgroundColor: widget.guide['iconColor'],
-                              radius: 30,
-                              child: Icon(
-                                widget.guide['imageAsset'],
-                                color: Colors.white,
-                                size: 35,
+                              backgroundImage: NetworkImage(
+                                widget.guide['profileUrl'],
                               ),
+                              radius: 30,
+                              backgroundColor: Colors.grey[200],
+                              onBackgroundImageError: (e, s) {
+                                debugPrint('이미지 로딩 실패: $e');
+                              },
+                              // 이미지가 없을 때만 기본 아이콘 표시
+                              child:
+                                  widget.guide['profileUrl'].isEmpty
+                                      ? Icon(
+                                        Icons.person,
+                                        color: Colors.grey[600],
+                                        size: 35,
+                                      )
+                                      : null,
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -664,7 +674,7 @@ class _MatchingResistScreenState extends State<MatchingResistScreen> {
             selectedFoodCategory: _selectedFoodCategory,
             selectedTaste: _selectedTaste,
             request: _requestController.text,
-             requestController: _requestController, 
+            requestController: _requestController,
             guide: widget.guide,
             regionId: widget.guide['regionId'],
             tagIds: widget.guide['tagIds'],
