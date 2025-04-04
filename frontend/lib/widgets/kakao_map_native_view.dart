@@ -1,4 +1,4 @@
-// lib/widgets/kakao_map_native_view.dart
+// lib/widgets/kakao_map_native_view.dart (리팩토링 버전)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -41,109 +41,100 @@ class _KakaoMapNativeViewState extends State<KakaoMapNativeView> {
     // Provider 초기화는 didChangeDependencies에서 처리
   }
 
-@override
-void didChangeDependencies() {
-  super.didChangeDependencies();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
 
-  final mapProvider = Provider.of<MapProvider>(context);
+    final mapProvider = Provider.of<MapProvider>(context);
 
-  // 처음 Provider에 연결될 때만 초기화
-  if (_mapProvider == null) {
-    _mapProvider = mapProvider;
-    
-    // 프레임 완료 후 초기화 실행
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeMap();
-    });
+    // 처음 Provider에 연결될 때만 초기화
+    if (_mapProvider == null) {
+      _mapProvider = mapProvider;
+      
+      // 프레임 완료 후 초기화 실행
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _initializeMap();
+      });
+    }
   }
-}
 
   Future<void> _initializeMap() async {
-  try {
-    // 초기 로딩 상태 설정은 build 메서드 외부에서 수행
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_mapProvider != null) {
-        _mapProvider!.setLoadingState(MapLoadingState.loading);
-      }
-    });
-
-    // Provider에서 값 가져오기 (위젯 속성으로 오버라이드 가능)
-    final latitude = widget.latitude ?? _mapProvider!.centerLatitude;
-    final longitude = widget.longitude ?? _mapProvider!.centerLongitude;
-    final zoomLevel = widget.zoomLevel ?? _mapProvider!.zoomLevel;
-
-    // 좌표 유효성 검사 추가
-    if (!MapUtils.isValidKoreaCoordinate(latitude, longitude)) {
+    try {
+      // 초기 로딩 상태 설정은 build 메서드 외부에서 수행
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_mapProvider != null) {
-          _mapProvider!.setLoadingState(MapLoadingState.failure, '유효하지 않은 좌표');
+          _mapProvider!.setLoadingState(MapLoadingState.loading);
         }
       });
-      return;
-    }
 
-    // 맵 초기화
-    final result = await KakaoMapPlatform.initializeMap();
+      // Provider에서 값 가져오기 (위젯 속성으로 오버라이드 가능)
+      final latitude = widget.latitude ?? _mapProvider!.centerLatitude;
+      final longitude = widget.longitude ?? _mapProvider!.centerLongitude;
+      final zoomLevel = widget.zoomLevel ?? _mapProvider!.zoomLevel;
 
-    // 맵 상태 설정
-    if (result) {
-      // 라벨 레이어 명시적 초기화 시도
-      await KakaoMapPlatform.initializeLabelLayer();
-
-      // 중심 위치 설정
-      await KakaoMapPlatform.setMapCenter(
-        latitude: latitude,
-        longitude: longitude,
-        zoomLevel: zoomLevel,
-      );
-
-      // Provider 업데이트 (위젯에서 값을 전달받은 경우)
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_mapProvider != null) {
-          if (widget.latitude != null && widget.longitude != null) {
-            _mapProvider!.setMapCenter(
-              latitude: latitude,
-              longitude: longitude,
-              zoomLevel: zoomLevel,
-            );
+      // 좌표 유효성 검사 추가
+      if (!MapUtils.isValidKoreaCoordinate(latitude, longitude)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_mapProvider != null) {
+            _mapProvider!.setLoadingState(MapLoadingState.failure, '유효하지 않은 좌표');
           }
-          
-          // 로딩 상태 업데이트
-          _mapProvider!.setLoadingState(MapLoadingState.success);
-        }
-      });
+        });
+        return;
+      }
 
-      // 마커 설정
-      for (var marker in _mapProvider!.markers) {
-        await KakaoMapPlatform.addMarker(
-          latitude: marker.latitude,
-          longitude: marker.longitude,
-          title: marker.title,
+      // 맵 초기화
+      final result = await KakaoMapPlatform.initializeMap();
+
+      // 맵 상태 설정
+      if (result) {
+        // 라벨 레이어 명시적 초기화 시도
+        await KakaoMapPlatform.initializeLabelLayer();
+
+        // 중심 위치 설정
+        await KakaoMapPlatform.setMapCenter(
+          latitude: latitude,
+          longitude: longitude,
+          zoomLevel: zoomLevel,
         );
-      }
 
-      // 라벨 설정 추가
-      await _updateLabels();
+        // Provider 업데이트 (위젯에서 값을 전달받은 경우)
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_mapProvider != null) {
+            if (widget.latitude != null && widget.longitude != null) {
+              _mapProvider!.setMapCenter(
+                latitude: latitude,
+                longitude: longitude,
+                zoomLevel: zoomLevel,
+              );
+            }
+            
+            // 로딩 상태 업데이트
+            _mapProvider!.setLoadingState(MapLoadingState.success);
+          }
+        });
 
-      // 맵 생성 콜백 호출
-      if (widget.onMapCreated != null) {
-        widget.onMapCreated!();
+        // 라벨 설정 추가
+        await _updateLabels();
+
+        // 맵 생성 콜백 호출
+        if (widget.onMapCreated != null) {
+          widget.onMapCreated!();
+        }
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_mapProvider != null) {
+            _mapProvider!.setLoadingState(MapLoadingState.failure, '지도 초기화 실패');
+          }
+        });
       }
-    } else {
+    } catch (e) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_mapProvider != null) {
-          _mapProvider!.setLoadingState(MapLoadingState.failure, '지도 초기화 실패');
+          _mapProvider!.setLoadingState(MapLoadingState.failure, e.toString());
         }
       });
     }
-  } catch (e) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_mapProvider != null) {
-        _mapProvider!.setLoadingState(MapLoadingState.failure, e.toString());
-      }
-    });
   }
-}
 
   // 리스너 설정 메서드
   void _setupProviderListeners() {
