@@ -112,10 +112,15 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
   }
 
   // URL 패턴 수정
-  if (url.contains('/api/payment/approve') || url.contains('/api/match/approve')) {
+  // if (url.contains('/api/payment/approve') || url.contains('/api/match/approve')) {
+  //   final uri = Uri.parse(url);
+  //   final pgToken = uri.queryParameters['pg_token'];
+
+
+    if (url.contains('/api/match/approve')) {
     final uri = Uri.parse(url);
     final pgToken = uri.queryParameters['pg_token'];
-
+    
     print('pgToken: $pgToken');
     print('tid: $_tid');
     print('orderId: $_orderId');
