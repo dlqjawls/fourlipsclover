@@ -11,4 +11,8 @@ public interface ExpenseParticipantRepository extends
 		JpaRepository<ExpenseParticipant, Long> {
 
 	List<ExpenseParticipant> findByExpense(Expense expense);
+
+	boolean existsByExpense_ExpenseIdAndMember_MemberId(Long expenseId, Long memberId);
+
+	void deleteAllByExpense_ExpenseId(Long expenseId);
 }
