@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/widgets/clover_loading_spinner.dart';
 import '../../config/theme.dart';
 import '../../services/restaurant_service.dart';
 import '../../services/review_service.dart';
@@ -61,32 +62,23 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: restaurantData,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError || snapshot.data == null) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20.0),
-                child: Text("가게 정보를 불러오는 중 오류가 발생했습니다.", style: TextStyle(fontSize: 16, color: Colors.red)),
-              ),
-            );
-          }
+    return FutureBuilder<Map<String, dynamic>>(
+      future: restaurantData,
+      builder: (context, snapshot) {
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
 
-          final data = snapshot.data!;
-          final menu = data['menu'] ?? [];
-
-          return Scaffold(
+        return LoadingOverlay(
+          isLoading: isLoading,
+          overlayColor: Colors.white.withOpacity(0.7),
+          minDisplayTime: const Duration(milliseconds: 1200),
+          child: Scaffold(
+            backgroundColor: AppColors.background,
             appBar: AppBar(
               backgroundColor: AppColors.background,
               elevation: 0,
               centerTitle: true,
               title: Text(
-                data['placeName'] ?? "가게 정보",
+                snapshot.data?['placeName'] ?? "가게 정보",
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               leading: IconButton(
@@ -110,12 +102,24 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 const SizedBox(width: 20),
               ],
             ),
-            body: SingleChildScrollView(
+            body: snapshot.hasError || snapshot.data == null
+                ? const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20.0),
+                child: Text(
+                  "가게 정보를 불러오는 중 오류가 발생했습니다.",
+                  style: TextStyle(fontSize: 16, color: Colors.red),
+                ),
+              ),
+            )
+                : SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  RestaurantInfo(data: data, imageUrl: representativeImageUrl),
-
+                  RestaurantInfo(
+                    data: snapshot.data!,
+                    imageUrl: representativeImageUrl,
+                  ),
                   const Padding(
                     padding: EdgeInsets.only(top: 12.0),
                     child: Divider(thickness: 6.5, color: AppColors.verylightGray, height: 24),
@@ -124,21 +128,19 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                     padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
                     child: Text("메뉴", style: TextStyle(fontSize: 16)),
                   ),
-
-                  if (menu.isNotEmpty)
-                    MenuList(menu: menu)
+                  if ((snapshot.data!['menu'] ?? []).isNotEmpty)
+                    MenuList(menu: snapshot.data!['menu'])
                   else
-                    const Center(child: Padding(padding: EdgeInsets.all(16.0), child: Text("메뉴 정보가 없습니다."))),
-
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Text("메뉴 정보가 없습니다."),
+                      ),
+                    ),
                   const Padding(
                     padding: EdgeInsets.only(top: 16.0),
                     child: Divider(thickness: 6.5, color: AppColors.verylightGray, height: 24),
                   ),
-                  // const Padding(
-                  //   padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                  //   child: Text("리뷰", style: TextStyle(fontSize: 16)),
-                  // ),
-
                   ReviewList(
                     restaurantId: widget.restaurantId,
                     onReviewUpdated: fetchData,
@@ -146,9 +148,9 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 ],
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }

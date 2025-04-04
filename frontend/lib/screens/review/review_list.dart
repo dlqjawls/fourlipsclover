@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/widgets/clover_loading_spinner.dart';
 import '../../config/theme.dart';
 import '../../models/review_model.dart';
 import '../review/review_detail.dart';
@@ -137,7 +138,7 @@ class _ReviewListState extends State<ReviewList> {
           future: reviewData,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: CloverLoadingSpinner());
             } else if (snapshot.hasError) {
               return Center(child: Text("에러 발생: ${snapshot.error}"));
             } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
