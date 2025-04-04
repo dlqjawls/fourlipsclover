@@ -187,9 +187,12 @@ public class GroupService {
 
     @Transactional(readOnly = true)
     public List<GroupResponse> getMyGroups(Long loggedInMemberId) {
-        List<Group> groups = groupRepository.findByMemberMemberId(loggedInMemberId);
-        return groups.stream()
-                .map(GroupMapper::toResponse)
+        // GroupMember를 기준으로 해당 memberId에 속한 그룹을 찾는다.
+        List<GroupMember> groupMembers = groupMemberRepository.findByIdMemberId(loggedInMemberId);
+
+        // 그룹 목록을 반환
+        return groupMembers.stream()
+                .map(groupMember -> GroupMapper.toResponse(groupMember.getGroup()))  // Group 객체로 변환
                 .collect(Collectors.toList());
     }
 
@@ -246,9 +249,17 @@ public class GroupService {
             newGroup.setIsPublic(false);
             newGroup.setCreatedAt(LocalDateTime.now());
             newGroup.setMember(member);
-
             // 그룹 생성 후, 해당 그룹의 ID를 신청서에 설정
             groupRepository.save(newGroup);
+
+            GroupMember groupMember = new GroupMember();
+            GroupMemberId groupMemberId = new GroupMemberId(newGroup.getGroupId(), member.getMemberId());
+            groupMember.setId(groupMemberId);
+            groupMember.setGroup(newGroup);
+            groupMember.setMember(member);
+            groupMember.setJoinedAt(LocalDateTime.now());
+
+            groupMemberRepository.save(groupMember);
 
             // 신청서에 생성된 그룹 ID 저장
             guideRequestForm.setGroup(newGroup);
