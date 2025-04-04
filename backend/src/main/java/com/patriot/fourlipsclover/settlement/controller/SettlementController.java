@@ -1,5 +1,6 @@
 package com.patriot.fourlipsclover.settlement.controller;
 
+import com.patriot.fourlipsclover.settlement.dto.response.SettlementRequestResponse;
 import com.patriot.fourlipsclover.settlement.dto.response.SettlementResponse;
 import com.patriot.fourlipsclover.settlement.service.SettlementService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -54,8 +55,11 @@ public class SettlementController {
 		return ResponseEntity.ok(response);
 	}
 
-	// 각 Expense 마다 사람 조절하게끔 한다.
-	// expenseId로 입력받기.
-	// 사람 수 보여주기,
-	// expenseId의 participantId를 입력받아서 더할지, 뺼지 결정한다.
+	@PostMapping("/{planId}/settlement/request")
+	public ResponseEntity<SettlementRequestResponse> settlementRequest(
+			@PathVariable Integer planId) {
+		SettlementRequestResponse response = settlementService.request(planId);
+		return ResponseEntity.ok(response);
+
+	}
 }
