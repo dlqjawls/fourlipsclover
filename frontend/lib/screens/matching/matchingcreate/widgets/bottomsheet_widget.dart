@@ -126,6 +126,7 @@ class _MatchingConfirmBottomSheetState
     return {
       'guide': {
         'id': widget.guide['id']?.toString() ?? '',
+        'memberId': widget.guide['memberId']?.toString() ?? '',
         'name': widget.guide['name']?.toString() ?? '',
         'iconColor': widget.guide['iconColor'],
         'imageAsset': widget.guide['imageAsset'],
@@ -155,10 +156,11 @@ class _MatchingConfirmBottomSheetState
         tid: paymentData['tid']!,
         pgToken: result['pg_token'],
         orderId: paymentData['orderId']!,
-        amount: int.parse(paymentData['totalAmount']!),
+        amount: paymentData['totalAmount']!,
+        // amount: int.parse(paymentData['totalAmount']!),
         tagIds: widget.tagIds,
         regionId: widget.regionId,
-        guideMemberId: widget.guide['id'],
+        guideMemberId: widget.guide['memberId'],
         transportation: widget.selectedTransport ?? '',
         foodPreference: widget.selectedFoodCategory ?? '',
         tastePreference: widget.selectedTaste ?? '',
