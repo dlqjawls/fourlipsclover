@@ -42,7 +42,13 @@ public class SettlementController {
 	}
 
 	@GetMapping("/{planId}/settlement")
+	@Operation(summary = "정산 상세 조회", description = "특정 계획의 정산 정보를 상세 조회합니다")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "정산 정보 조회 성공"),
+			@ApiResponse(responseCode = "404", description = "계획 또는 정산 정보를 찾을 수 없음")
+	})
 	public ResponseEntity<SettlementResponse> detail(
+			@Parameter(description = "계획 ID", required = true)
 			@PathVariable(value = "planId") Integer planId) {
 		SettlementResponse response = settlementService.detail(planId);
 		return ResponseEntity.ok(response);
