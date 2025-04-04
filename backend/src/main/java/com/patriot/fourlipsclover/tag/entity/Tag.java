@@ -19,7 +19,7 @@ public class Tag {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "tag_id", nullable = false)
-    private Long tagId;
+    private Integer tagId;
 
     @Column(name = "category")
     private String category;
