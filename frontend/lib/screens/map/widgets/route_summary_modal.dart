@@ -1,7 +1,7 @@
 // lib/widgets/route_summary_modal.dart
 import 'package:flutter/material.dart';
-import '../models/route_model.dart';
-import '../config/theme.dart';
+import '../../../models/route_model.dart';
+import '../../../config/theme.dart';
 
 class RouteSummaryModal extends StatelessWidget {
   final KakaoRoute route;

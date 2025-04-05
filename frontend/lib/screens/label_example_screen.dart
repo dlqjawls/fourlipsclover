@@ -8,8 +8,8 @@ import '../widgets/kakao_map_native_view.dart';
 import '../config/theme.dart';
 import '../services/kakao_map_service.dart';
 import 'package:geolocator/geolocator.dart'; // 위치 정보를 위한 패키지
-import '../widgets/route_summary_modal.dart';
-import '../widgets/route_search_panel.dart';
+import 'map/widgets/route_summary_modal.dart';
+import 'map/widgets/route_search_panel.dart';
 import 'package:flutter/services.dart'; //SystemOvelayStyle 사용을 위해
 // url_launcher 패키지가 필요합니다 (pubspec.yaml에 추가 필요)
 // import 'package:url_launcher/url_launcher.dart';

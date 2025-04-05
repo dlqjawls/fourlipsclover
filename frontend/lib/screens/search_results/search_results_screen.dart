@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
-import '../../widgets/map_preview.dart';
 import '../../providers/search_provider.dart';
 import '../../providers/map_provider.dart';
 import '../../models/restaurant_model.dart';
@@ -101,7 +100,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
         _resultCount = results.length;
       });
 
-      // 지도에 라벨 추가
+      // 지도에 라벨 추가 - 검색 결과를 MapProvider에 저장해두는 로직 유지
       if (results.isNotEmpty) {
         _addLabelsToMap(results, mapProvider);
       }
@@ -109,7 +108,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
   }
 
   // 기존 _addLabelsToMap 메소드는 그대로 유지
-
+  // MapProvider에 라벨 정보를 저장해두는 중요한 로직
   void _addLabelsToMap(
     List<RestaurantResponse> restaurants,
     MapProvider mapProvider,
@@ -154,7 +153,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
           imageAsset: 'clover',
           textSize: 24.0,
           zIndex: 1,
-          isClickable: false,
+          isClickable: true, // FullMapScreen에서 클릭 가능하도록 true로 변경
         );
 
         addedCount++;
@@ -176,11 +175,11 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
       final centerLat = (minLat + maxLat) / 2;
       final centerLng = (minLng + maxLng) / 2;
 
-      print('지도 중심 설정: lat=$centerLat, lng=$centerLng');
+      print('지도 중심 설정: lat=$centerLat, lng=$centerLng!!');
 
       mapProvider.setMapCenter(
-        latitude: centerLat,
-        longitude: centerLng,
+        latitude: centerLng,
+        longitude: centerLat,
         zoomLevel: 14,
       );
     }
@@ -339,7 +338,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                     color: Colors.white,
                     child: Column(
                       children: [
-                        // 검색 결과 카운트 표시
+                        // 검색 결과 카운트와 "지도로 보기" 버튼 표시
                         Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: Row(
@@ -384,14 +383,51 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                                   ],
                                 ),
                               ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.share,
-                                  color: AppColors.darkGray,
-                                ),
-                                onPressed: () {
-                                  // 공유 기능 구현
-                                },
+                              Row(
+                                children: [
+                                  // 지도로 보기 버튼 - MapPreview 제거 후 직접 버튼 추가
+                                  ElevatedButton.icon(
+                                    onPressed: _openFullMap,
+                                    icon: Icon(
+                                      Icons.map,
+                                      size: 16,
+                                      color: AppColors.primary,
+                                    ),
+                                    label: Text(
+                                      "지도로 보기",
+                                      style: TextStyle(
+                                        fontFamily: 'Anemone_air',
+                                        fontSize: 14,
+                                        color: AppColors.darkGray,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      elevation: 1,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                        side: BorderSide(
+                                          color: AppColors.lightGray,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  // 공유 버튼
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.share,
+                                      color: AppColors.darkGray,
+                                    ),
+                                    onPressed: () {
+                                      // 공유 기능 구현
+                                    },
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -414,12 +450,6 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                                       .toList(),
                             ),
                           ),
-
-                        // 지도 미리보기
-                        MapPreview(
-                          location: _currentQuery,
-                          onTapViewMap: _openFullMap,
-                        ),
 
                         // 필터 태그
                         SearchFilterTags(
@@ -472,6 +502,8 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                 fontWeight: FontWeight.w500,
               ),
             ),
+            SizedBox(width: 4),
+            Icon(Icons.close, size: 14, color: AppColors.darkGray),
           ],
         ),
       ),

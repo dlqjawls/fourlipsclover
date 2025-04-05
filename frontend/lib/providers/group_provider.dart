@@ -4,6 +4,7 @@ import '../models/group/group_detail_model.dart';
 import '../models/group/member_model.dart';
 import '../services/api/group_api.dart';
 import 'package:flutter/widgets.dart';
+import '../models/group/group_join_request_model.dart';
 
 class GroupProvider with ChangeNotifier {
   final GroupApi _groupApi = GroupApi();
@@ -201,34 +202,34 @@ class GroupProvider with ChangeNotifier {
     }
   }
 
-Future<bool> deleteGroup(int groupId) async {
-  _setLoading(true);
-  try {
-    await _groupApi.deleteGroup(groupId);
+  Future<bool> deleteGroup(int groupId) async {
+    _setLoading(true);
+    try {
+      await _groupApi.deleteGroup(groupId);
 
-    // 캐시된 그룹 목록에서 삭제
-    _groups.removeWhere((group) => group.groupId == groupId);
+      // 캐시된 그룹 목록에서 삭제
+      _groups.removeWhere((group) => group.groupId == groupId);
 
-    // 선택된 그룹이 삭제된 그룹이라면 선택 해제 또는 첫 번째 그룹 선택
-    if (_selectedGroup?.groupId == groupId) {
-      _selectedGroup = _groups.isNotEmpty ? _groups.first : null;
+      // 선택된 그룹이 삭제된 그룹이라면 선택 해제 또는 첫 번째 그룹 선택
+      if (_selectedGroup?.groupId == groupId) {
+        _selectedGroup = _groups.isNotEmpty ? _groups.first : null;
+      }
+
+      // 캐시에서도 제거
+      _groupDetailsCache.remove(groupId);
+
+      _error = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = '그룹 삭제에 실패했습니다: $e';
+      debugPrint(_error);
+      notifyListeners(); // 에러 상태 알림
+      return false;
+    } finally {
+      _setLoading(false);
     }
-
-    // 캐시에서도 제거
-    _groupDetailsCache.remove(groupId);
-
-    _error = null;
-    notifyListeners();
-    return true;
-  } catch (e) {
-    _error = '그룹 삭제에 실패했습니다: $e';
-    debugPrint(_error);
-    notifyListeners(); // 에러 상태 알림
-    return false;
-  } finally {
-    _setLoading(false);
   }
-}
 
   // 그룹 초대 링크 생성 (API)
   Future<String?> generateInviteLink(int groupId) async {
@@ -262,7 +263,24 @@ Future<bool> deleteGroup(int groupId) async {
     }
   }
 
+  // 초대 링크 유효성 검사 (API)
+  Future<Map<String, dynamic>?> checkInvitationLink(String token) async {
+    _setLoading(true);
+    try {
+      final result = await _groupApi.checkInvitationStatus(token);
+      _error = null;
+      return result;
+    } catch (e) {
+      _error = '초대 링크 확인에 실패했습니다: $e';
+      debugPrint(_error);
+      return null;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // 가입 요청 승인/거절 (API)
+  // 기존 메서드 개선
   Future<bool> respondToJoinRequest({
     required int groupId,
     required String token,
@@ -282,7 +300,11 @@ Future<bool> deleteGroup(int groupId) async {
 
       // 승인된 경우 그룹 상세 정보 새로고침
       if (accept) {
-        await fetchGroupDetail(groupId);
+        // 그룹 상세 정보 새로고침
+        final groupDetail = await fetchGroupDetail(groupId);
+
+        // 가입 요청 목록도 새로고침 필요
+        // 가입 요청 목록 새로고침 로직이 추가되어야 함
       }
 
       _error = null;
@@ -291,6 +313,22 @@ Future<bool> deleteGroup(int groupId) async {
       _error = '가입 요청 처리에 실패했습니다: $e';
       debugPrint(_error);
       return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // 가입 요청 목록 조회 메서드 추가
+  Future<List<GroupJoinRequest>?> fetchJoinRequestList(int groupId) async {
+    _setLoading(true);
+    try {
+      final requests = await _groupApi.getJoinRequestList(groupId);
+      _error = null;
+      return requests;
+    } catch (e) {
+      _error = '가입 요청 목록 조회에 실패했습니다: $e';
+      debugPrint(_error);
+      return null;
     } finally {
       _setLoading(false);
     }
@@ -310,11 +348,12 @@ Future<bool> deleteGroup(int groupId) async {
     _error = null;
     notifyListeners();
   }
+
   // 캐시된 그룹 상세 정보 가져오기
-GroupDetail? getGroupDetail(int groupId) {
-  if (_groupDetailsCache.containsKey(groupId)) {
-    return _groupDetailsCache[groupId];
+  GroupDetail? getGroupDetail(int groupId) {
+    if (_groupDetailsCache.containsKey(groupId)) {
+      return _groupDetailsCache[groupId];
+    }
+    return null;
   }
-  return null;
-}
 }
