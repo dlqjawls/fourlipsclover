@@ -6,6 +6,7 @@ import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.restaurant.entity.Region;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,6 +14,7 @@ import java.util.List;
 
 @Getter
 @Setter
+@Data
 public class MatchCreateRequest {
 
     @NotNull(message = "태그는 필수입니다")
