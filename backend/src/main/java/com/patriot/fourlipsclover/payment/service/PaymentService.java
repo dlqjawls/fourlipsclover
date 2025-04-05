@@ -1,10 +1,12 @@
 package com.patriot.fourlipsclover.payment.service;
 
+import com.patriot.fourlipsclover.exception.PaymentNotFoundException;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentApproveResponse;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentCancelResponse;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentReadyResponse;
 import com.patriot.fourlipsclover.payment.entity.PaymentApproval;
 import com.patriot.fourlipsclover.payment.entity.PaymentItem;
+import com.patriot.fourlipsclover.payment.entity.PaymentStatus;
 import com.patriot.fourlipsclover.payment.mapper.PaymentMapper;
 import com.patriot.fourlipsclover.payment.repository.PaymentApprovalRepository;
 import com.patriot.fourlipsclover.payment.repository.PaymentItemRepository;
@@ -132,7 +134,9 @@ public class PaymentService {
         if (Objects.isNull(response)) {
             throw new IllegalArgumentException("존재하지 않는 거래입니다.");
         }
-        paymentApprovalRepository.save(paymentMapper.toEntity(response));
+        PaymentApproval paymentApproval = paymentMapper.toEntity(response);
+        paymentApproval.setStatus(PaymentStatus.APPROVED);
+        paymentApprovalRepository.save(paymentApproval);
         return responseEntity.getBody();
     }
 
@@ -155,7 +159,8 @@ public class PaymentService {
         HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(params, headers);
         ResponseEntity<PaymentCancelResponse> responseEntity = restTemplate.postForEntity(
                 KAKAO_PAY_CANCEL, requestEntity, PaymentCancelResponse.class);
-
+        PaymentApproval paymentApproval = paymentApprovalRepository.findByTid(tid).orElseThrow(() -> new PaymentNotFoundException("존재하지 않는 결제 정보 입니다."));
+        paymentApproval.setStatus(PaymentStatus.CANCELED);
         return responseEntity.getBody();
     }
 
