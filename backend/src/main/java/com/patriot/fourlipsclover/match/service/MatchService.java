@@ -149,9 +149,15 @@ public class MatchService {
         // 5. MatchTag 저장 (태그 처리)
         for (MatchTag matchTag : request.getTags()) {
             // 프론트에서 받은 tagId를 기반으로 Tag 객체를 찾아야 함
-            Tag tagEntity = tagRepository.findById(matchTag.getTag().getTagId())
-                    .orElseThrow(() -> new IllegalArgumentException("Tag not found"));
+            Long tagId = matchTag.getTag().getTagId();  // tagId를 가져옴
+            if (tagId == null) {
+                throw new IllegalArgumentException("Tag ID는 필수입니다.");
+            }
 
+            // Tag 객체를 찾아서, 없으면 예외 처리
+            Tag tagEntity = tagRepository.findById(tagId)
+                    .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 tagId: " + tagId));
+            
             // MatchTag 객체 생성
             MatchTag newMatchTag = MatchTag.builder()
                     .match(match) // 새로 생성된 match와 연결
