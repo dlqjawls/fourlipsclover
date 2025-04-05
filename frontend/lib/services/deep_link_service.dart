@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:app_links/app_links.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DeepLinkService {
   static final DeepLinkService _instance = DeepLinkService._internal();
@@ -54,28 +55,99 @@ class DeepLinkService {
   }
   
   // 링크 처리 로직
-  void _handleLink(BuildContext context, Uri uri) {
+  Future<void> _handleLink(BuildContext context, Uri uri) async {
     debugPrint('딥링크 처리: $uri');
     
-    if (uri.host == 'invitation') {
-      // clover://invitation/{token} 형식 처리
+    String? token;
+    
+    // 1. clover://invitation/{token} 형식 처리
+    if (uri.scheme == 'clover' && uri.host == 'invitation') {
       if (uri.pathSegments.isNotEmpty) {
-        final token = uri.pathSegments.first;
-        _navigateToInvitationScreen(context, token);
+        token = uri.pathSegments.first;
       }
+    }
+    // 2. kakao{앱키}://kakaolink 형식 처리
+    else if (uri.host == 'kakaolink' || uri.host == 'kakolink') {
+      // 쿼리 파라미터에서 토큰 추출 시도
+      if (uri.queryParameters.containsKey('token')) {
+        token = uri.queryParameters['token'];
+      } 
+      // execParams에서 토큰 추출 시도
+      else if (uri.fragment.isNotEmpty) {
+        final params = _parseExecParams(uri.fragment);
+        token = params['token'];
+      }
+      // 쿼리스트링에서 토큰 추출 시도
+      else if (uri.query.isNotEmpty) {
+        final params = _parseExecParams(uri.query);
+        token = params['token'];
+      }
+    }
+    
+    if (token != null && token.isNotEmpty) {
+      debugPrint('토큰 추출 성공: $token');
+      await _storePendingInvitation(token);
+      _navigateToGroupScreen(context, token);
+    } else {
+      debugPrint('토큰을 찾을 수 없음: $uri');
     }
   }
   
-  // 초대 화면으로 이동
-  void _navigateToInvitationScreen(BuildContext context, String token) {
-    debugPrint('초대 토큰 처리: $token');
-    // 메인 context에서 네비게이션하기 위해 나중에 실행
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Navigator.of(context).pushNamed(
-        '/group/invitation', 
-        arguments: {'token': token}
-      );
-    });
+  // execParams 파싱 헬퍼 함수
+  Map<String, String> _parseExecParams(String paramsString) {
+    Map<String, String> result = {};
+    
+    try {
+      final pairs = paramsString.split('&');
+      for (var pair in pairs) {
+        final keyValue = pair.split('=');
+        if (keyValue.length == 2) {
+          final key = keyValue[0];
+          final value = Uri.decodeComponent(keyValue[1]);
+          result[key] = value;
+        }
+      }
+    } catch (e) {
+      debugPrint('execParams 파싱 오류: $e');
+    }
+    
+    return result;
+  }
+  
+  // 초대 토큰 저장
+  Future<void> _storePendingInvitation(String token) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('pendingInvitationToken', token);
+      debugPrint('초대 토큰 저장됨: $token');
+    } catch (e) {
+      debugPrint('초대 토큰 저장 중 오류: $e');
+    }
+  }
+  
+  // 적절한 화면으로 이동
+  void _navigateToGroupScreen(BuildContext context, String token) {
+    // 현재 화면에 따라 다르게 처리
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+    
+    // 그룹 화면에 있는 경우 새로 고침 (Provider를 통해)
+    if (currentRoute == '/home' || currentRoute == '/group') {
+      // 이미 그룹 화면에 있으므로 새로고침만 필요
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('그룹 초대 링크가 수신되었습니다. 초대를 확인해보세요.')),
+        );
+      });
+    } else {
+      // 다른 화면에 있으면 그룹 화면으로 이동
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/home', 
+          (route) => false,
+          arguments: {'initialTab': 2} // 그룹 탭으로 이동 (탭 인덱스에 맞게 조정)
+        );
+      });
+    }
   }
   
   // 웹 URL에서 토큰 추출
