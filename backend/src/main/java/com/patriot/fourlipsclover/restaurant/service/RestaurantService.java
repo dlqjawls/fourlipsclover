@@ -20,6 +20,7 @@ import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.entity.City;
 import com.patriot.fourlipsclover.restaurant.entity.FoodCategory;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
+import com.patriot.fourlipsclover.restaurant.entity.RestaurantImage;
 import com.patriot.fourlipsclover.restaurant.entity.Review;
 import com.patriot.fourlipsclover.restaurant.entity.ReviewLike;
 import com.patriot.fourlipsclover.restaurant.entity.ReviewLikePK;
@@ -27,6 +28,7 @@ import com.patriot.fourlipsclover.restaurant.mapper.RestaurantMapper;
 import com.patriot.fourlipsclover.restaurant.mapper.ReviewMapper;
 import com.patriot.fourlipsclover.restaurant.repository.CityRepository;
 import com.patriot.fourlipsclover.restaurant.repository.FoodCategoryRepository;
+import com.patriot.fourlipsclover.restaurant.repository.RestaurantImageRepository;
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewLikeJpaRepository;
@@ -60,6 +62,7 @@ public class RestaurantService {
 	private final CityRepository cityRepository;
 	private final FoodCategoryRepository foodCategoryRepository;
 	private final TagService tagService;
+	private final RestaurantImageRepository restaurantImageRepository;
 
 	@Transactional
 	public ReviewResponse create(ReviewCreate reviewCreate, List<MultipartFile> images) {
@@ -96,7 +99,26 @@ public class RestaurantService {
 				LikeStatus.DISLIKE);
 		response.setLikedCount(likedCount.intValue());
 		response.setDislikedCount(dislikedCount.intValue());
+		try {
+			Member member = loadCurrentMember();
+			boolean userLiked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.LIKE);
+			boolean userDisliked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.DISLIKE);
+			response.setUserLiked(userLiked);
+			response.setUserDisliked(userDisliked);
+		} catch (UnauthorizedAccessException e) {
+			response.setUserLiked(false);
+			response.setUserDisliked(false);
+		}
 		return response;
+	}
+
+	private Member loadCurrentMember() {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication == null || !authentication.isAuthenticated()) {
+			throw new UnauthorizedAccessException("인증되지 않은 사용자입니다.");
+		}
+		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+		return userDetails.getMember();
 	}
 
 	@Transactional(readOnly = true)
@@ -105,6 +127,7 @@ public class RestaurantService {
 			throw new IllegalArgumentException("올바른 kakaoPlaceId 값을 입력하세요.");
 		}
 		List<Review> reviews = reviewRepository.findByKakaoPlaceId(kakaoPlaceId);
+		System.out.println(reviews);
 		return reviews.stream()
 				.map(review -> {
 					Integer reviewId = review.getReviewId();
@@ -117,7 +140,16 @@ public class RestaurantService {
 							reviewId, LikeStatus.DISLIKE);
 					response.setLikedCount(likedCount.intValue());
 					response.setDislikedCount(dislikedCount.intValue());
-
+					try {
+						Member member = loadCurrentMember();
+						boolean userLiked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.LIKE);
+						boolean userDisliked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.DISLIKE);
+						response.setUserLiked(userLiked);
+						response.setUserDisliked(userDisliked);
+					} catch (UnauthorizedAccessException e) {
+						response.setUserLiked(false);
+						response.setUserDisliked(false);
+					}
 					return response;
 				})
 				.toList();
@@ -125,12 +157,20 @@ public class RestaurantService {
 
 	@Transactional
 	public ReviewResponse update(Integer reviewId,
-			ReviewUpdate reviewUpdate) {
+			ReviewUpdate reviewUpdate, List<String> deleteImageUrls, List<MultipartFile> images) {
 		Review review = reviewRepository.findById(reviewId)
 				.orElseThrow(() -> new ReviewNotFoundException(reviewId));
 		checkReviewerIsCurrentUser(review.getMember().getMemberId());
 		if (review.getIsDelete()) {
 			throw new DeletedResourceAccessException("삭제된 리뷰 데이터는 접근할 수 없습니다.");
+		}
+
+		if (deleteImageUrls != null && !deleteImageUrls.isEmpty()) {
+			reviewImageService.deleteImages(deleteImageUrls);
+		}
+
+		if (images != null && !images.isEmpty()) {
+			reviewImageService.uploadFiles(review, images);
 		}
 
 		review.setContent(reviewUpdate.getContent());
@@ -141,15 +181,9 @@ public class RestaurantService {
 	}
 
 	private void checkReviewerIsCurrentUser(Long reviewMemberId) {
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (authentication == null || !authentication.isAuthenticated()) {
-			throw new UnauthorizedAccessException("인증되지 않은 사용자입니다.");
-		}
+		Member member =loadCurrentMember();
 
-		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-		Member currentMember = userDetails.getMember();
-
-		if (!Objects.equals(currentMember.getMemberId(), reviewMemberId)) {
+		if (!Objects.equals(member.getMemberId(), reviewMemberId)) {
 			throw new UnauthorizedAccessException("현재 User ID가 작성자 ID와 다릅니다.");
 		}
 	}
@@ -173,24 +207,36 @@ public class RestaurantService {
 		if (Objects.isNull(kakaoPlaceId) || kakaoPlaceId.isBlank()) {
 			throw new IllegalArgumentException("올바른 kakaoPlaceId 값을 입력하세요.");
 		}
-		RestaurantResponse restaurantResponse = restaurantMapper.toDto(
-				restaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
-						.orElseThrow(() -> new InvalidDataException(
-								"존재 하지 않는 식당입니다.")));
+		Restaurant restaurant = restaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
+				.orElseThrow(() -> new InvalidDataException("존재 하지 않는 식당입니다."));
+
+		RestaurantResponse restaurantResponse = restaurantMapper.toDto(restaurant);
+
 		List<RestaurantTagResponse> restaurantTagResponses = tagService.findRestaurantTagByRestaurantId(
 				kakaoPlaceId);
 		restaurantResponse.setTags(restaurantTagResponses);
+
+		// 식당 이미지 조회 및 설정
+		List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(restaurant);
+		restaurantResponse.setRestaurantImages(restaurantMapper.toRestaurantImageDtoList(restaurantImages));
 		return restaurantResponse;
 	}
 
 	@Transactional(readOnly = true)
 	public List<RestaurantResponse> findNearbyRestaurants(Double latitude, Double longitude,
-			Integer radius) {
+														  Integer radius) {
 		List<RestaurantResponse> response = new ArrayList<>();
 		List<Restaurant> nearbyRestaurants = restaurantRepository.findNearbyRestaurants(
 				latitude, longitude, radius);
+
 		for (Restaurant data : nearbyRestaurants) {
 			RestaurantResponse restaurantResponse = restaurantMapper.toDto(data);
+
+			// 식당 이미지 조회 및 설정
+			List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(data);
+			restaurantResponse.setRestaurantImages(restaurantMapper.toRestaurantImageDtoList(restaurantImages));
+
+			// 태그 설정
 			List<RestaurantTagResponse> tags = tagService.findRestaurantTagByRestaurantId(
 					data.getKakaoPlaceId());
 			restaurantResponse.setTags(tags);

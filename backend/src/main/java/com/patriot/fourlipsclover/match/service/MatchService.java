@@ -4,20 +4,26 @@ import com.patriot.fourlipsclover.exception.*;
 import com.patriot.fourlipsclover.group.entity.Group;
 import com.patriot.fourlipsclover.group.repository.GroupRepository;
 import com.patriot.fourlipsclover.group.service.GroupService;
+import com.patriot.fourlipsclover.match.dto.mapper.MatchMapper;
+import com.patriot.fourlipsclover.match.dto.request.GuideRequestFormRequest;
 import com.patriot.fourlipsclover.match.dto.request.LocalsProposalRequest;
 import com.patriot.fourlipsclover.match.dto.request.MatchCreateRequest;
+import com.patriot.fourlipsclover.match.dto.request.TagRequest;
 import com.patriot.fourlipsclover.match.dto.response.*;
 import com.patriot.fourlipsclover.match.entity.*;
 import com.patriot.fourlipsclover.match.repository.GuideRequestFormRepository;
 import com.patriot.fourlipsclover.match.repository.LocalsProposalRepository;
 import com.patriot.fourlipsclover.match.repository.MatchRepository;
 import com.patriot.fourlipsclover.match.repository.MatchTagRepository;
+import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberRepository;
 import com.patriot.fourlipsclover.payment.dto.response.PaymentCancelResponse;
 import com.patriot.fourlipsclover.payment.entity.PaymentApproval;
 import com.patriot.fourlipsclover.payment.repository.PaymentApprovalRepository;
 import com.patriot.fourlipsclover.payment.service.PaymentService;
+import com.patriot.fourlipsclover.restaurant.entity.Region;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
+import com.patriot.fourlipsclover.restaurant.repository.RegionRepository;
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
 import com.patriot.fourlipsclover.tag.entity.Tag;
 import com.patriot.fourlipsclover.tag.repository.TagRepository;
@@ -49,6 +55,8 @@ public class MatchService {
     private static final Logger logger = LoggerFactory.getLogger(MatchService.class);
     private final MatchTagRepository matchTagRepository;
     private final TagRepository tagRepository;
+    private final MatchMapper matchMapper;
+    private final RegionRepository regionRepository;
 
     public void validateMatchRequest(MatchCreateRequest request, long memberId) {
         boolean isMember = memberRepository.existsById(memberId);
@@ -80,7 +88,7 @@ public class MatchService {
         }
 
         // 가이드 신청서 검증
-        GuideRequestForm form = request.getGuideRequestForm();
+        GuideRequestFormRequest form = request.getGuideRequestForm();
         if (form == null) {
             throw new MatchBusinessException("가이드 신청서 작성은 필수입니다.");
         }
@@ -106,37 +114,29 @@ public class MatchService {
 
     @Transactional
     public Match createMatchAfterPayment(String partnerOrderId, MatchCreateRequest request, long currentMemberId) {
+        logger.info("매치 생성 LOG, MatchCreateRequest = {}", request);
+        GuideRequestForm guideRequestForm = matchMapper.toGuideRequestForm(request.getGuideRequestForm());
         // 그룹이 선택되지 않았을 경우 새로운 그룹을 생성하고 할당
-        if (request.getGuideRequestForm().getGroup() == null) {
+        if (request.getGuideRequestForm().getGroupId() == null) {
             // 그룹 처리: 그룹이 선택되지 않으면 "나홀로 여행" 그룹을 생성하고 할당
-            groupService.handleGroupAssignment(request.getGuideRequestForm(), currentMemberId); // 그룹 생성 후 guideRequestForm에 그룹 설정
+            groupService.handleGroupAssignment(guideRequestForm, currentMemberId); // 그룹 생성 후 guideRequestForm에 그룹 설정
         } else {
             // 이미 그룹 정보가 존재하면 해당 groupId를 사용하여 그룹을 설정
-            Integer groupId = request.getGuideRequestForm().getGroup().getGroupId();  // 입력된 groupId로 그룹 정보 설정
+            Integer groupId = request.getGuideRequestForm().getGroupId();  // 입력된 groupId로 그룹 정보 설정
             Group existingGroup = groupRepository.findById(groupId)
                     .orElseThrow(() -> new MatchBusinessException("유효하지 않은 그룹입니다."));  // 그룹이 존재하지 않으면 예외 처리
-            request.getGuideRequestForm().setGroup(existingGroup);  // 신청서에 기존 그룹 설정
+            guideRequestForm.setGroup(existingGroup);
         }
-
-        // 2. GuideRequestForm 생성
-        GuideRequestForm guideRequestForm = GuideRequestForm.builder()
-                .group(request.getGuideRequestForm().getGroup()) // 해당 그룹 정보
-                .transportation(request.getGuideRequestForm().getTransportation())
-                .foodPreference(request.getGuideRequestForm().getFoodPreference())
-                .tastePreference(request.getGuideRequestForm().getTastePreference())
-                .requirements(request.getGuideRequestForm().getRequirements())
-                .startDate(request.getGuideRequestForm().getStartDate())
-                .endDate(request.getGuideRequestForm().getEndDate())
-                .build();
 
         // GuideRequestForm을 DB에 저장 (새로 생성된 객체이므로 저장해야 함)
         guideRequestFormRepository.save(guideRequestForm);
-
+        Region region = regionRepository.findByRegionId(request.getRegion().getRegionId());
+        Member guide = memberRepository.findByMemberId(request.getGuide().getMemberId());
         // 3. Match 엔티티 생성
         Match match = Match.builder()
                 .memberId(currentMemberId) // 매칭 요청자 ID
-                .region(request.getRegion()) // 지역 정보
-                .guide(request.getGuide()) // 가이드 정보
+                .region(region) // 지역 정보
+                .guide(guide) // 가이드 정보
                 .guideRequestForm(guideRequestForm) // 가이드 신청서 연결
                 .status(ApprovalStatus.PENDING) // 기본 승인 상태 (대기)
                 .partnerOrderId(partnerOrderId) // 결제 번호
@@ -145,11 +145,12 @@ public class MatchService {
 
         // 4. Match 저장 (match_id가 생성됨)
         matchRepository.save(match);
+        logger.info("프론트의 태그 확인 LOG, MatchCreateRequest = {}", request.getTags());
 
         // 5. MatchTag 저장 (태그 처리)
-        for (MatchTag matchTag : request.getTags()) {
+        for (TagRequest matchTag : request.getTags()) {
             // 프론트에서 받은 tagId를 기반으로 Tag 객체를 찾아야 함
-            Long tagId = matchTag.getTag().getTagId();  // tagId를 가져옴
+            Long tagId = matchTag.getTagId();  // tagId를 가져옴
             if (tagId == null) {
                 throw new IllegalArgumentException("Tag ID는 필수입니다.");
             }
@@ -157,7 +158,7 @@ public class MatchService {
             // Tag 객체를 찾아서, 없으면 예외 처리
             Tag tagEntity = tagRepository.findById(tagId)
                     .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 tagId: " + tagId));
-            
+
             // MatchTag 객체 생성
             MatchTag newMatchTag = MatchTag.builder()
                     .match(match) // 새로 생성된 match와 연결
@@ -451,5 +452,4 @@ public class MatchService {
         match.setUpdatedAt(LocalDateTime.now());
         matchRepository.save(match);
     }
-
 }

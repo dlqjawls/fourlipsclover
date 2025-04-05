@@ -6,6 +6,7 @@ import com.patriot.fourlipsclover.restaurant.repository.ReviewImageRepository;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
+import io.minio.RemoveObjectArgs;
 import io.minio.errors.ErrorResponseException;
 import io.minio.errors.InsufficientDataException;
 import io.minio.errors.InternalException;
@@ -113,5 +114,40 @@ public class ReviewImageService {
 			imageUrls.add(url);
 		}
 		return imageUrls;
+	}
+
+	@Transactional
+	public void deleteImages(List<String> deleteImageUrls) {
+		if (deleteImageUrls == null || deleteImageUrls.isEmpty()) {
+			return;
+		}
+
+		for (String imageUrl : deleteImageUrls) {
+			try {
+				String fileName = imageUrl;
+
+				if (imageUrl.startsWith("http")) {
+					try {
+						java.net.URL url = new java.net.URL(imageUrl);
+						String path = url.getPath();
+						fileName = path.substring(path.lastIndexOf('/') + 1);
+					} catch (java.net.MalformedURLException e) {
+					}
+				}
+
+				minioClient.removeObject(
+						RemoveObjectArgs.builder()
+								.bucket(bucketName)
+								.object(fileName)
+								.build()
+				);
+
+				reviewImageRepository.deleteByImageUrl(fileName);
+			} catch (ErrorResponseException | InsufficientDataException | InternalException |
+					 InvalidKeyException | InvalidResponseException | IOException |
+					 NoSuchAlgorithmException | ServerException | XmlParserException e) {
+				throw new RuntimeException("이미지 삭제 중 오류가 발생했습니다: " + e.getMessage(), e);
+			}
+		}
 	}
 }

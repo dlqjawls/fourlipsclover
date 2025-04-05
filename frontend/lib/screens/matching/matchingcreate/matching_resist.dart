@@ -6,6 +6,7 @@ import 'package:frontend/screens/matching/matchingcreate/styles/matching_styles.
 import 'package:frontend/screens/matching/matchingcreate/widgets/matching_submit_buttons.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class MatchingResistScreen extends StatefulWidget {
   final Map<String, dynamic> guide;
@@ -25,12 +26,19 @@ class _MatchingResistScreenState extends State<MatchingResistScreen> {
   String? _selectedTransport;
   String? _selectedFoodCategory;
   String? _selectedTaste;
+
+  // 선택된 시작일 / 종료일
   DateTime? _startDate;
   DateTime? _endDate;
-  // 텍스트필드 컨트롤러
-  final TextEditingController _requestController = TextEditingController();
 
-  // 드롭다운 목록
+  // TableCalendar에서 사용할 focusedDay
+  late DateTime _focusedDay;
+
+  // 텍스트필드 컨트롤러 및 포커스노드
+  final TextEditingController _requestController = TextEditingController();
+  final FocusNode _requestFocusNode = FocusNode();
+
+  // 그룹 드롭다운 목록
   List<String> get _groupItems {
     List<String> items = ['나혼자 산다'];
     if (_groups.isNotEmpty) {
@@ -47,6 +55,7 @@ class _MatchingResistScreenState extends State<MatchingResistScreen> {
   void initState() {
     super.initState();
     _loadGroups();
+    _focusedDay = DateTime.now();
   }
 
   Future<void> _loadGroups() async {
@@ -57,93 +66,461 @@ class _MatchingResistScreenState extends State<MatchingResistScreen> {
     });
   }
 
-  Future<void> _selectDate(BuildContext context, bool isStart) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2026),
-    );
-
-    if (picked != null) {
-      setState(() {
-        if (isStart) {
-          _startDate = picked;
-          if (_endDate != null && _endDate!.isBefore(_startDate!)) {
-            _endDate = _startDate;
-          }
-        } else {
-          if (_startDate != null && picked.isBefore(_startDate!)) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('종료일은 시작일 이후여야 합니다.')));
-            return;
-          }
-          _endDate = picked;
-        }
-      });
-    }
-  }
-
   @override
   void dispose() {
     _requestController.dispose();
+    _requestFocusNode.dispose();
     super.dispose();
   }
 
-  // 드롭다운 섹션 빌드
-  Widget _buildDropdownSection(
-    String title,
-    Icon icon,
-    List<Widget> dropdowns,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              icon,
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.darkGray,
+  /// TableCalendar를 활용한 범위 선택 다이얼로그 (StatefulBuilder 사용)
+  Future<void> _showRangeCalendarDialog(BuildContext context) async {
+    // 다이얼로그 열릴 때 기존 선택값 유지
+    DateTime? rangeStart = _startDate;
+    DateTime? rangeEnd = _endDate;
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (dialogContext, setStateDialog) {
+            String rangeText = '';
+            if (rangeStart != null && rangeEnd != null) {
+              rangeText =
+                  '${DateFormat("yyyy.MM.dd").format(rangeStart!)} ~ ${DateFormat("yyyy.MM.dd").format(rangeEnd!)}';
+            }
+            return AlertDialog(
+              title: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    '여행 일정 선택',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  if (rangeStart != null && rangeEnd != null)
+                    Text(
+                      rangeText,
+                      style: TextStyle(fontSize: 14, color: AppColors.darkGray),
+                    ),
+                ],
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 400,
+                child: TableCalendar(
+                  firstDay: DateTime.now(),
+                  lastDay: DateTime(2026, 12, 31),
+                  focusedDay: _focusedDay,
+                  locale: 'ko_KR',
+                  rangeSelectionMode: RangeSelectionMode.toggledOn,
+                  // null인 경우 _focusedDay를 기본값으로 전달
+                  rangeStartDay: rangeStart ?? _focusedDay,
+                  rangeEndDay: rangeEnd ?? _focusedDay,
+                  onRangeSelected: (start, end, focusedDay) {
+                    setStateDialog(() {
+                      rangeStart = start;
+                      rangeEnd = end;
+                      _focusedDay = focusedDay;
+                    });
+                  },
+                  headerStyle: HeaderStyle(
+                    titleCentered: true,
+                    formatButtonVisible: false,
+                    titleTextStyle: TextStyle(
+                      fontFamily: 'Anemone_air',
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.darkGray,
+                    ),
+                  ),
+                  calendarStyle: CalendarStyle(
+                    // 오늘 날짜는 부드러운 테두리와 색상으로 표시
+                    todayDecoration: BoxDecoration(
+                      color: AppColors.primaryLight.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    // 범위 시작/종료는 진한 색상으로, 자연스러운 원형 모양
+                    rangeStartDecoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.8),
+                      shape: BoxShape.circle,
+                    ),
+                    rangeEndDecoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.8),
+                      shape: BoxShape.circle,
+                    ),
+                    // 범위 내부는 부드럽게 채워지도록
+                    rangeHighlightColor: AppColors.primaryLight,
+                  ),
                 ),
               ),
-            ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('취소'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (rangeStart != null && rangeEnd != null) {
+                      setState(() {
+                        _startDate = rangeStart;
+                        _endDate = rangeEnd;
+                      });
+                    }
+                    Navigator.pop(context);
+                  },
+                  child: const Text('확인'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // 센스있는 날짜 범위 선택 카드 위젯 (여행 일정)
+  Widget _buildStyledDateRangeDisplay() {
+    return InkWell(
+      onTap: () => _showRangeCalendarDialog(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.calendar_today, color: AppColors.primary, size: 28),
+            const SizedBox(width: 16),
+            Expanded(
+              child:
+                  _startDate != null && _endDate != null
+                      ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '여행 기간',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.mediumGray,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${DateFormat("yyyy.MM.dd").format(_startDate!)} - ${DateFormat("yyyy.MM.dd").format(_endDate!)}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.darkGray,
+                            ),
+                          ),
+                        ],
+                      )
+                      : Text(
+                        '여행 날짜를 선택해주세요',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: AppColors.mediumGray,
+                        ),
+                      ),
+            ),
+            Icon(Icons.arrow_forward_ios, color: AppColors.primary, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        // 빈 공간 터치 시 키보드 해제
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        appBar: MatchingStyles.buildAppBar(context, '가이드 신청서'),
+        body: Column(
+          children: [
+            MatchingStyles.buildProgressIndicator(1.0),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      // 가이드 프로필 카드
+                      _buildGuideProfileCard(),
+                      const SizedBox(height: 20),
+                      // 여행 일정 카드 (최상단에 단독으로 배치)
+                      _buildStyledDateRangeDisplay(),
+                      const SizedBox(height: 20),
+                      // 기본 정보 섹션
+                      _buildSectionBox(
+                        title: '기본 정보',
+                        icon: Icons.person_outline,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildDropdown(
+                                  '그룹 선택',
+                                  _groupItems,
+                                  _selectedGroup,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildDropdown(
+                                  '이동 수단',
+                                  _transportItems,
+                                  _selectedTransport,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      // 음식 선호도 섹션
+                      _buildSectionBox(
+                        title: '음식 선호도',
+                        icon: Icons.restaurant_menu,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildDropdown(
+                                  '음식 종류',
+                                  _foodCategoryItems,
+                                  _selectedFoodCategory,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildDropdown(
+                                  '선호하는 맛',
+                                  _tasteItems,
+                                  _selectedTaste,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      // 요청사항 섹션
+                      _buildSectionBox(
+                        title: '요청사항',
+                        icon: Icons.edit_note,
+                        children: [
+                          Text(
+                            '식사 예산, 알레르기, 선호 분위기, 하루 식사 횟수, 못 먹는 음식, 웨이팅 수용도 등',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.mediumGray,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.verylightGray,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.grey.withOpacity(0.3),
+                              ),
+                            ),
+                            child: TextField(
+                              controller: _requestController,
+                              focusNode: _requestFocusNode,
+                              maxLines: 5,
+                              decoration: InputDecoration(
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.all(12),
+                                hintText: '여행 요청사항을 자유롭게 적어주세요',
+                                hintStyle: TextStyle(
+                                  color: AppColors.mediumGray,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // 하단 버튼 영역
+            MatchingSubmitButtons(
+              selectedGroup: _selectedGroupObj,
+              selectedTransport: _selectedTransport,
+              selectedFoodCategory: _selectedFoodCategory,
+              selectedTaste: _selectedTaste,
+              request: _requestController.text,
+              requestController: _requestController,
+              guide: widget.guide,
+              regionId: widget.guide['regionId'],
+              tagIds: widget.guide['tagIds'],
+              startDate:
+                  _startDate != null
+                      ? DateFormat('yyyy-MM-dd').format(_startDate!)
+                      : null,
+              endDate:
+                  _endDate != null
+                      ? DateFormat('yyyy-MM-dd').format(_endDate!)
+                      : null,
+              onCancel: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 가이드 프로필 카드 위젯
+  Widget _buildGuideProfileCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: dropdowns[0]),
-              const SizedBox(width: 16),
-              Expanded(child: dropdowns[1]),
-            ],
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          Hero(
+            tag: 'guide_${widget.guide['name']}',
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.primary.withOpacity(0.2),
+                  width: 2,
+                ),
+              ),
+              child: ClipOval(
+                child:
+                    widget.guide['profileUrl'].isEmpty
+                        ? Icon(Icons.person, size: 40, color: Colors.grey[600])
+                        : Image.network(
+                          widget.guide['profileUrl'],
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.person,
+                              size: 40,
+                              color: Colors.grey[600],
+                            );
+                          },
+                        ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${widget.guide['name']}님과 함께하는',
+                  style: TextStyle(color: AppColors.darkGray, fontSize: 16),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '맛있는 여행',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  // 드롭다운 아이템 빌드
-  Widget _buildDropdown(String label, List<String> items, String? value) {
+  // 섹션 박스 위젯 (기본 정보, 음식 선호도, 요청사항 등)
+  Widget _buildSectionBox({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
     return Container(
-      height: 70,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: AppColors.verylightGray,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.lightGray.withOpacity(0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: () => _showDropdownDialog(label, items, value),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 타이틀 영역
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(icon, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          // 내용 영역
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(children: children),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 드롭다운 위젯
+  Widget _buildDropdown(String label, List<String> items, String? value) {
+    return InkWell(
+      onTap: () => _showDropdownDialog(label, items, value),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.verylightGray,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.withOpacity(0.3)),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               label,
@@ -161,15 +538,12 @@ class _MatchingResistScreenState extends State<MatchingResistScreen> {
                           value != null
                               ? AppColors.darkGray
                               : AppColors.mediumGray,
-                      fontWeight:
-                          value != null ? FontWeight.w500 : FontWeight.normal,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Icon(
                   Icons.keyboard_arrow_down,
-                  color: AppColors.primary,
+                  color: AppColors.mediumGray,
                   size: 20,
                 ),
               ],
@@ -180,7 +554,7 @@ class _MatchingResistScreenState extends State<MatchingResistScreen> {
     );
   }
 
-  // 드롭다운 다이얼로그 표시
+  // 드롭다운 선택 다이얼로그
   void _showDropdownDialog(
     String label,
     List<String> items,
@@ -198,6 +572,7 @@ class _MatchingResistScreenState extends State<MatchingResistScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // 다이얼로그 타이틀
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -219,6 +594,7 @@ class _MatchingResistScreenState extends State<MatchingResistScreen> {
                   ],
                 ),
               ),
+              // 항목 목록
               Container(
                 constraints: BoxConstraints(
                   maxHeight: MediaQuery.of(context).size.height * 0.4,
@@ -325,371 +701,6 @@ class _MatchingResistScreenState extends State<MatchingResistScreen> {
           ),
         );
       },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: MatchingStyles.buildAppBar(context, '가이드 신청서'),
-      body: Column(
-        children: [
-          MatchingStyles.buildProgressIndicator(1.0),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: MatchingStyles.defaultPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 가이드 정보 카드
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: AppColors.mediumGray.withOpacity(0.3),
-                        ),
-                      ),
-                      padding: const EdgeInsets.all(20),
-                      child: Row(
-                        children: [
-                          Hero(
-                            tag: 'guide_${widget.guide['name']}',
-                            child: CircleAvatar(
-                              backgroundImage: NetworkImage(
-                                widget.guide['profileUrl'],
-                              ),
-                              radius: 30,
-                              backgroundColor: Colors.grey[200],
-                              onBackgroundImageError: (e, s) {
-                                debugPrint('이미지 로딩 실패: $e');
-                              },
-                              // 이미지가 없을 때만 기본 아이콘 표시
-                              child:
-                                  widget.guide['profileUrl'].isEmpty
-                                      ? Icon(
-                                        Icons.person,
-                                        color: Colors.grey[600],
-                                        size: 35,
-                                      )
-                                      : null,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${widget.guide['name']}님과 함께하는',
-                                  style: TextStyle(
-                                    color: AppColors.darkGray,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                Text(
-                                  '맛있는 여행',
-                                  style: TextStyle(
-                                    color: AppColors.primary,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // 드롭다운 섹션
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          _buildDropdownSection(
-                            '기본 정보',
-                            Icon(
-                              Icons.group,
-                              color: AppColors.primary,
-                              size: 24,
-                            ),
-                            [
-                              _buildDropdown(
-                                '그룹 선택',
-                                _groupItems,
-                                _selectedGroup,
-                              ),
-                              _buildDropdown(
-                                '이동 수단',
-                                _transportItems,
-                                _selectedTransport,
-                              ),
-                            ],
-                          ),
-                          Container(
-                            height: 1,
-                            color: AppColors.lightGray.withOpacity(0.3),
-                          ),
-                          _buildDropdownSection(
-                            '음식 선호도',
-                            Icon(
-                              Icons.restaurant_menu,
-                              color: AppColors.primary,
-                              size: 24,
-                            ),
-                            [
-                              _buildDropdown(
-                                '음식 종류',
-                                _foodCategoryItems,
-                                _selectedFoodCategory,
-                              ),
-                              _buildDropdown(
-                                '선호하는 맛',
-                                _tasteItems,
-                                _selectedTaste,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.calendar_today,
-                                color: AppColors.primary,
-                                size: 24,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '여행 일정',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.darkGray,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: InkWell(
-                                  onTap: () => _selectDate(context, true),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.verylightGray,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: AppColors.lightGray.withOpacity(
-                                          0.5,
-                                        ),
-                                      ),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          '시작일',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: AppColors.mediumGray,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          _startDate != null
-                                              ? DateFormat(
-                                                'yyyy-MM-dd',
-                                              ).format(_startDate!)
-                                              : '선택하세요',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color:
-                                                _startDate != null
-                                                    ? AppColors.darkGray
-                                                    : AppColors.mediumGray,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: InkWell(
-                                  onTap: () => _selectDate(context, false),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.verylightGray,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: AppColors.lightGray.withOpacity(
-                                          0.5,
-                                        ),
-                                      ),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          '종료일',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: AppColors.mediumGray,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          _endDate != null
-                                              ? DateFormat(
-                                                'yyyy-MM-dd',
-                                              ).format(_endDate!)
-                                              : '선택하세요',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color:
-                                                _endDate != null
-                                                    ? AppColors.darkGray
-                                                    : AppColors.mediumGray,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    // 요청사항 섹션
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.edit_note,
-                                color: AppColors.primary,
-                                size: 24,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '요청사항',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.darkGray,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '식사 예산, 알레르기, 선호 분위기, 하루 식사 횟수, 못 먹는 음식, 웨이팅 수용도 등',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.mediumGray,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          TextField(
-                            controller: _requestController,
-                            maxLines: 6,
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: AppColors.verylightGray,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                              hintText: '여행 요청사항을 자유롭게 적어주세요...',
-                              hintStyle: TextStyle(color: AppColors.mediumGray),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // 하단 버튼
-          MatchingSubmitButtons(
-            selectedGroup: _selectedGroupObj,
-            selectedTransport: _selectedTransport,
-            selectedFoodCategory: _selectedFoodCategory,
-            selectedTaste: _selectedTaste,
-            request: _requestController.text,
-            requestController: _requestController,
-            guide: widget.guide,
-            regionId: widget.guide['regionId'],
-            tagIds: widget.guide['tagIds'],
-            startDate:
-                _startDate != null
-                    ? DateFormat('yyyy-MM-dd').format(_startDate!)
-                    : null,
-            endDate:
-                _endDate != null
-                    ? DateFormat('yyyy-MM-dd').format(_endDate!)
-                    : null,
-            onCancel: () => Navigator.pop(context),
-          ),
-        ],
-      ),
     );
   }
 }

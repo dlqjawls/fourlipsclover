@@ -1,9 +1,15 @@
 package com.patriot.fourlipsclover.restaurant.mapper;
 
 import com.patriot.fourlipsclover.restaurant.document.RestaurantDocument;
+import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantImageResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
+
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import com.patriot.fourlipsclover.restaurant.entity.RestaurantImage;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -22,6 +28,7 @@ public class RestaurantMapper {
 				.placeUrl(restaurant.getPlaceUrl())
 				.x(restaurant.getX())
 				.y(restaurant.getY())
+				.openingHours(restaurant.getOpeningHours())
 				.build();
 	}
 
@@ -39,5 +46,19 @@ public class RestaurantMapper {
 						.y(doc.getLocation() != null ? doc.getLocation().getLon() : null)
 						.build())
 				.toList();
+	}
+
+	public List<RestaurantImageResponse> toRestaurantImageDtoList(List<RestaurantImage> images) {
+		if (images == null) {
+			return Collections.emptyList();
+		}
+
+		return images.stream()
+				.map(image -> RestaurantImageResponse.builder()
+						.restaurantImageId(image.getRestaurantImageId())
+						.restaurantId(image.getRestaurant().getRestaurantId())
+						.url(image.getUrl())
+						.build())
+				.collect(Collectors.toList());
 	}
 }
