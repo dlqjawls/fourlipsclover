@@ -11,6 +11,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @Table(name = "match_tag")
+@Data
 public class MatchTag {
 
     @Id
