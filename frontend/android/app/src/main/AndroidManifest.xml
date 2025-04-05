@@ -51,9 +51,22 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="clover" android:host="payment" android:path="/success" />
             </intent-filter>
+                    <!-- 새로 추가하는 그룹 초대 딥링크 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="clover" android:host="invitation" />
+            </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <intent-filter android:label="flutter_web_auth">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="kakao${NATIVE_APP_KEY}" android:host="kakolink"/>
             </intent-filter>
         </activity>
 
@@ -69,5 +82,11 @@
         </intent>
         <!-- 카카오톡 설치 여부 확인을 위한 쿼리 -->
         <package android:name="com.kakao.talk" />
+
+            <!-- ✨ 카카오 공유링크를 위한 kakaolink 스킴 추가 -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="kakaolink" />
+        </intent>
     </queries>
 </manifest>
