@@ -19,18 +19,22 @@ class MatchingService {
 
   static Future<void> initializeMatches() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userRole = prefs.getString('userRole');
       final service = MatchingService();
 
       debugPrint('=== 매칭 목록 초기화 시작 ===');
-      debugPrint('사용자 역할: $userRole');
 
-      if (userRole == 'GUIDE') {
-        await service.getGuideMatchRequests();
-      } else {
-        await service.getApplicantMatches();
-      }
+      // 두 가지 매칭 리스트 모두 초기화
+      await Future.wait([
+        service.getGuideMatchRequests().catchError((e) {
+          debugPrint('가이드 매칭 초기화 실패: $e');
+          return <MatchRequest>[];
+        }),
+        service.getApplicantMatches().catchError((e) {
+          debugPrint('신청자 매칭 초기화 실패: $e');
+          return <MatchApplication>[];
+        }),
+      ]);
+
       debugPrint('=== 매칭 목록 초기화 완료 ===');
     } catch (e) {
       debugPrint('=== 매칭 목록 초기화 실패 ===');
@@ -135,60 +139,39 @@ class MatchingService {
     try {
       final token = await _getToken();
       debugPrint('=== 신청자 매칭 요청 시작 ===');
-      debugPrint('인증 토큰: $token');
-      debugPrint('요청 URL: $baseUrl/api/match');
 
       final response = await http.get(
-        Uri.parse('$baseUrl/api/match'),
+        Uri.parse('$baseUrl/api/match'), // URL 수정
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           'Authorization': 'Bearer $token',
         },
       );
 
-      debugPrint('응답 상태 코드: ${response.statusCode}');
-      debugPrint('응답 헤더: ${response.headers}');
-
       if (response.statusCode == 200) {
         final String decodedBody = utf8.decode(response.bodyBytes);
-        debugPrint('원본 응답 데이터: $decodedBody');
-
         final List<dynamic> data = json.decode(decodedBody);
-        debugPrint('JSON 파싱 결과: $data');
         final List<MatchApplication> matches = [];
 
         for (var item in data) {
           try {
-            final match = MatchApplication.fromJson(item);
-            matches.add(match);
-            debugPrint('매칭 데이터 변환 성공: ${match.guideNickname}');
+            matches.add(MatchApplication.fromJson(item));
           } catch (e) {
             debugPrint('데이터 변환 실패: $e');
-            debugPrint('실패한 데이터: $item');
-            rethrow;
           }
         }
 
-        debugPrint('성공적으로 변환된 매칭 수: ${matches.length}');
-        debugPrint('=== 신청자 매칭 요청 완료 ===');
+        debugPrint('조회된 매칭 수: ${matches.length}');
         return matches;
+      } else if (response.statusCode == 404) {
+        debugPrint('신청한 매칭이 없습니다.');
+        return [];
       } else {
-        final String errorMessage = utf8.decode(response.bodyBytes);
-        final Map<String, dynamic> errorJson = json.decode(errorMessage);
-        debugPrint('응답 오류 내용: ${errorJson['error']}');
-        debugPrint('=== 신청자 매칭 요청 실패 ===');
-
-        if (response.statusCode == 404) {
-          throw Exception('매칭 신청 내역이 없습니다.');
-        } else {
-          throw Exception('매칭 신청 목록 조회 실패 (${response.statusCode})');
-        }
+        throw Exception('매칭 조회 실패 (${response.statusCode})');
       }
-    } catch (e, stackTrace) {
-      debugPrint('=== 신청자 매칭 요청 중 예외 발생 ===');
-      debugPrint('예외 내용: $e');
-      debugPrint('스택 트레이스: $stackTrace');
-      throw Exception('매칭 신청 목록 조회 중 오류 발생: $e');
+    } catch (e) {
+      debugPrint('신청자 매칭 조회 중 오류: $e');
+      return []; // 오류 발생 시 빈 리스트 반환
     }
   }
 
