@@ -1,5 +1,6 @@
 package com.patriot.fourlipsclover.restaurant.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonRawValue;
 import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -26,4 +27,8 @@ public class RestaurantResponse {
 	private Double y;
 
 	private List<RestaurantTagResponse> tags;
+
+	@JsonRawValue
+	private String openingHours;
+	private List<RestaurantImageResponse> restaurantImages;
 }

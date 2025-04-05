@@ -89,7 +89,7 @@ class MatchingApproveService {
       final responseBody = utf8.decode(response.bodyBytes);
       debugPrint('응답 본문: $responseBody');
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200) {
         return json.decode(responseBody);
       } else {
         throw Exception('매칭 승인 실패 (${response.statusCode}): $responseBody');

@@ -206,26 +206,38 @@ class _MatchingScreenState extends State<MatchingScreen>
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return RefreshIndicator(
+      onRefresh: _fetchMatches,
+      child: ListView(
+        // SingleChildScrollView 대신 ListView 사용
+        physics: const AlwaysScrollableScrollPhysics(), // 항상 스크롤 가능하도록 설정
         children: [
-          Text(
-            '아직 매칭 내역이 없습니다',
-            style: TextStyle(fontSize: 16, color: AppColors.mediumGray),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () => _navigateToCreateMatch(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.7, // 충분한 스크롤 영역 확보
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '아직 매칭 내역이 없습니다',
+                    style: TextStyle(fontSize: 16, color: AppColors.mediumGray),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => _navigateToCreateMatch(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      '새로운 매칭 만들기',
+                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            child: const Text(
-              '새로운 매칭 만들기',
-              style: TextStyle(fontSize: 16, color: Colors.white),
             ),
           ),
         ],

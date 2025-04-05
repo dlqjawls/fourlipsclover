@@ -17,19 +17,10 @@ import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
 import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
-import com.patriot.fourlipsclover.restaurant.entity.City;
-import com.patriot.fourlipsclover.restaurant.entity.FoodCategory;
-import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
-import com.patriot.fourlipsclover.restaurant.entity.Review;
-import com.patriot.fourlipsclover.restaurant.entity.ReviewLike;
-import com.patriot.fourlipsclover.restaurant.entity.ReviewLikePK;
+import com.patriot.fourlipsclover.restaurant.entity.*;
 import com.patriot.fourlipsclover.restaurant.mapper.RestaurantMapper;
 import com.patriot.fourlipsclover.restaurant.mapper.ReviewMapper;
-import com.patriot.fourlipsclover.restaurant.repository.CityRepository;
-import com.patriot.fourlipsclover.restaurant.repository.FoodCategoryRepository;
-import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
-import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
-import com.patriot.fourlipsclover.restaurant.repository.ReviewLikeJpaRepository;
+import com.patriot.fourlipsclover.restaurant.repository.*;
 import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
 import com.patriot.fourlipsclover.tag.service.TagService;
 import java.time.LocalDateTime;
@@ -60,6 +51,7 @@ public class RestaurantService {
 	private final CityRepository cityRepository;
 	private final FoodCategoryRepository foodCategoryRepository;
 	private final TagService tagService;
+	private final RestaurantImageRepository restaurantImageRepository;
 
 	@Transactional
 	public ReviewResponse create(ReviewCreate reviewCreate, List<MultipartFile> images) {
@@ -173,24 +165,36 @@ public class RestaurantService {
 		if (Objects.isNull(kakaoPlaceId) || kakaoPlaceId.isBlank()) {
 			throw new IllegalArgumentException("올바른 kakaoPlaceId 값을 입력하세요.");
 		}
-		RestaurantResponse restaurantResponse = restaurantMapper.toDto(
-				restaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
-						.orElseThrow(() -> new InvalidDataException(
-								"존재 하지 않는 식당입니다.")));
+		Restaurant restaurant = restaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
+				.orElseThrow(() -> new InvalidDataException("존재 하지 않는 식당입니다."));
+
+		RestaurantResponse restaurantResponse = restaurantMapper.toDto(restaurant);
+
 		List<RestaurantTagResponse> restaurantTagResponses = tagService.findRestaurantTagByRestaurantId(
 				kakaoPlaceId);
 		restaurantResponse.setTags(restaurantTagResponses);
+
+		// 식당 이미지 조회 및 설정
+		List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(restaurant);
+		restaurantResponse.setRestaurantImages(restaurantMapper.toRestaurantImageDtoList(restaurantImages));
 		return restaurantResponse;
 	}
 
 	@Transactional(readOnly = true)
 	public List<RestaurantResponse> findNearbyRestaurants(Double latitude, Double longitude,
-			Integer radius) {
+														  Integer radius) {
 		List<RestaurantResponse> response = new ArrayList<>();
 		List<Restaurant> nearbyRestaurants = restaurantRepository.findNearbyRestaurants(
 				latitude, longitude, radius);
+
 		for (Restaurant data : nearbyRestaurants) {
 			RestaurantResponse restaurantResponse = restaurantMapper.toDto(data);
+
+			// 식당 이미지 조회 및 설정
+			List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(data);
+			restaurantResponse.setRestaurantImages(restaurantMapper.toRestaurantImageDtoList(restaurantImages));
+
+			// 태그 설정
 			List<RestaurantTagResponse> tags = tagService.findRestaurantTagByRestaurantId(
 					data.getKakaoPlaceId());
 			restaurantResponse.setTags(tags);
