@@ -32,4 +32,8 @@ public class ReviewResponse {
 	private Integer likedCount;
 
 	private Integer dislikedCount;
+
+	private boolean userLiked;
+
+	private boolean userDisliked;
 }
