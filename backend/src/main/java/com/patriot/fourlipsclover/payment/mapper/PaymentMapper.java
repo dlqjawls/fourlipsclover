@@ -81,7 +81,7 @@ public class PaymentMapper {
 		response.setCreatedAt(entity.getCreatedAt());
 		response.setApprovedAt(entity.getApprovedAt());
 		response.setPayload(entity.getPayload());
-
+		response.setStatus(entity.getStatus().name());
 		return response;
 	}
 }

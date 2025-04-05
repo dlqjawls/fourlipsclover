@@ -55,5 +55,6 @@ public class PaymentApproveResponse {
 
 	@JsonProperty("payload")
 	private String payload;
-
+	@JsonProperty("status")
+	private String status;
 }
