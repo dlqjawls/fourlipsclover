@@ -115,13 +115,16 @@ public class RestaurantController {
 	@Operation(summary = "리뷰 수정", description = "식당에 대한 리뷰를 수정합니다.")
 	@PutMapping("/reviews/{reviewId}")
 	public ResponseEntity<ReviewResponse> reviewUpdate(
-			@Parameter(description = "리뷰 ID", required = true) @PathVariable(name = "reviewId") Integer reviewId,
-			@Parameter(description = "수정할 리뷰 정보", required = true) @Valid @RequestBody ReviewUpdate reviewUpdate) {
+			@PathVariable(name = "reviewId") Integer reviewId,
+			@Valid @RequestPart(name = "data") ReviewUpdate reviewUpdate,
+			@RequestPart(name = "deleteImageUrls", required = false) List<String> deleteImageUrls,
+			@RequestPart(name = "images", required = false) List<MultipartFile> images) {
 		if (Objects.isNull(reviewId)) {
 			throw new IllegalArgumentException("reviewId는 비어있을 수 없습니다");
 		}
 
-		ReviewResponse response = restaurantService.update(reviewId, reviewUpdate);
+		ReviewResponse response = restaurantService.update(reviewId, reviewUpdate, deleteImageUrls,
+				images);
 		return ResponseEntity.ok(response);
 	}
 
