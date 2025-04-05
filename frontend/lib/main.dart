@@ -16,11 +16,21 @@ import 'providers/user_provider.dart';
 import 'providers/notice_provider.dart'; // 추가된 NoticeProvider
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:frontend/services/user_service.dart';
+import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 
 void main() async {
   // Flutter 엔진 초기화
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
+
+  try {
+    final kakaoAppKey = dotenv.env['KAKAO_NATIVE_APP_KEY'] ?? '';
+    KakaoSdk.init(nativeAppKey: kakaoAppKey);
+    print('카카오 SDK 초기화 성공: $kakaoAppKey');
+  } catch (e) {
+    print('카카오 SDK 초기화 실패: $e');
+  }
+
   await AppInitializer.initialize();
   runApp(const MyApp());
 }

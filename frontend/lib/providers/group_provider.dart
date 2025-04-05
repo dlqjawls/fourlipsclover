@@ -5,6 +5,7 @@ import '../models/group/member_model.dart';
 import '../services/api/group_api.dart';
 import 'package:flutter/widgets.dart';
 import '../models/group/group_join_request_model.dart';
+import '../services/deep_link_service.dart';
 
 class GroupProvider with ChangeNotifier {
   final GroupApi _groupApi = GroupApi();
@@ -246,6 +247,27 @@ class GroupProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
+
+  // 초대 URL 생성 + 딥링크 변환
+Future<String?> generateInviteLinkWithDeepLink(int groupId) async {
+  _setLoading(true);
+  try {
+    final backendUrl = await _groupApi.createInvitationUrl(groupId);
+    
+    // 백엔드 URL을 앱 딥링크로 변환
+    final deepLinkService = DeepLinkService();
+    final deepLink = deepLinkService.convertToAppLink(backendUrl);
+    
+    _error = null;
+    return deepLink;
+  } catch (e) {
+    _error = '초대 링크 생성에 실패했습니다: $e';
+    debugPrint(_error);
+    return null;
+  } finally {
+    _setLoading(false);
+  }
+}
 
   // 그룹 가입 요청 (API)
   Future<bool> joinGroup(String token) async {
