@@ -16,10 +16,10 @@ public class MatchTag {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "match_tag_id", nullable = false)
-    private Integer matchTagId;
+    private Long matchTagId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "match_id", nullable = false)
+    @JoinColumn(name = "match_id")
     private Match match;
 
     @ManyToOne(fetch = FetchType.LAZY)
