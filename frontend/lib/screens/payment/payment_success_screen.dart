@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/payment_service.dart';
-import 'payment_history_screen.dart'; // 리스트 화면 import
+import 'payment_history_screen.dart';
 import '../../config/theme.dart';
+import '../../screens/matching/matching.dart';
 
 class PaymentSuccessScreen extends StatelessWidget {
   final String itemName;
@@ -26,25 +27,36 @@ class PaymentSuccessScreen extends StatelessWidget {
 
       showDialog(
         context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('결제 취소'),
-          content: const Text('결제가 정상적으로 취소되었습니다.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // 다이얼로그 닫기
-              },
-              child: const Text('확인'),
+        builder:
+            (_) => AlertDialog(
+              title: const Text('결제 취소'),
+              content: const Text('결제가 정상적으로 취소되었습니다.'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context); // 다이얼로그 닫기
+                    _navigateToMatching(context); // 매칭 화면으로 이동
+                  },
+                  child: const Text('확인'),
+                ),
+              ],
             ),
-          ],
-        ),
       );
     } catch (e) {
       print('❌ 결제 취소 실패: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('결제 취소 실패: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('결제 취소 실패: $e')));
     }
+  }
+
+  void _navigateToMatching(BuildContext context) {
+    // 현재 화면 스택을 모두 제거하고 매칭 화면으로 이동
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const MatchingScreen()),
+      (route) => false,
+    );
   }
 
   @override
@@ -52,15 +64,16 @@ class PaymentSuccessScreen extends StatelessWidget {
     const String userId = '3963528811'; // TODO: 나중에 실제 로그인 값으로 교체
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('결제 완료'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('결제 완료'), centerTitle: true),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check_circle_outline, size: 80, color: AppColors.primary),
+            const Icon(
+              Icons.check_circle_outline,
+              size: 80,
+              color: AppColors.primary,
+            ),
             const SizedBox(height: 16),
             Text(
               '$itemName 결제가 완료되었습니다.',
@@ -80,7 +93,8 @@ class PaymentSuccessScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => PaymentHistoryListScreen(memberId: userId),
+                        builder:
+                            (_) => PaymentHistoryListScreen(memberId: userId),
                       ),
                     );
                   },
@@ -97,7 +111,22 @@ class PaymentSuccessScreen extends StatelessWidget {
                   ),
                 ),
               ],
-            )
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => _navigateToMatching(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
+              ),
+              child: const Text(
+                '매칭 목록으로 이동',
+                style: TextStyle(fontSize: 16, color: Colors.white),
+              ),
+            ),
           ],
         ),
       ),
