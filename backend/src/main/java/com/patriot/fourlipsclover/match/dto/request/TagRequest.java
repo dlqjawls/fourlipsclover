@@ -8,5 +8,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Data
 public class TagRequest {
-    private Integer tagId;
+    private Long tagId;
 }
