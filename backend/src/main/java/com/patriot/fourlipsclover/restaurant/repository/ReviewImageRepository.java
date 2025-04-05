@@ -9,4 +9,6 @@ import org.springframework.stereotype.Repository;
 public interface ReviewImageRepository extends JpaRepository<ReviewImage, Integer> {
 
 	List<ReviewImage> findByReviewReviewId(Integer reviewId);
+
+	void deleteByImageUrl(String imageUrl);
 }

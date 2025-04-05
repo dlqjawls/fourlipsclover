@@ -17,10 +17,21 @@ import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
 import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
-import com.patriot.fourlipsclover.restaurant.entity.*;
+import com.patriot.fourlipsclover.restaurant.entity.City;
+import com.patriot.fourlipsclover.restaurant.entity.FoodCategory;
+import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
+import com.patriot.fourlipsclover.restaurant.entity.RestaurantImage;
+import com.patriot.fourlipsclover.restaurant.entity.Review;
+import com.patriot.fourlipsclover.restaurant.entity.ReviewLike;
+import com.patriot.fourlipsclover.restaurant.entity.ReviewLikePK;
 import com.patriot.fourlipsclover.restaurant.mapper.RestaurantMapper;
 import com.patriot.fourlipsclover.restaurant.mapper.ReviewMapper;
-import com.patriot.fourlipsclover.restaurant.repository.*;
+import com.patriot.fourlipsclover.restaurant.repository.CityRepository;
+import com.patriot.fourlipsclover.restaurant.repository.FoodCategoryRepository;
+import com.patriot.fourlipsclover.restaurant.repository.RestaurantImageRepository;
+import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
+import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
+import com.patriot.fourlipsclover.restaurant.repository.ReviewLikeJpaRepository;
 import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
 import com.patriot.fourlipsclover.tag.service.TagService;
 import java.time.LocalDateTime;
@@ -117,12 +128,20 @@ public class RestaurantService {
 
 	@Transactional
 	public ReviewResponse update(Integer reviewId,
-			ReviewUpdate reviewUpdate) {
+			ReviewUpdate reviewUpdate, List<String> deleteImageUrls, List<MultipartFile> images) {
 		Review review = reviewRepository.findById(reviewId)
 				.orElseThrow(() -> new ReviewNotFoundException(reviewId));
 		checkReviewerIsCurrentUser(review.getMember().getMemberId());
 		if (review.getIsDelete()) {
 			throw new DeletedResourceAccessException("삭제된 리뷰 데이터는 접근할 수 없습니다.");
+		}
+
+		if (deleteImageUrls != null && !deleteImageUrls.isEmpty()) {
+			reviewImageService.deleteImages(deleteImageUrls);
+		}
+
+		if (images != null && !images.isEmpty()) {
+			reviewImageService.uploadFiles(review, images);
 		}
 
 		review.setContent(reviewUpdate.getContent());
@@ -137,11 +156,10 @@ public class RestaurantService {
 		if (authentication == null || !authentication.isAuthenticated()) {
 			throw new UnauthorizedAccessException("인증되지 않은 사용자입니다.");
 		}
-
 		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-		Member currentMember = userDetails.getMember();
+		Member member = userDetails.getMember();
 
-		if (!Objects.equals(currentMember.getMemberId(), reviewMemberId)) {
+		if (!Objects.equals(member.getMemberId(), reviewMemberId)) {
 			throw new UnauthorizedAccessException("현재 User ID가 작성자 ID와 다릅니다.");
 		}
 	}
