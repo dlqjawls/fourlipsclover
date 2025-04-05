@@ -1,6 +1,6 @@
 // lib/widgets/route_search_panel.dart의 수정된 버전
 import 'package:flutter/material.dart';
-import '../config/theme.dart';
+import '../../../config/theme.dart';
 
 class RouteSearchPanel extends StatefulWidget {
   final String? originName;

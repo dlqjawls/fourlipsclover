@@ -12,7 +12,7 @@ import 'package:frontend/screens/group_plan/group_detail_screen.dart';
 import 'package:frontend/screens/group_plan/plan_detail_screen.dart';
 import 'package:frontend/models/group/group_model.dart';
 import 'package:frontend/models/plan/plan_model.dart';
-import 'package:frontend/widgets/full_map_screen.dart';
+import 'package:frontend/screens/map/full_map_screen.dart';
 import 'package:frontend/screens/payment/kakao_pay_screen.dart';
 import '../screens/payment/kakao_pay_official_screen.dart';
 
