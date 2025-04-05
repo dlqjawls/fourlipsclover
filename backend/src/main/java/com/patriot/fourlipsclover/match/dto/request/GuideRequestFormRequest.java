@@ -10,6 +10,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class GuideRequestFormRequest {
+    private Integer groupId;
     private String transportation;  // 교통수단
     private String foodPreference;  // 음식 취향
     private String tastePreference; // 맛 취향
