@@ -5,6 +5,7 @@ import com.patriot.fourlipsclover.restaurant.service.FavoriteRestaurantService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,5 +30,11 @@ public class FavoriteRestaurantController {
 	public ResponseEntity<List<FavoriteRestaurantResponse>> findByMemberId(@PathVariable Long memberId){
 		List<FavoriteRestaurantResponse> response = favoriteRestaurantService.findByMemberId(memberId);
 		return ResponseEntity.ok(response);
+	}
+
+	@DeleteMapping("/{restaurantId}/favorite/{memberId}")
+	public ResponseEntity<Void> delete(@PathVariable Integer restaurantId, @PathVariable Long memberId){
+		favoriteRestaurantService.delete(restaurantId, memberId);
+		return ResponseEntity.noContent().build();
 	}
 }

@@ -11,4 +11,6 @@ public interface FavoriteRestaurantRepository extends JpaRepository<FavoriteRest
 	List<FavoriteRestaurant> member(Member member);
 
 	List<FavoriteRestaurant> findByMember_MemberId(Long memberId);
+
+	void deleteByRestaurant_RestaurantIdAndMember_MemberId(Integer restaurantId, Long memberId);
 }
