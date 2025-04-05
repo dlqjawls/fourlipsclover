@@ -106,6 +106,7 @@ public class MatchService {
 
     @Transactional
     public Match createMatchAfterPayment(String partnerOrderId, MatchCreateRequest request, long currentMemberId) {
+        logger.info("매치 생성 LOG, MatchCreateRequest = {}", request);
         // 그룹이 선택되지 않았을 경우 새로운 그룹을 생성하고 할당
         if (request.getGuideRequestForm().getGroup() == null) {
             // 그룹 처리: 그룹이 선택되지 않으면 "나홀로 여행" 그룹을 생성하고 할당
@@ -145,6 +146,7 @@ public class MatchService {
 
         // 4. Match 저장 (match_id가 생성됨)
         matchRepository.save(match);
+        logger.info("프론트의 태그 확인 LOG, MatchCreateRequest = {}", request.getTags());
 
         // 5. MatchTag 저장 (태그 처리)
         for (MatchTag matchTag : request.getTags()) {
@@ -157,7 +159,7 @@ public class MatchService {
             // Tag 객체를 찾아서, 없으면 예외 처리
             Tag tagEntity = tagRepository.findById(tagId)
                     .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 tagId: " + tagId));
-            
+
             // MatchTag 객체 생성
             MatchTag newMatchTag = MatchTag.builder()
                     .match(match) // 새로 생성된 match와 연결
@@ -451,5 +453,4 @@ public class MatchService {
         match.setUpdatedAt(LocalDateTime.now());
         matchRepository.save(match);
     }
-
 }
