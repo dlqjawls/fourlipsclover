@@ -59,4 +59,7 @@ public class Restaurant {
     @JoinColumn(name = "city_id")
     private City city;
 
+    @Column(name = "opening_hours")
+    private String openingHours;
+
 }
