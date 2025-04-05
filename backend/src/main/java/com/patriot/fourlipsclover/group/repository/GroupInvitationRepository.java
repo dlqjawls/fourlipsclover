@@ -11,4 +11,5 @@ public interface GroupInvitationRepository extends JpaRepository<GroupInvitation
 
     Optional<GroupInvitation> findByToken(String token);
 
+    void deleteByGroupId(int groupId);
 }

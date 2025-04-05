@@ -17,6 +17,9 @@ import com.patriot.fourlipsclover.match.repository.GuideRequestFormRepository;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberRepository;
 import com.patriot.fourlipsclover.notification.service.NotificationService;
+import com.patriot.fourlipsclover.plan.entity.Plan;
+import com.patriot.fourlipsclover.plan.repository.PlanMemberRepository;
+import com.patriot.fourlipsclover.plan.repository.PlanRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -40,6 +43,8 @@ public class GroupService {
     private final MemberRepository memberRepository;
     private final GroupJoinRequestRepository groupJoinRequestRepository;
     private final GuideRequestFormRepository guideRequestFormRepository;
+    private final PlanRepository planRepository;
+    private final PlanMemberRepository planMemberRepository;
 
     public GroupResponse createGroup(GroupCreateRequest request, Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
@@ -222,8 +227,27 @@ public class GroupService {
             throw new UnauthorizedAccessException("그룹 생성자만 수정할 수 있습니다");
         }
 
+        // 2. 그룹과 연관된 GuideRequestForm 삭제
+        guideRequestFormRepository.deleteByGroup_GroupId(groupId);
+
+        // 3. 그룹에 속한 Plan 삭제 및 Plan에 연관된 PlanMember 삭제
+        List<Plan> plans = planRepository.findByGroup_GroupId(groupId);
+        for (Plan plan : plans) {
+            planMemberRepository.deleteByPlan_PlanId(plan.getPlanId());
+        }
+        planRepository.deleteByGroup_GroupId(groupId);
+
+        // 4. 그룹 초대 관련(GroupInvitation) 데이터 삭제
+        groupInvitationRepository.deleteByGroupId(groupId);
+
+        // 5. 그룹 가입 요청(GroupJoinRequest) 데이터 삭제
+        groupJoinRequestRepository.deleteByGroup_GroupId(groupId);
+
+        // 6. 그룹 멤버(GroupMember) 삭제
         groupMemberRepository.deleteByGroup_groupId(groupId);
-        groupRepository.deleteByGroupId(groupId);
+
+        // 7. 마지막으로 그룹 삭제
+        groupRepository.delete(group);
     }
 
     @Transactional(readOnly = true)
@@ -244,8 +268,8 @@ public class GroupService {
             Member member = memberRepository.findByMemberId(currentMemId);
             // 새로운 그룹을 생성하고, 해당 그룹에 매칭 신청자 추가
             Group newGroup = new Group();
-            newGroup.setName("새로운 여행");  // 기본 이름 설정
-            newGroup.setDescription("가보자고");
+            newGroup.setName("떠나봐요 " + guideRequestForm.getFoodPreference() + "여행");  // 기본 이름 설정
+            newGroup.setDescription(guideRequestForm.getTastePreference() + "떠나는 여행");
             newGroup.setIsPublic(false);
             newGroup.setCreatedAt(LocalDateTime.now());
             newGroup.setMember(member);
