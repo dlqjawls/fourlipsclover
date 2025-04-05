@@ -99,7 +99,26 @@ public class RestaurantService {
 				LikeStatus.DISLIKE);
 		response.setLikedCount(likedCount.intValue());
 		response.setDislikedCount(dislikedCount.intValue());
+		try {
+			Member member = loadCurrentMember();
+			boolean userLiked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.LIKE);
+			boolean userDisliked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.DISLIKE);
+			response.setUserLiked(userLiked);
+			response.setUserDisliked(userDisliked);
+		} catch (UnauthorizedAccessException e) {
+			response.setUserLiked(false);
+			response.setUserDisliked(false);
+		}
 		return response;
+	}
+
+	private Member loadCurrentMember() {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication == null || !authentication.isAuthenticated()) {
+			throw new UnauthorizedAccessException("인증되지 않은 사용자입니다.");
+		}
+		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+		return userDetails.getMember();
 	}
 
 	@Transactional(readOnly = true)
@@ -108,6 +127,7 @@ public class RestaurantService {
 			throw new IllegalArgumentException("올바른 kakaoPlaceId 값을 입력하세요.");
 		}
 		List<Review> reviews = reviewRepository.findByKakaoPlaceId(kakaoPlaceId);
+		System.out.println(reviews);
 		return reviews.stream()
 				.map(review -> {
 					Integer reviewId = review.getReviewId();
@@ -120,7 +140,16 @@ public class RestaurantService {
 							reviewId, LikeStatus.DISLIKE);
 					response.setLikedCount(likedCount.intValue());
 					response.setDislikedCount(dislikedCount.intValue());
-
+					try {
+						Member member = loadCurrentMember();
+						boolean userLiked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.LIKE);
+						boolean userDisliked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.DISLIKE);
+						response.setUserLiked(userLiked);
+						response.setUserDisliked(userDisliked);
+					} catch (UnauthorizedAccessException e) {
+						response.setUserLiked(false);
+						response.setUserDisliked(false);
+					}
 					return response;
 				})
 				.toList();
@@ -152,12 +181,7 @@ public class RestaurantService {
 	}
 
 	private void checkReviewerIsCurrentUser(Long reviewMemberId) {
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (authentication == null || !authentication.isAuthenticated()) {
-			throw new UnauthorizedAccessException("인증되지 않은 사용자입니다.");
-		}
-		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-		Member member = userDetails.getMember();
+		Member member =loadCurrentMember();
 
 		if (!Objects.equals(member.getMemberId(), reviewMemberId)) {
 			throw new UnauthorizedAccessException("현재 User ID가 작성자 ID와 다릅니다.");
