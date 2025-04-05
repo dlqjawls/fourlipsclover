@@ -9,7 +9,7 @@ import lombok.Data;
 public class SettlementResponse {
 
 	private Integer settlementId;
-
+	
 	private String planName;
 	private Integer planId;
 	private String treasurerName;

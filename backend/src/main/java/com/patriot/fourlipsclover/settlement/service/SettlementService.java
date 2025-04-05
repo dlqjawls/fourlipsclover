@@ -27,6 +27,8 @@ import com.patriot.fourlipsclover.settlement.repository.ExpenseParticipantReposi
 import com.patriot.fourlipsclover.settlement.repository.ExpenseRepository;
 import com.patriot.fourlipsclover.settlement.repository.SettlementRepository;
 import com.patriot.fourlipsclover.settlement.repository.SettlementTransactionRepository;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -109,6 +111,7 @@ public class SettlementService {
 		return settlementMapper.toDto(settlement, expenseResponses);
 	}
 
+	@Transactional
 	public SettlementRequestResponse request(Integer planId) {
 		Settlement settlement = settlementRepository.findByPlan_PlanId(planId)
 				.orElseThrow(() -> new SettlementNotFoundException(planId));
@@ -124,23 +127,47 @@ public class SettlementService {
 				for (MemberCost memberCost : memberCosts) {
 					if (Objects.equals(ep.getMember().getMemberId(),
 							memberCost.getMember().getMemberId())) {
-						memberCost.increaseCost(total / expenseParticipants.size());
+						BigDecimal totalAmount = new BigDecimal(total);
+						BigDecimal participantCount = new BigDecimal(expenseParticipants.size());
+						BigDecimal share = totalAmount.divide(participantCount, 0,
+								RoundingMode.CEILING);
+						memberCost.increaseCost(share.intValue());
 					}
 				}
 			});
 		}
 		List<SettlementTransaction> settlementTransactions = new ArrayList<>();
 		for (MemberCost memberCost : memberCosts) {
-			SettlementTransaction settlementTransaction = new SettlementTransaction();
-			settlementTransaction.setPayee(settlement.getTreasurer());
-			settlementTransaction.setPayer(memberCost.getMember());
-			settlementTransaction.setSettlement(settlement);
-			settlementTransaction.setTransactionStatus(TransactionStatus.PENDING);
-			settlementTransaction.setCost(memberCost.getCost());
-			settlementTransactions.add(settlementTransaction);
+			// 총무는 결제 트랜잭션에서 제외
+			if (!Objects.equals(memberCost.getMember().getMemberId(),
+					settlement.getTreasurer().getMemberId())) {
+				SettlementTransaction settlementTransaction = new SettlementTransaction();
+				settlementTransaction.setPayee(settlement.getTreasurer());
+				settlementTransaction.setPayer(memberCost.getMember());
+				settlementTransaction.setSettlement(settlement);
+				settlementTransaction.setTransactionStatus(TransactionStatus.PENDING);
+				settlementTransaction.setCost(memberCost.getCost());
+				settlementTransactions.add(settlementTransaction);
+			}
 		}
-		settlementTransactionRepository.saveAll(settlementTransactions);
-		List<SettlementTransactionResponse> settlementTransactionResponses;
+		settlementTransactionRepository.saveAll(
+				settlementTransactions);
+
+		// 0이 아닌 멤버들만 결제 요청
+		List<SettlementTransactionResponse> settlementTransactionResponses = settlementTransactions.stream()
+				.filter(st ->
+						st.getCost() != 0)
+				.map(settlementTransactionMapper::toDto).toList();
+
+		SettlementRequestResponse response = new SettlementRequestResponse();
+		response.setPlanTitle(settlement.getPlan().getTitle());
+		response.setRequestedDate(LocalDateTime.now());
+		response.setSettlementId(settlement.getSettlementId());
+		response.setSettlementTransactionResponses(settlementTransactionResponses);
+		response.setTreasurer(
+				settlementTransactionMapper.toTreasureResponse(settlement.getTreasurer()));
+
+		return response;
 	}
 
 	private class MemberCost {
@@ -162,7 +189,9 @@ public class SettlementService {
 		}
 
 		public void increaseCost(int moneyToAdd) {
-			this.cost += moneyToAdd;
+			if (moneyToAdd > 0) {
+				this.cost += moneyToAdd;
+			}
 		}
 	}
 }
