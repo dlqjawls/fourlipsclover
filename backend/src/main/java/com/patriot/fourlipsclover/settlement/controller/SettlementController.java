@@ -60,6 +60,5 @@ public class SettlementController {
 			@PathVariable Integer planId) {
 		SettlementRequestResponse response = settlementService.request(planId);
 		return ResponseEntity.ok(response);
-
 	}
 }
