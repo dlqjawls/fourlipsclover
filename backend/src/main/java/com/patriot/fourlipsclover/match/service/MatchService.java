@@ -118,41 +118,51 @@ public class MatchService {
             request.getGuideRequestForm().setGroup(existingGroup);  // 신청서에 기존 그룹 설정
         }
 
-        Match match = new Match();
-        match.setMemberId(currentMemberId);  // 현재 로그인한 사용자의 ID를 사용
-        match.setRegion(request.getRegion());    // 신청서에서 지역 정보 저장
-        match.setGuide(request.getGuide());      // 신청서에서 가이드 정보 저장
-        match.setStatus(ApprovalStatus.PENDING);
-        match.setPartnerOrderId(partnerOrderId);  // 결제에서 받은 partnerOrderId 저장
-        match.setCreatedAt(LocalDateTime.now());
+        // 2. GuideRequestForm 생성
+        GuideRequestForm guideRequestForm = GuideRequestForm.builder()
+                .group(request.getGuideRequestForm().getGroup()) // 해당 그룹 정보
+                .transportation(request.getGuideRequestForm().getTransportation())
+                .foodPreference(request.getGuideRequestForm().getFoodPreference())
+                .tastePreference(request.getGuideRequestForm().getTastePreference())
+                .requirements(request.getGuideRequestForm().getRequirements())
+                .startDate(request.getGuideRequestForm().getStartDate())
+                .endDate(request.getGuideRequestForm().getEndDate())
+                .build();
 
-        // 가이드 신청서 (GuideRequestForm) 저장
-        GuideRequestForm guideRequestForm = request.getGuideRequestForm();
-        guideRequestForm.setCreatedAt(LocalDateTime.now());
-        guideRequestFormRepository.save(guideRequestForm);  // 가이드 신청서 저장
-        match.setGuideRequestForm(guideRequestForm);  // 매칭과 연결
+        // GuideRequestForm을 DB에 저장 (새로 생성된 객체이므로 저장해야 함)
+        guideRequestFormRepository.save(guideRequestForm);
 
-        Match savedMatch = matchRepository.save(match);
+        // 3. Match 엔티티 생성
+        Match match = Match.builder()
+                .memberId(currentMemberId) // 매칭 요청자 ID
+                .region(request.getRegion()) // 지역 정보
+                .guide(request.getGuide()) // 가이드 정보
+                .guideRequestForm(guideRequestForm) // 가이드 신청서 연결
+                .status(ApprovalStatus.PENDING) // 기본 승인 상태 (대기)
+                .partnerOrderId(partnerOrderId) // 결제 번호
+                .createdAt(LocalDateTime.now())
+                .build();
 
-        // 태그 처리: MatchCreateRequest에서 받은 태그를 MatchTag로 변환하여 저장
-        List<MatchTag> matchTags = new ArrayList<>();
-        for (Long tagId : request.getTags()) {  // Long 타입으로 변경된 tags 리스트를 사용
+        // 4. Match 저장 (match_id가 생성됨)
+        matchRepository.save(match);
 
-            // tagId로 Tag 객체 조회
-            Tag tag = tagRepository.findById(tagId)
-                    .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 tagId입니다. tagId: " + tagId));
+        // 5. MatchTag 저장 (태그 처리)
+        for (MatchTag matchTag : request.getTags()) {
+            // 프론트에서 받은 tagId를 기반으로 Tag 객체를 찾아야 함
+            Tag tagEntity = tagRepository.findById(matchTag.getTag().getTagId())
+                    .orElseThrow(() -> new IllegalArgumentException("Tag not found"));
 
-            // Tag 객체를 MatchTag에 설정
-            MatchTag matchTag = new MatchTag();
-            matchTag.setMatch(savedMatch);  // 저장된 매칭을 연결
-            matchTag.setTag(tag);  // 조회된 Tag 객체를 설정
-            matchTags.add(matchTag);  // 생성한 MatchTag를 리스트에 추가
+            // MatchTag 객체 생성
+            MatchTag newMatchTag = MatchTag.builder()
+                    .match(match) // 새로 생성된 match와 연결
+                    .tag(tagEntity) // Tag 엔티티 연결
+                    .build();
+
+            // MatchTag 저장
+            matchTagRepository.save(newMatchTag);
         }
 
-        // MatchTag 저장
-        matchTagRepository.saveAll(matchTags);  // 모든 MatchTag 저장
-
-        return savedMatch;  // 저장된 매칭 반환
+        return match; // 생성된 Match 객체 반환
     }
 
     // 신청자 - 매칭 신청 내역 조회(현지인 수락 상태 상관없이 전체 신청 목록 조회)
