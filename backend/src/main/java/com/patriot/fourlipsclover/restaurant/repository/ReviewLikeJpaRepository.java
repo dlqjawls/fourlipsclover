@@ -1,5 +1,6 @@
 package com.patriot.fourlipsclover.restaurant.repository;
 
+import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.restaurant.dto.request.LikeStatus;
 import com.patriot.fourlipsclover.restaurant.entity.Review;
 import com.patriot.fourlipsclover.restaurant.entity.ReviewLike;
@@ -13,4 +14,6 @@ public interface ReviewLikeJpaRepository extends JpaRepository<ReviewLike, Revie
 	ReviewLike review(Review review);
 
 	Long countByIdReviewIdAndLikeStatus(Integer reviewId, LikeStatus likeStatus);
+
+	boolean existsByReviewAndMemberAndLikeStatus(Review review, Member member, LikeStatus likeStatus);
 }
