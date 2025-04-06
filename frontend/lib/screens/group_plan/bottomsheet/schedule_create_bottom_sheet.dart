@@ -4,10 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../models/plan/plan_model.dart';
 import '../../../models/plan/plan_schedule_create_request.dart';
+import '../../../models/restaurant_model.dart';
 import '../../../providers/plan_provider.dart';
 import '../../../widgets/clover_loading_spinner.dart';
 import '../../../config/theme.dart';
 import 'custom_time_picker.dart';
+import 'restaurant_search_screen.dart';
 
 class ScheduleCreateBottomSheet extends StatefulWidget {
   final int groupId;
@@ -31,8 +33,9 @@ class ScheduleCreateBottomSheet extends StatefulWidget {
 class _ScheduleCreateBottomSheetState extends State<ScheduleCreateBottomSheet> {
   final _formKey = GlobalKey<FormState>();
 
-  // 장소 정보 - kakaoPlaceId 사용 (또는 restaurantId 사용 가능)
+  // 장소 정보
   int? _restaurantId;
+  String? _kakaoPlaceId;
   String _placeName = '';
 
   // 방문 날짜 및 시간
@@ -79,6 +82,14 @@ class _ScheduleCreateBottomSheetState extends State<ScheduleCreateBottomSheet> {
 
     _formKey.currentState!.save();
 
+    // 유효성 검사 - 레스토랑 ID 또는 kakaoPlaceId 중 하나는 있어야 함
+    if (_restaurantId == null && _kakaoPlaceId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('방문 장소를 선택해주세요')));
+      return;
+    }
+
     // 방문 일시 생성 (날짜 + 시간)
     final visitDateTime = DateTime(
       _visitDate.year,
@@ -91,6 +102,7 @@ class _ScheduleCreateBottomSheetState extends State<ScheduleCreateBottomSheet> {
     // 요청 데이터 생성
     final request = PlanScheduleCreateRequest(
       restaurantId: _restaurantId,
+      kakaoPlaceId: _kakaoPlaceId,
       notes: _notesController.text.isNotEmpty ? _notesController.text : null,
       visitAt: visitDateTime,
     );
@@ -140,16 +152,22 @@ class _ScheduleCreateBottomSheetState extends State<ScheduleCreateBottomSheet> {
     }
   }
 
-  // 장소 검색 기능 (카카오맵 API 연동 예정)
+  // 장소 검색 화면으로 이동
   Future<void> _searchPlace() async {
-    // TODO: 카카오맵 API 연동 장소 검색 기능 구현
-    // 현재는 임시로 더미 데이터 사용
+    // RestaurantSearchScreen으로 이동하여 결과 받기
+    final result = await Navigator.push<RestaurantResponse>(
+      context,
+      MaterialPageRoute(builder: (context) => const RestaurantSearchScreen()),
+    );
 
-    // 장소 검색 결과 예시
-    setState(() {
-      _restaurantId = 1;
-      _placeName = '초돈'; // 실제 구현 시 선택한 장소 이름 사용
-    });
+    // 결과가 있는 경우 상태 업데이트
+    if (result != null) {
+      setState(() {
+        _restaurantId = result.restaurantId;
+        _kakaoPlaceId = result.kakaoPlaceId;
+        _placeName = result.placeName ?? '이름 없음';
+      });
+    }
   }
 
   @override
