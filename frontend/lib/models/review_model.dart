@@ -18,6 +18,7 @@ class Review {
   final List<String> menu;
   bool isLiked;
   bool isDisliked;
+  final List<String> imageUrls;
 
   Review({
     required this.id,
@@ -36,6 +37,7 @@ class Review {
     required this.menu,
     this.isLiked = false,
     this.isDisliked = false,
+    required this.imageUrls,
   });
 
   factory Review.fromResponse(ReviewResponse response) {
@@ -49,6 +51,11 @@ class Review {
     if (response.reviewId == null || response.reviewer == null || response.restaurant == null) {
       print("⚠️ 필수 데이터 누락으로 리뷰 제외: $response");
       throw Exception("리뷰 필수 데이터 누락");
+    }
+
+    String normalizeUrl(String url) {
+      if (url.startsWith('http')) return url;
+      return 'http://43.203.123.220:9000/review-images/$url';
     }
 
     return Review(
@@ -68,8 +75,10 @@ class Review {
       menu: [],
       isLiked: false,
       isDisliked: false,
+      imageUrls: response.reviewImageUrls.map((url) => normalizeUrl(url)).toList(),
     );
   }
+
 
 
   factory Review.fromJson(Map<String, dynamic> json) {
@@ -92,6 +101,7 @@ class Review {
       menu: (json['menu'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       isLiked: json['is_liked'] ?? false,
       isDisliked: json['is_disliked'] ?? false,
+      imageUrls: List<String>.from(json['image_urls'] ?? []),
     );
   }
 
@@ -113,6 +123,7 @@ class Review {
       'menu': menu,
       'is_liked': isLiked,
       'is_disliked': isDisliked,
+      'image_urls': imageUrls,
     };
   }
 }
