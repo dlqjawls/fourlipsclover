@@ -14,6 +14,7 @@ import 'package:frontend/models/group/group_model.dart';
 import 'package:frontend/models/plan/plan_model.dart';
 import 'package:frontend/screens/map/full_map_screen.dart';
 import 'package:frontend/screens/payment/kakao_pay_screen.dart';
+import '../screens/group_plan/group_invitation_screen.dart';
 import '../screens/payment/kakao_pay_official_screen.dart';
 
 class AppRoutes {
@@ -60,6 +61,13 @@ class AppRoutes {
           ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
       final locationName = arguments['locationName'] as String;
       return FullMapScreen(locationName: locationName);
+    },
+
+    '/group/invitation': (context) {
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>;
+      final token = args['token'] as String;
+      return GroupInvitationScreen(token: token);
     },
 
     // 앱의 경로를 여기에 등록

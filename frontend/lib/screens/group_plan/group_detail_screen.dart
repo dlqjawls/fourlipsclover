@@ -18,28 +18,9 @@ import 'group_widgets/group_edit_dialog.dart';
 import '../../models/plan/plan_model.dart';
 import '../../providers/user_provider.dart';
 import './plan_detail_screen.dart';
-import '../../widgets/clover_loading_spinner.dart'; // 로딩 스피너 import 추가
-
-// screens/group/group_detail_screen.dart
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:table_calendar/table_calendar.dart';
-import '../../models/group/group_model.dart';
-import '../../models/group/group_detail_model.dart';
-import '../../models/plan/plan_list_model.dart';
-import '../../providers/plan_provider.dart';
-import '../../providers/group_provider.dart';
-import '../../config/theme.dart';
-import 'group_widgets/group_calendar.dart';
-import 'plan_widgets/empty_plan_view.dart';
-import 'plan_widgets/plan_list_view.dart';
-import 'bottomsheet/plan_create_bottom_sheet.dart';
-import 'bottomsheet/calendar_event_bottom_sheet.dart';
-import 'group_widgets/group_members_bar.dart';
-import 'group_widgets/group_edit_dialog.dart';
-import '../../models/plan/plan_model.dart';
-import '../../providers/user_provider.dart';
-import '../../widgets/clover_loading_spinner.dart'; // 로딩 스피너 import 추가
+import '../../widgets/clover_loading_spinner.dart';
+import '../../services/kakao_share_service.dart';
+import './group_widgets/group_invitation_dialog.dart';
 
 class GroupDetailScreen extends StatefulWidget {
   final Group group;
@@ -302,41 +283,74 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 isExpanded: _isMembersBarExpanded, // 토글 상태 전달
                 onToggle: _toggleMembersBar, // 토글 함수 전달
                 onAddMember: () async {
-                  // 초대 링크 생성 및 공유 기능
-                  final groupProvider = Provider.of<GroupProvider>(
-                    context,
-                    listen: false,
-                  );
+                  setState(() {
+                    _isLoading = true;
+                  });
 
-                  // 로딩 표시
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('초대 링크 생성 중...')),
-                  );
-
-                  // 초대 링크 생성
-                  final inviteUrl = await groupProvider.generateInviteLink(
-                    _currentGroup.groupId,
-                  );
-
-                  if (inviteUrl != null) {
-                    // TODO: 생성된 초대 링크를 공유하는 기능 구현
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('초대 링크가 생성되었습니다: $inviteUrl'),
-                        action: SnackBarAction(
-                          label: '복사',
-                          onPressed: () {
-                            // TODO: 클립보드에 복사하는 기능 구현
-                          },
-                        ),
-                      ),
+                  try {
+                    final groupProvider = Provider.of<GroupProvider>(
+                      context,
+                      listen: false,
                     );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('초대 링크 생성 실패: ${groupProvider.error}'),
-                      ),
-                    );
+
+                    // 딥링크 형식으로 초대 URL 생성
+                    final inviteUrl = await groupProvider
+                        .generateInviteLinkWithDeepLink(_currentGroup.groupId);
+
+                    setState(() {
+                      _isLoading = false;
+                    });
+
+                    if (inviteUrl != null && mounted) {
+                      // 초대 다이얼로그 표시
+                      showDialog(
+                        context: context,
+                        builder:
+                            (context) => GroupInvitationDialog(
+                              inviteUrl: inviteUrl,
+                              expiryDate: DateTime.now().add(
+                                const Duration(days: 1),
+                              ),
+                              onShareKakao: (url) async {
+                                // 카카오톡으로 공유
+                                final success =
+                                    await KakaoShareService.shareGroupInvitation(
+                                      groupName: _currentGroup.name,
+                                      inviteUrl: url,
+                                      description: _currentGroup.description,
+                                    );
+
+                                if (!success && mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('카카오톡 공유에 실패했습니다'),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                      );
+                    } else {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '초대 링크 생성 실패: ${groupProvider.error}',
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    setState(() {
+                      _isLoading = false;
+                    });
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('초대 링크 생성 중 오류 발생: $e')),
+                      );
+                    }
                   }
                 },
               ),
