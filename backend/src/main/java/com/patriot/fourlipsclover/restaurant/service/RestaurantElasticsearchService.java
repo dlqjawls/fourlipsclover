@@ -24,6 +24,7 @@ public class RestaurantElasticsearchService {
 		try {
 			SearchResponse<RestaurantDocument> response = elasticsearchClient.search(s -> s
 							.index("restaurants")
+							.size(20)
 							.query(q -> q
 									.multiMatch(mm -> mm
 											.query(query)
