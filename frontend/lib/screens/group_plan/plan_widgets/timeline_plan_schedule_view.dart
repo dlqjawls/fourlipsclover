@@ -130,9 +130,7 @@ class _TimelinePlanScheduleViewState extends State<TimelinePlanScheduleView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return ScheduleCreateBottomSheet(
           groupId: widget.groupId,
@@ -285,33 +283,34 @@ class _TimelinePlanScheduleViewState extends State<TimelinePlanScheduleView> {
                     ),
                   ],
                 ),
-                // 항상 추가 버튼 표시 (일정이 없어도)
-                GestureDetector(
-                  onTap: _showAddScheduleDialog,
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.verylightGray,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.lightGray,
-                          spreadRadius: 1,
-                          blurRadius: 3,
-                          offset: const Offset(0, 2),
+                // 일정이 있을 때만 상단 추가 버튼 표시
+                if (hasSchedules)
+                  GestureDetector(
+                    onTap: _showAddScheduleDialog,
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.verylightGray,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.lightGray,
+                            spreadRadius: 1,
+                            blurRadius: 3,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.add,
+                          color: AppColors.mediumGray,
+                          size: 24,
                         ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.add,
-                        color: AppColors.mediumGray,
-                        size: 24,
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -370,6 +369,8 @@ class _TimelinePlanScheduleViewState extends State<TimelinePlanScheduleView> {
               planId: widget.plan.planId,
               onScheduleDeleted: _loadSchedules,
               onScheduleUpdated: _loadSchedules, // 일정 수정 콜백 추가
+              startDate: widget.plan.startDate, // 계획의 시작일 전달
+              endDate: widget.plan.endDate, // 계획의 종료일 전달
             );
           },
         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../../models/plan/plan_model.dart';
 import '../../../models/plan/plan_schedule_model.dart';
 import '../../../providers/plan_provider.dart';
 import '../../../config/theme.dart';
@@ -15,6 +16,8 @@ class TimelineCard extends StatelessWidget {
   final int planId;
   final VoidCallback onScheduleDeleted;
   final VoidCallback onScheduleUpdated;
+  final DateTime startDate; // 여행 시작일 추가
+  final DateTime endDate;   // 여행 종료일 추가
 
   const TimelineCard({
     Key? key,
@@ -25,6 +28,8 @@ class TimelineCard extends StatelessWidget {
     required this.planId,
     required this.onScheduleDeleted,
     required this.onScheduleUpdated,
+    required this.startDate,  // 필수 매개변수로 추가
+    required this.endDate,    // 필수 매개변수로 추가
   }) : super(key: key);
 
   @override
@@ -152,18 +157,17 @@ class TimelineCard extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      backgroundColor: Colors.transparent,
+      builder: (context) => ScheduleDetailBottomSheet(
+        groupId: groupId,
+        planId: planId,
+        schedule: schedule,
+        onScheduleUpdated: onScheduleUpdated,
+        onScheduleDeleted: onScheduleDeleted,
+        color: color,
+        startDate: startDate, // 여행 시작일 전달
+        endDate: endDate,     // 여행 종료일 전달
       ),
-      builder:
-          (context) => ScheduleDetailBottomSheet(
-            groupId: groupId,
-            planId: planId,
-            schedule: schedule,
-            onScheduleUpdated: onScheduleUpdated,
-            onScheduleDeleted: onScheduleDeleted,
-            color: color,
-          ),
     );
   }
 
@@ -187,11 +191,10 @@ class DashedLinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint =
-        Paint()
-          ..color = color
-          ..strokeWidth = 1.5
-          ..style = PaintingStyle.stroke;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
 
     const dashWidth = 4;
     const dashSpace = 3;
