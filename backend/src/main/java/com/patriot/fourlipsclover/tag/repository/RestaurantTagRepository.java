@@ -1,5 +1,6 @@
 package com.patriot.fourlipsclover.tag.repository;
 
+import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
 import com.patriot.fourlipsclover.restaurant.entity.RestaurantTag;
 import java.util.List;
 import java.util.Optional;
@@ -19,4 +20,6 @@ public interface RestaurantTagRepository extends JpaRepository<RestaurantTag, Lo
 	@Query("select rt from RestaurantTag rt where rt.restaurant.kakaoPlaceId =:kakaoPlaceId order by rt.avgConfidence desc, rt.frequency desc limit 5")
 	List<RestaurantTag> findRestaurantTagsByKakaoPlaceId(
 			@Param("kakaoPlaceId") String kakaoPlaceId);
+
+	List<RestaurantTag> findByRestaurant(Restaurant restaurant);
 }
