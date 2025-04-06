@@ -25,6 +25,7 @@ import com.patriot.fourlipsclover.plan.repository.PlanRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
 import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
 import com.patriot.fourlipsclover.tag.service.TagService;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -123,7 +124,7 @@ public class MemberService {
 		response.setLocalRank(localCertification.getLocalGrade().getValue());
 		response.setLocalRegion(localCertification.getLocalRegion().getRegionName());
 
-		List<PlanMember> planMembers = planMemberRepository.findByMember(member);
+		List<PlanMember> planMembers = planMemberRepository.findCurrentPlansByMember(member, LocalDate.now());
 		List<MypagePlanResponse> mypagePlanResponses = new ArrayList<>();
 		for(PlanMember planMember: planMembers){
 			MypagePlanResponse mypagePlanResponse = new MypagePlanResponse();
