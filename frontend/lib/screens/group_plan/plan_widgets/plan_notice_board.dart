@@ -6,6 +6,7 @@ import '../../../config/theme.dart';
 import '../../../models/notice/notice_model.dart';
 import '../../../providers/notice_provider.dart';
 import '../bottomsheet/notice_create_bottom_sheet.dart';
+import '../bottomsheet/notice_edit_bottom_sheet.dart'; // 수정 바텀시트 추가
 
 class PlanNoticeBoard extends StatefulWidget {
   final int planId;
@@ -109,75 +110,59 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
     );
   }
 
-  // 공지사항 삭제 확인 다이얼로그
-  Future<void> _showDeleteConfirmDialog(NoticeModel notice) async {
-    final RenderBox? overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox?;
+  // 공지사항 수정 바텀시트 표시
+  void _showEditNoticeBottomSheet(NoticeModel notice) {
+    final noticeProvider = Provider.of<NoticeProvider>(context, listen: false);
 
-    final confirmed = await showDialog<bool>(
+    // 이용 가능한 색상 리스트 만들기
+    final availableColors = [
+      AppColors.noticeMemoYellow,
+      AppColors.noticeMemoRed,
+      AppColors.noticeMemoBlue,
+      AppColors.noticeMemoGreen,
+      AppColors.noticeMemoOrange,
+      AppColors.noticeMemoViolet,
+    ];
+
+    showNoticeEditBottomSheet(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.3),
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 40,
-            vertical: 24,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  '공지사항 삭제',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  '이 공지사항을 삭제하시겠습니까?',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // 취소 버튼
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop(false); // 다이얼로그 닫기 (취소)
-                      },
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.grey.shade700,
-                      ),
-                      child: const Text('취소'),
-                    ),
-                    // 삭제 버튼
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).pop(true); // 다이얼로그 닫기 (확인)
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.shade400,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('삭제'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
+      notice: notice,
+      availableColors: availableColors,
+      onNoticeUpdated: (updatedNotice) async {
+        try {
+          // NoticeEditItem에서 NoticeModel로 변환
+          final noticeToUpdate = NoticeModel(
+            planNoticeId: notice.planNoticeId, // 기존 ID 유지
+            planId: widget.planId,
+            isImportant: updatedNotice.isImportant,
+            color: noticeProvider.getNoticeColorFromColor(updatedNotice.color),
+            content: updatedNotice.content,
+            createdAt: notice.createdAt, // 기존 생성일 유지
+          );
+
+          // API 통신으로 공지사항 수정
+          await noticeProvider.updateNotice(
+            widget.planId,
+            notice.planNoticeId!,
+            noticeToUpdate,
+          );
+
+          // 수정 후 공지사항 목록 다시 불러오기
+          _loadNotices();
+
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('공지사항이 수정되었습니다')));
+        } catch (e) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('공지사항 수정에 실패했습니다: $e')));
+        }
+      },
+      onNoticeDeleted: () async {
+        await _deleteNotice(notice.planNoticeId!);
       },
     );
-
-    if (confirmed == true && notice.planNoticeId != null) {
-      await _deleteNotice(notice.planNoticeId!);
-    }
   }
 
   // 공지사항 삭제
@@ -416,114 +401,112 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
     );
   }
 
-  // 공지사항 아이템 위젯 (메모지 스타일)
+  // 공지사항 아이템 위젯 (메모지 스타일) - 클릭 시 수정 바텀시트 열기 추가, 삭제 버튼 제거
   Widget _buildNoticeItem(NoticeModel notice, Color noticeColor, int index) {
     // 회전 각도 계산 (살짝 기울임)
     final random = math.Random(notice.planNoticeId?.hashCode ?? index);
     final rotation =
         (random.nextDouble() * 10 - 5) * math.pi / 180; // -5도에서 5도 사이 랜덤 회전
 
-    return Transform.rotate(
-      angle: rotation,
-      child: Container(
-        width: 160,
-        constraints: const BoxConstraints(minHeight: 120, maxHeight: 200),
-        margin: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: noticeColor,
-          borderRadius: BorderRadius.circular(4),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2), // 그림자 강화
-              blurRadius: 4,
-              offset: const Offset(1, 3), // 그림자 위치 조정
-            ),
-          ],
-        ),
-        child: Stack(
-          clipBehavior: Clip.none, // 자식 위젯이 부모 밖으로 나갈 수 있도록 설정
-          children: [
-            // 메모 내용
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 20, 12, 12), // 상단 여백 증가
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 중요 표시
-                  if (notice.isImportant)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.red.withOpacity(0.3)),
-                      ),
-                      child: Text(
-                        '중요',
-                        style: TextStyle(
-                          color: Colors.red.shade700,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+    return GestureDetector(
+      onTap: () {
+        // 메모 클릭 시 수정 바텀시트 열기
+        if (notice.planNoticeId != null) {
+          _showEditNoticeBottomSheet(notice);
+        }
+      },
+      child: Transform.rotate(
+        angle: rotation,
+        child: Container(
+          width: 160,
+          constraints: const BoxConstraints(minHeight: 120, maxHeight: 200),
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: noticeColor,
+            borderRadius: BorderRadius.circular(4),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2), // 그림자 강화
+                blurRadius: 4,
+                offset: const Offset(1, 3), // 그림자 위치 조정
+              ),
+            ],
+          ),
+          child: Stack(
+            clipBehavior: Clip.none, // 자식 위젯이 부모 밖으로 나갈 수 있도록 설정
+            children: [
+              // 메모 내용
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 20, 12, 12), // 상단 여백 증가
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 중요 표시
+                    if (notice.isImportant)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: Colors.red.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          '중요',
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
+
+                    // 공지사항 내용
+                    Text(
+                      notice.content,
+                      style: const TextStyle(fontSize: 14, height: 1.3),
+                      maxLines: 6,
+                      overflow: TextOverflow.ellipsis,
                     ),
-
-                  // 공지사항 내용
-                  Text(
-                    notice.content,
-                    style: const TextStyle(fontSize: 14, height: 1.3),
-                    maxLines: 6,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  // 날짜 정보 제거됨 (요청에 따라)
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            // 자석 핀 (위쪽 중앙) - 위치 조정하여 완전히 보이도록 수정
-            Positioned(
-              top: 3, // 자석이 보이도록 위치 조정
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  width: 18,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    color:
-                        notice.isImportant
-                            ? Colors.red.shade300
-                            : Colors.blue.shade300,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 2,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
+              // 자석 핀 (위쪽 중앙) - 위치 조정하여 완전히 보이도록 수정
+              Positioned(
+                top: 3, // 자석이 보이도록 위치 조정
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color:
+                          notice.isImportant
+                              ? Colors.red.shade300
+                              : Colors.blue.shade300,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 2,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-
-            // 삭제 버튼 (메모 우상단) - 흰 배경 제거
-            Positioned(
-              top: 2,
-              right: 2,
-              child: InkWell(
-                onTap: () => _showDeleteConfirmDialog(notice), // 삭제 확인 다이얼로그 표시
-                child: Icon(Icons.close, size: 14, color: Colors.grey.shade700),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
