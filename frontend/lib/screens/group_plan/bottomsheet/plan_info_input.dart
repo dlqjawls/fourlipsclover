@@ -266,85 +266,23 @@ class _PlanInfoInputState extends State<PlanInfoInput> {
               },
             ),
           ),
-
           const SizedBox(height: 24),
 
-          // 여행 소개 라벨
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 8),
-            child: Text(
-              '여행 소개',
-              style: TextStyle(
-                fontFamily: 'Anemone_air',
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.darkGray,
+          // 귀여운 클로버 이미지 추가
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 10.0, left: 30.0),
+                child: Image.asset(
+                  'assets/images/cute_clover.png',
+                  width: 150,
+                  height: 150,
+                  fit: BoxFit.contain,
+                ),
               ),
-            ),
+            ],
           ),
-
-          // 여행 소개 입력 필드 (힌트 텍스트 색상 변경)
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            constraints: const BoxConstraints(minHeight: 120, maxHeight: 200),
-            child: TextField(
-              controller: widget.descriptionController,
-              style: const TextStyle(fontFamily: 'Anemone_air'),
-              decoration: InputDecoration(
-                hintText: '여행에 대해 간단히 소개해 주세요',
-                hintStyle: TextStyle(
-                  color: AppColors.lightGray,
-                  fontFamily: 'Anemone_air',
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                alignLabelWithHint: true,
-              ),
-              maxLines: 6,
-              minLines: 4,
-              maxLength: 100,
-              buildCounter: (
-                context, {
-                required currentLength,
-                required isFocused,
-                maxLength,
-              }) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: Text(
-                    '$currentLength/$maxLength',
-                    style: TextStyle(
-                      fontFamily: 'Anemone_air',
-                      fontSize: 12,
-                      color: AppColors.mediumGray,
-                    ),
-                    textAlign: TextAlign.end,
-                  ),
-                );
-              },
-            ),
-          ),
-
-          // 하단 여백 추가
-          const SizedBox(height: 16),
         ],
       ),
     );

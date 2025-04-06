@@ -13,6 +13,8 @@ class ScheduleDetailBottomSheet extends StatelessWidget {
   final VoidCallback onScheduleUpdated;
   final VoidCallback onScheduleDeleted;
   final Color color;
+  final DateTime startDate; // 여행 시작일
+  final DateTime endDate; // 여행 종료일
 
   const ScheduleDetailBottomSheet({
     Key? key,
@@ -22,6 +24,8 @@ class ScheduleDetailBottomSheet extends StatelessWidget {
     required this.onScheduleUpdated,
     required this.onScheduleDeleted,
     required this.color,
+    required this.startDate,
+    required this.endDate,
   }) : super(key: key);
 
   @override
@@ -49,6 +53,19 @@ class ScheduleDetailBottomSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            // 상단 드래그 핸들 추가
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
             // 헤더
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -176,14 +193,14 @@ class ScheduleDetailBottomSheet extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      backgroundColor: Colors.transparent,
       builder:
           (context) => ScheduleUpdateBottomSheet(
             groupId: groupId,
             planId: planId,
             schedule: schedule,
+            startDate: startDate, // 추가: 여행 시작일 전달
+            endDate: endDate, // 추가: 여행 종료일 전달
             onScheduleUpdated: onScheduleUpdated,
           ),
     );
@@ -242,8 +259,6 @@ class ScheduleDetailBottomSheet extends StatelessWidget {
       } finally {
         planProvider.setLoading(false);
       }
-    } else {
-      // 취소한 경우에는 바텀시트를 닫지 않음
     }
   }
 }

@@ -27,8 +27,9 @@ class CustomTimePicker {
           );
           onTimeSelected(timeOfDay);
         },
+        minuteInterval: TimePickerInterval.TEN,
         // 타임피커 핵심 설정
-        is24HrFormat: true, // 12시간제 사용
+        is24HrFormat: false, // 12시간제 사용
         disableHour: false, // 시간 선택 활성화
         disableMinute: false, // 분 선택 활성화
         // UI 스타일링
@@ -42,9 +43,6 @@ class CustomTimePicker {
         okText: '확인', // 확인 버튼 텍스트
         // 헤더 설정
         displayHeader: true, // 헤더 표시
-        // 시간 레이블 (한국어)
-        hourLabel: '시', // 시간 레이블
-        minuteLabel: '분', // 분 레이블
         // 커스텀 이미지 설정
         sunAsset: Image.asset('assets/images/rice.png', width: 80, height: 80),
         moonAsset: Image.asset('assets/images/beer.png', width: 90, height: 90),
