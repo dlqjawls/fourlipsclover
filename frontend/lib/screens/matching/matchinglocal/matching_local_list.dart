@@ -4,6 +4,7 @@ import 'package:frontend/services/matching/matching_service.dart';
 import 'package:frontend/models/matching/matching_main_model.dart'; // 추가
 import 'matching_local_resist.dart';
 import 'package:table_calendar/table_calendar.dart';
+import '../matchingchat/matching_chat.dart';
 
 class MatchingLocalListScreen extends StatefulWidget {
   const MatchingLocalListScreen({Key? key})
@@ -175,36 +176,36 @@ class _MatchingLocalListScreenState extends State<MatchingLocalListScreen>
     );
   }
 
- Future<void> _loadMatches() async {
-  setState(() => isLoading = true);
-  
-  // 접수된 매칭 로드
-  try {
-    final confirmedMatches = await _matchingService.getConfirmedMatches();
-    setState(() {
-      acceptedRequests = confirmedMatches;
-      debugPrint('확정된 매칭 수: ${acceptedRequests.length}');
-    });
-  } catch (e) {
-    debugPrint('확정된 매칭 로드 중 오류: $e');
-    setState(() => acceptedRequests = []);
-  }
+  Future<void> _loadMatches() async {
+    setState(() => isLoading = true);
 
-  // 대기중인 매칭 로드
-  try {
-    final pendingMatches = await _matchingService.getGuideMatchRequests();
-    setState(() {
-      pendingRequests = pendingMatches.where((m) => m.status == 'PENDING').toList();
-      debugPrint('대기중인 매칭 수: ${pendingRequests.length}');
-    });
-  } catch (e) {
-    debugPrint('대기중인 매칭 로드 중 오류: $e');
-    setState(() => pendingRequests = []);
-  }
+    // 접수된 매칭 로드
+    try {
+      final confirmedMatches = await _matchingService.getConfirmedMatches();
+      setState(() {
+        acceptedRequests = confirmedMatches;
+        debugPrint('확정된 매칭 수: ${acceptedRequests.length}');
+      });
+    } catch (e) {
+      debugPrint('확정된 매칭 로드 중 오류: $e');
+      setState(() => acceptedRequests = []);
+    }
 
-  setState(() => isLoading = false);
-}
-  
+    // 대기중인 매칭 로드
+    try {
+      final pendingMatches = await _matchingService.getGuideMatchRequests();
+      setState(() {
+        pendingRequests =
+            pendingMatches.where((m) => m.status == 'PENDING').toList();
+        debugPrint('대기중인 매칭 수: ${pendingRequests.length}');
+      });
+    } catch (e) {
+      debugPrint('대기중인 매칭 로드 중 오류: $e');
+      setState(() => pendingRequests = []);
+    }
+
+    setState(() => isLoading = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -464,7 +465,15 @@ class _MatchingLocalListScreenState extends State<MatchingLocalListScreen>
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        // TODO: 채팅방 이동
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => MatchingChatScreen(
+                                  groupId: match.matchId.toString(),
+                                ),
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.chat_bubble_outline, size: 18),
                       label: const Text('대화하기'),
