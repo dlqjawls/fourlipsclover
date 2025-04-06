@@ -13,6 +13,9 @@ import '../../models/plan/plan_create_request.dart';
 import '../../models/plan/plan_update_request.dart';
 import '../../models/plan/plan_schedule_create_request.dart';
 import '../../models/plan/plan_schedule_update_request.dart';
+import '../../models/plan/member_info_response.dart';
+import '../../models/plan/add_member_to_plan_request.dart';
+import '../../models/plan/add_member_to_plan_response.dart';
 
 /// 계획 API 클래스
 /// 백엔드 서버와의 HTTP 통신을 담당합니다.
@@ -415,6 +418,109 @@ class PlanApi {
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception(
           '계획 일정 삭제에 실패했습니다: ${response.statusCode}, ${response.body}',
+        );
+      }
+    } catch (e) {
+      debugPrint('API 호출 중 에러 발생: $e');
+      rethrow;
+    }
+  }
+  
+  /// 계획에 추가 가능한 멤버 목록 조회하기
+  /// [groupId] 그룹 ID
+  /// [planId] 계획 ID  
+  Future<List<MemberInfoResponse>> getAvailableMembers(int groupId, int planId) async {
+    final token = await _getAuthToken();
+
+    // 토큰 유효성 검사
+    if (!_validateToken(token)) {
+      throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+    }
+
+    final url = Uri.parse('$baseUrl${getApiPrefix(groupId)}/$planId/available-members');
+    
+    try {
+      final response = await http.get(
+        url,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+        return data.map((json) => MemberInfoResponse.fromJson(json)).toList();
+      } else {
+        throw Exception(
+          '추가 가능한 멤버 목록 조회에 실패했습니다: ${response.statusCode}, ${response.body}',
+        );
+      }
+    } catch (e) {
+      debugPrint('API 호출 중 에러 발생: $e');
+      rethrow;
+    }
+  }
+  
+  /// 계획에 멤버 추가하기
+  /// [groupId] 그룹 ID
+  /// [planId] 계획 ID
+  /// [members] 추가할 멤버 ID 목록
+  Future<AddMemberToPlanResponse> addMembersToPlan(
+    int groupId, 
+    int planId, 
+    List<AddMemberToPlanRequest> members
+  ) async {
+    final token = await _getAuthToken();
+
+    // 토큰 유효성 검사
+    if (!_validateToken(token)) {
+      throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+    }
+
+    final url = Uri.parse('$baseUrl${getApiPrefix(groupId)}/$planId/add-member');
+    
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(members.map((m) => m.toJson()).toList()),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return AddMemberToPlanResponse.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        throw Exception(
+          '계획에 멤버 추가에 실패했습니다: ${response.statusCode}, ${response.body}',
+        );
+      }
+    } catch (e) {
+      debugPrint('API 호출 중 에러 발생: $e');
+      rethrow;
+    }
+  }
+  
+  /// 계획에서 나가기
+  /// [planId] 계획 ID
+  Future<void> leavePlan(int groupId, int planId) async {
+    final token = await _getAuthToken();
+
+    // 토큰 유효성 검사
+    if (!_validateToken(token)) {
+      throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+    }
+
+    final url = Uri.parse('$baseUrl${getApiPrefix(groupId)}/$planId/leave');
+    
+    try {
+      final response = await http.delete(
+        url,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception(
+          '계획에서 나가기에 실패했습니다: ${response.statusCode}, ${response.body}',
         );
       }
     } catch (e) {

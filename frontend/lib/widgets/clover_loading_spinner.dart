@@ -1,21 +1,19 @@
 // lib/widgets/clover_loading_spinner.dart
 import 'package:flutter/material.dart';
 import 'dart:async';
+import '../config/theme.dart';
 
 // 로딩 스피너 클래스
 class CloverLoadingSpinner extends StatelessWidget {
   final double size;
-  
-  const CloverLoadingSpinner({
-    Key? key, 
-    this.size = 50.0,
-  }) : super(key: key);
+
+  const CloverLoadingSpinner({Key? key, this.size = 50.0}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Image.asset(
-        'assets/images/loading.gif', 
+        'assets/images/loading.gif',
         width: size,
         height: size,
       ),
@@ -29,12 +27,12 @@ class LoadingOverlay extends StatefulWidget {
   final Widget child;
   final Color overlayColor;
   final Duration minDisplayTime; // 최소 표시 시간 추가
-  
+
   const LoadingOverlay({
     Key? key,
     required this.isLoading,
     required this.child,
-    this.overlayColor = Colors.white70, // 기본값 0.7 opacity
+    this.overlayColor = AppColors.background,
     this.minDisplayTime = const Duration(milliseconds: 1200), // 기본값 1.2초
   }) : super(key: key);
 
@@ -56,7 +54,7 @@ class _LoadingOverlayState extends State<LoadingOverlay> {
   @override
   void didUpdateWidget(LoadingOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // 로딩 상태가 변경되면 상태 업데이트
     if (oldWidget.isLoading != widget.isLoading) {
       _updateLoadingState();
@@ -72,10 +70,11 @@ class _LoadingOverlayState extends State<LoadingOverlay> {
       });
     } else if (_showLoading) {
       // 로딩 종료 요청
-      final loadingElapsed = _loadingStartTime != null 
-          ? DateTime.now().difference(_loadingStartTime!) 
-          : Duration.zero;
-      
+      final loadingElapsed =
+          _loadingStartTime != null
+              ? DateTime.now().difference(_loadingStartTime!)
+              : Duration.zero;
+
       // 최소 표시 시간이 경과했는지 확인
       if (loadingElapsed >= widget.minDisplayTime) {
         // 최소 시간 충족, 바로 숨김
@@ -113,9 +112,7 @@ class _LoadingOverlayState extends State<LoadingOverlay> {
             color: widget.overlayColor,
             width: double.infinity,
             height: double.infinity,
-            child: const Center(
-              child: CloverLoadingSpinner(size: 120),
-            ),
+            child: const Center(child: CloverLoadingSpinner(size: 120)),
           ),
       ],
     );
