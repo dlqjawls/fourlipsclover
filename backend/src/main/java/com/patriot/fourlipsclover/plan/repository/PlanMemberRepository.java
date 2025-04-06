@@ -1,5 +1,6 @@
 package com.patriot.fourlipsclover.plan.repository;
 
+import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.plan.entity.Plan;
 import com.patriot.fourlipsclover.plan.entity.PlanMember;
 import com.patriot.fourlipsclover.plan.entity.PlanMemberId;
@@ -21,4 +22,6 @@ public interface PlanMemberRepository extends JpaRepository<PlanMember, PlanMemb
     Integer plan(Plan plan);
 
     long countByPlan_PlanId(Integer planId);
+
+	List<PlanMember> findByMember(Member member);
 }

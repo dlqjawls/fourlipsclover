@@ -55,7 +55,6 @@ public class MypageController {
 		response.put("tags", mypageData.getTags());
 		response.put("reviewCount", 10);
 		response.put("groupCount", 2);
-		response.put("albumCount", 5);
 
 		List<Map<String, Object>> recentPayments = new ArrayList<>();
 		Map<String, Object> payment1 = new HashMap<>();
