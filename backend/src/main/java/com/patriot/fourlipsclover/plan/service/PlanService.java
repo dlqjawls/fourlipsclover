@@ -2,15 +2,15 @@ package com.patriot.fourlipsclover.plan.service;
 
 import com.patriot.fourlipsclover.exception.*;
 import com.patriot.fourlipsclover.group.entity.Group;
+import com.patriot.fourlipsclover.group.entity.GroupMember;
 import com.patriot.fourlipsclover.group.entity.GroupMemberId;
 import com.patriot.fourlipsclover.group.repository.GroupMemberRepository;
 import com.patriot.fourlipsclover.group.repository.GroupRepository;
+import com.patriot.fourlipsclover.member.dto.mapper.MemberMapper;
+import com.patriot.fourlipsclover.member.dto.response.MemberInfoResponse;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.plan.dto.mapper.PlanMapper;
-import com.patriot.fourlipsclover.plan.dto.request.PlanCreateRequest;
-import com.patriot.fourlipsclover.plan.dto.request.PlanScheduleCreateRequest;
-import com.patriot.fourlipsclover.plan.dto.request.PlanScheduleUpdateRequest;
-import com.patriot.fourlipsclover.plan.dto.request.PlanUpdateRequest;
+import com.patriot.fourlipsclover.plan.dto.request.*;
 import com.patriot.fourlipsclover.plan.dto.response.*;
 import com.patriot.fourlipsclover.plan.entity.Plan;
 import com.patriot.fourlipsclover.plan.entity.PlanMember;
@@ -26,7 +26,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,6 +43,7 @@ public class PlanService {
     private final PlanMemberRepository planMemberRepository;
     private final PlanScheduleRepository planScheduleRepository;
     private final RestaurantJpaRepository restaurantJpaRepository;
+    private final MemberMapper memberMapper;
 
     public PlanResponse createPlan(int groupId, PlanCreateRequest request, long currentMemberId) {
         Group group = groupRepository.findById(groupId)
@@ -273,4 +277,88 @@ public class PlanService {
         planScheduleRepository.delete(schedule);
     }
 
+    // plan이 소속된 group의 인원 중 현재 plan에 소속되지 않은 member list 조회
+    public List<MemberInfoResponse> getAvailableMemberInfo(Integer groupId, Integer planId, long currentMemberId) {
+        // 현재 요청자가 해당 Plan의 구성원인지 확인 (권한 체크)
+        if (!planMemberRepository.existsByPlan_PlanIdAndMember_MemberId(planId, currentMemberId)) {
+            throw new NotPlanMemberException("계획에 참여한 회원만 이용할 수 있습니다.");
+        }
+
+        // Plan에 이미 포함된 회원 ID 집합 생성
+        Set<Long> planMemberIds = planMemberRepository.findByPlan_PlanId(planId)
+                .stream()
+                .map(pm -> pm.getMember().getMemberId())
+                .collect(Collectors.toSet());
+
+        // 그룹에 소속된 모든 멤버 중, Plan에 포함되지 않은 회원들을 조회 후 DTO로 매핑
+        return groupMemberRepository.findByGroup_GroupId(groupId)
+                .stream()
+                .map(GroupMember::getMember)
+                .filter(member -> !planMemberIds.contains(member.getMemberId()))
+                .map(member -> new MemberInfoResponse(
+                        member.getMemberId(),
+                        member.getNickname(),
+                        member.getEmail()))
+                .collect(Collectors.toList());
+    }
+
+    // plan이 소속된 group에서 인원 추가
+    public AddMemberToPlanResponse addMemberToPlan(Integer planId, Integer groupId, long currentMemberId, List<AddMemberToPlanRequest> requests) {
+        if (!planMemberRepository.existsByPlan_PlanIdAndMember_MemberId(planId, currentMemberId)) {
+            throw new NotPlanMemberException("계획에 참여한 회원만 친구 초대 기능을 사용할 수 있습니다.");
+        }
+        Plan plan = planRepository.findById(planId)
+                .orElseThrow(() -> new PlanNotFoundException("계획을 찾을 수 없습니다. id=" + planId));
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new GroupNotFoundException("그룹을 찾을 수 없습니다. id=" + groupId));
+
+        // 그룹 멤버들 조회, Map 구성 (memberId -> Member)
+        List<GroupMember> groupMembers = groupMemberRepository.findByGroup_GroupId(groupId);
+        Map<Long, Member> groupMemberMap = groupMembers.stream()
+                .collect(Collectors.toMap(gm -> gm.getMember().getMemberId(), GroupMember::getMember));
+
+        List<AddedMemberInfo> addedMembers = new ArrayList<>();
+
+        // 요청으로 넘어온 각 memberId에 대해 처리
+        for (AddMemberToPlanRequest req : requests) {
+            Long memberId = req.getMemberId();
+
+            // 그룹에 속한 멤버인지 확인 (이미 조회한 Map 사용)
+            Member member = groupMemberMap.get(memberId);
+            if (member == null) {
+                throw new NotGroupMemberException("그룹에 속하지 않은 멤버입니다. memberId: " + memberId);
+            }
+            // 해당 멤버가 이미 계획에 소속되어 있는지 확인
+            if (planMemberRepository.existsByPlan_PlanIdAndMember_MemberId(planId, memberId)) {
+                throw new AlreadyMemberException("이미 계획에 소속된 멤버입니다. memberId: " + memberId);
+            }
+
+            // PlanMember 엔티티 생성 및 저장 (역할은 "Participant", 가입 시각은 현재 시간)
+            PlanMemberId planMemberId = new PlanMemberId(plan.getPlanId(), memberId);
+            PlanMember planMember = PlanMember.builder()
+                    .id(planMemberId)
+                    .plan(plan)
+                    .member(member)
+                    .role("Participant")
+                    .joinedAt(LocalDateTime.now())
+                    .build();
+            planMemberRepository.save(planMember);
+
+            // 추가된 회원의 정보를 AddedMemberInfo에 저장
+            addedMembers.add(memberMapper.toAddedMemberInfo(member));
+        }
+
+        return new AddMemberToPlanResponse(addedMembers);
+    }
+
+    @Transactional
+    public void leavePlan(Integer planId, long currentMemberId) {
+        Plan plan = planRepository.findById(planId)
+                .orElseThrow(() -> new IllegalArgumentException("계획을 찾을 수 없습니다. id=" + planId));
+
+        PlanMember planMember = (PlanMember) planMemberRepository.findByPlan_PlanIdAndMember_MemberId(planId, currentMemberId)
+                .orElseThrow(() -> new NotPlanMemberException("해당 계획에 소속되어 있지 않습니다."));
+
+        planMemberRepository.delete(planMember);
+    }
 }
