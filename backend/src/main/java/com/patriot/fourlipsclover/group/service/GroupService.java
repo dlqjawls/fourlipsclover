@@ -13,10 +13,16 @@ import com.patriot.fourlipsclover.group.repository.GroupJoinRequestRepository;
 import com.patriot.fourlipsclover.group.repository.GroupMemberRepository;
 import com.patriot.fourlipsclover.group.repository.GroupRepository;
 import com.patriot.fourlipsclover.match.entity.GuideRequestForm;
+import com.patriot.fourlipsclover.match.entity.Match;
 import com.patriot.fourlipsclover.match.repository.GuideRequestFormRepository;
+import com.patriot.fourlipsclover.match.repository.MatchRepository;
+import com.patriot.fourlipsclover.match.repository.MatchTagRepository;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberRepository;
 import com.patriot.fourlipsclover.notification.service.NotificationService;
+import com.patriot.fourlipsclover.plan.entity.Plan;
+import com.patriot.fourlipsclover.plan.repository.PlanMemberRepository;
+import com.patriot.fourlipsclover.plan.repository.PlanRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -40,6 +46,10 @@ public class GroupService {
     private final MemberRepository memberRepository;
     private final GroupJoinRequestRepository groupJoinRequestRepository;
     private final GuideRequestFormRepository guideRequestFormRepository;
+    private final PlanRepository planRepository;
+    private final PlanMemberRepository planMemberRepository;
+    private final MatchRepository matchRepository;
+    private final MatchTagRepository matchTagRepository;
 
     public GroupResponse createGroup(GroupCreateRequest request, Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
@@ -222,8 +232,39 @@ public class GroupService {
             throw new UnauthorizedAccessException("그룹 생성자만 수정할 수 있습니다");
         }
 
+        // 그룹과 연관된 Match 및 MatchTag 데이터 삭제
+        // guide_request_form을 통해 연결된 Match 리스트를 조회
+        List<Match> matches = matchRepository.findByGuideRequestForm_Group_GroupId(groupId);
+        // 각 match에 대해 match_tag 테이블의 데이터 삭제
+        for (Match match : matches) {
+            // matchTagRepository는 match와 연관된 모든 match_tag 데이터를 삭제하는 메서드가 있어야 함
+            matchTagRepository.deleteByMatch(match);
+        }
+        // match 테이블의 데이터 삭제
+        for (Match match : matches) {
+            matchRepository.delete(match);
+        }
+
+        // 그룹과 연관된 GuideRequestForm 삭제
+        guideRequestFormRepository.deleteByGroup_GroupId(groupId);
+
+        // 그룹에 속한 Plan 및 PlanMember 삭제
+        List<Plan> plans = planRepository.findByGroup_GroupId(groupId);
+        for (Plan plan : plans) {
+            planMemberRepository.deleteByPlan_PlanId(plan.getPlanId());
+        }
+        planRepository.deleteByGroup_GroupId(groupId);
+
+        // 그룹 초대(GroupInvitation) 데이터 삭제
+        groupInvitationRepository.deleteByGroupId(groupId);
+
+        // 그룹 가입 요청(GroupJoinRequest) 데이터 삭제
+        groupJoinRequestRepository.deleteByGroup_GroupId(groupId);
+
+        // 그룹 멤버(GroupMember) 삭제
         groupMemberRepository.deleteByGroup_groupId(groupId);
-        groupRepository.deleteByGroupId(groupId);
+
+        groupRepository.delete(group);
     }
 
     @Transactional(readOnly = true)
@@ -244,8 +285,8 @@ public class GroupService {
             Member member = memberRepository.findByMemberId(currentMemId);
             // 새로운 그룹을 생성하고, 해당 그룹에 매칭 신청자 추가
             Group newGroup = new Group();
-            newGroup.setName("새로운 여행");  // 기본 이름 설정
-            newGroup.setDescription("가보자고");
+            newGroup.setName("떠나봐요 " + guideRequestForm.getFoodPreference() + "여행");  // 기본 이름 설정
+            newGroup.setDescription(guideRequestForm.getTastePreference() + "떠나는 여행");
             newGroup.setIsPublic(false);
             newGroup.setCreatedAt(LocalDateTime.now());
             newGroup.setMember(member);

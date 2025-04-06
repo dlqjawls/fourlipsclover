@@ -12,4 +12,7 @@ public interface PlanRepository extends JpaRepository<Plan, Integer> {
     @Query("SELECT p FROM Plan p WHERE p.group.groupId = :groupId")
     List<Plan> findPlansByGroupId(@Param("groupId") int groupId);  // Plan 엔티티만 반환
 
+    List<Plan> findByGroup_GroupId(int groupId);
+
+    void deleteByGroup_GroupId(int groupId);
 }
