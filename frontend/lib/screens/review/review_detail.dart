@@ -9,9 +9,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ReviewDetail extends StatefulWidget {
   final Review review;
-  final String restaurantId;
+  final String kakaoPlaceId;
 
-  const ReviewDetail({Key? key, required this.review, required this.restaurantId}) : super(key: key);
+  const ReviewDetail({Key? key, required this.review, required this.kakaoPlaceId}) : super(key: key);
 
   @override
   _ReviewDetailState createState() => _ReviewDetailState();
@@ -71,7 +71,7 @@ class _ReviewDetailState extends State<ReviewDetail> {
       MaterialPageRoute(
         builder: (context) => ReviewWriteScreen(
           review: _review,
-          kakaoPlaceId: widget.restaurantId,
+          kakaoPlaceId: widget.kakaoPlaceId,
         ),
       ),
     );

@@ -12,17 +12,20 @@ class ReviewService {
   static const String apiPrefix = '/api/restaurant';
 
   /// ✅ 리뷰 목록 조회
-  static Future<List<Review>> fetchReviews(String restaurantId) async {
-    print("📌 리뷰 데이터 요청: restaurantId = $restaurantId");
+  static Future<List<Review>> fetchReviews(String kakaoPlaceId) async {
+    print("📌 리뷰 데이터 요청: restaurantId = $kakaoPlaceId");
 
     List<Review> allReviews = [];
 
     try {
-      final url = Uri.parse('$baseUrl$apiPrefix/$restaurantId/reviews');
+      final url = Uri.parse('$baseUrl$apiPrefix/$kakaoPlaceId/reviews');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
         final String decodedBody = utf8.decode(response.bodyBytes);
+
+        print("🔎 응답 바디:\n$decodedBody");
+
         List<dynamic> apiData = jsonDecode(decodedBody);
 
         List<Review> apiReviews = apiData.map<Review>((json) {
@@ -39,6 +42,7 @@ class ReviewService {
 
     return allReviews;
   }
+
 
   /// ✅ 리뷰 상세 조회
   static Future<ReviewResponse> getReviewDetail({

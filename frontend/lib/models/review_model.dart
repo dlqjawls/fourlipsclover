@@ -39,23 +39,23 @@ class Review {
   });
 
   factory Review.fromResponse(ReviewResponse response) {
-    final baseUrl = dotenv.env['API_BASE_URL'] ?? '';
-
     final imageUrl = (response.reviewImageUrls.isNotEmpty)
         ? response.reviewImageUrls.first
         : null;
 
     final profileImageUrl = response.reviewer?.profileImageUrl;
 
-    print('📸 리뷰 이미지 URL: $imageUrl');
-    print('👤 작성자: ${response.reviewer?.nickname}, 리뷰 내용: ${response.content}');
-    print('🧑‍💼 프로필 이미지 URL: $profileImageUrl');
+    // 필수 값 없으면 null 반환 (리뷰 무시)
+    if (response.reviewId == null || response.reviewer == null || response.restaurant == null) {
+      print("⚠️ 필수 데이터 누락으로 리뷰 제외: $response");
+      throw Exception("리뷰 필수 데이터 누락");
+    }
 
     return Review(
-      id: response.reviewId?.toString() ?? '',
-      restaurantId: response.restaurant?.restaurantId?.toString() ?? '',
-      memberId: response.reviewer?.memberId ?? 0,
-      username: response.reviewer?.nickname ?? '익명',
+      id: response.reviewId.toString(),
+      restaurantId: response.restaurant!.kakaoPlaceId,
+      memberId: response.reviewer!.memberId,
+      username: response.reviewer!.nickname ?? '익명',
       content: response.content,
       imageUrl: imageUrl,
       profileImageUrl: profileImageUrl ?? 'assets/default_profile.png',
@@ -70,6 +70,7 @@ class Review {
       isDisliked: false,
     );
   }
+
 
   factory Review.fromJson(Map<String, dynamic> json) {
     return Review(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/models/restaurant_model.dart';
 import 'package:frontend/widgets/clover_loading_spinner.dart';
 import '../../config/theme.dart';
 import '../../services/restaurant_service.dart';
@@ -10,7 +11,6 @@ import 'review_list.dart';
 
 class RestaurantDetailScreen extends StatefulWidget {
   final String restaurantId;
-
   const RestaurantDetailScreen({Key? key, required this.restaurantId}) : super(key: key);
 
   @override
@@ -18,7 +18,7 @@ class RestaurantDetailScreen extends StatefulWidget {
 }
 
 class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
-  late Future<Map<String, dynamic>> restaurantData;
+  late Future<RestaurantResponse> restaurantData;
   late Future<List<Review>> reviews;
   bool isFavorite = false;
   String? representativeImageUrl;
@@ -62,7 +62,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, dynamic>>(
+    return FutureBuilder<RestaurantResponse>(
       future: restaurantData,
       builder: (context, snapshot) {
         final isLoading = snapshot.connectionState == ConnectionState.waiting;
@@ -78,7 +78,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               elevation: 0,
               centerTitle: true,
               title: Text(
-                snapshot.data?['placeName'] ?? "가게 정보",
+                snapshot.data?.placeName ?? "가게 정보",
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               leading: IconButton(
@@ -128,8 +128,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                     padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
                     child: Text("메뉴", style: TextStyle(fontSize: 16)),
                   ),
-                  if ((snapshot.data!['menu'] ?? []).isNotEmpty)
-                    MenuList(menu: snapshot.data!['menu'])
+                  if ((snapshot.data!.menu ?? []).isNotEmpty)
+                    MenuList(menu: snapshot.data!.menu!)
                   else
                     const Center(
                       child: Padding(

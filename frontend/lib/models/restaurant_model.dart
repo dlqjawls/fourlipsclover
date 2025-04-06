@@ -13,6 +13,10 @@ class RestaurantResponse {
   final String? placeUrl;
   final double? x;
   final double? y;
+  final Map<String, String>? openingHours;
+  final List<String>? restaurantImages;
+  final List<String>? menu;
+  final List<Map<String, dynamic>>? tags;
   double? distance;
 
   RestaurantResponse({
@@ -27,7 +31,11 @@ class RestaurantResponse {
     this.placeUrl,
     this.x,
     this.y,
+    this.openingHours,
+    this.restaurantImages,
     this.distance,
+    this.tags,
+    this.menu,
   });
 
   factory RestaurantResponse.fromJson(Map<String, dynamic> json) {
@@ -43,8 +51,17 @@ class RestaurantResponse {
       placeUrl: json['placeUrl'],
       x: json['x'],
       y: json['y'],
+      menu: (json['menu'] as List?)?.map((item) => item.toString()).toList(),
+      openingHours: json['openingHours'] != null
+          ? Map<String, String>.from(json['openingHours'])
+          : null,
+      restaurantImages: (json['restaurantImages'] as List<dynamic>?)
+          ?.map((img) => img['url'].toString())
+          .toList(),
+      tags: (json['tags'] as List<dynamic>?)?.cast<Map<String, dynamic>>(),
     );
   }
+
   Map<String, dynamic> toJson() {
     return {
       'restaurantId': restaurantId,
@@ -58,7 +75,11 @@ class RestaurantResponse {
       'placeUrl': placeUrl,
       'x': x,
       'y': y,
+      'openingHours': openingHours,
+      'restaurantImages': restaurantImages,
       'distance': distance,
+      'tags': tags,
+      'menu': menu,
     };
   }
 }
@@ -179,7 +200,6 @@ class ReviewResponse {
   String get formattedCreatedAt =>
       createdAt == null ? '' : DateFormat('yyyy.MM.dd HH:mm').format(createdAt!);
 }
-
 
 /// 리뷰 생성 요청 모델
 class ReviewCreate {

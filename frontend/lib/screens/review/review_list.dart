@@ -101,7 +101,7 @@ class _ReviewListState extends State<ReviewList> {
         MaterialPageRoute(
           builder: (context) => ReviewDetail(
             review: createdReview,
-            restaurantId: widget.restaurantId,
+            kakaoPlaceId: widget.restaurantId,
           ),
         ),
       );
@@ -166,7 +166,7 @@ class _ReviewListState extends State<ReviewList> {
                             MaterialPageRoute(
                               builder: (context) => ReviewDetail(
                                 review: review,
-                                restaurantId: widget.restaurantId,
+                                kakaoPlaceId: widget.restaurantId,
                               ),
                             ),
                           );
