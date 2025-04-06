@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import '../models/group/member_model.dart';
+import '../models/plan/edit_treasurer_request.dart';
+import '../models/plan/edit_treasurer_response.dart';
 import '../models/plan/plan_model.dart';
 import '../models/plan/plan_list_model.dart';
 import '../models/plan/plan_detail_model.dart';
@@ -510,6 +513,84 @@ class PlanProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
+
+  /// 계획 총무 수정하기
+/// [groupId] 그룹 ID
+/// [planId] 계획 ID
+/// [newTreasurerId] 새 총무 ID
+Future<EditTreasurerResponse> editTreasurer({
+  required int groupId,
+  required int planId,
+  required int newTreasurerId,
+}) async {
+  _setLoading(true);
+  try {
+    final request = EditTreasurerRequest(newTreasurerId: newTreasurerId);
+    
+    final response = await _planApi.editTreasurer(
+      groupId: groupId,
+      planId: planId,
+      request: request,
+    );
+    
+    // 선택된 계획이 수정된 계획이라면 총무 정보 갱신
+    if (_selectedPlanDetail?.planId == planId) {
+      // 현재 선택된 계획 상세 정보가 있을 경우 총무 ID 업데이트
+      _selectedPlanDetail = _selectedPlanDetail!.copyWith(
+        treasurerId: newTreasurerId,
+      );
+      
+      // 계획의 멤버 목록도 역할 정보 업데이트
+      if (_selectedPlanDetail?.members != null) {
+        final members = _selectedPlanDetail!.members;
+        for (var i = 0; i < members.length; i++) {
+          // 이전 총무의 역할을 '회원'으로 변경
+          if (members[i].memberId == response.oldTreasurerId) {
+            members[i].role = '회원';
+          }
+          // 새 총무의 역할을 '총무'로 변경
+          if (members[i].memberId == response.newTreasurerId) {
+            members[i].role = '총무';
+          }
+        }
+      }
+    }
+    
+    // 총무 이름 캐시 업데이트
+    _planTreasurerNames[planId] = response.newTreasurerNickname;
+    
+    _error = null;
+    notifyListeners();
+    return response;
+  } catch (e) {
+    _error = '총무 수정에 실패했습니다: $e';
+    debugPrint(_error);
+    throw Exception(_error);
+  } finally {
+    _setLoading(false);
+  }
+}
+
+/// 현재 로그인한 사용자가 해당 계획의 총무인지 확인
+bool isCurrentUserTreasurer(int planId, int currentMemberId) {
+  // 선택된 계획이 있고, 그 계획이 확인하려는 계획인 경우
+  if (_selectedPlanDetail?.planId == planId) {
+    return _selectedPlanDetail!.treasurerId == currentMemberId;
+  }
+  
+  return false;
+}
+
+/// 계획 멤버 중 현재 사용자를 제외한 다른 멤버 목록 가져오기
+List<Member> getOtherMembers(int planId, int currentMemberId) {
+  if (_selectedPlanDetail?.planId == planId && _selectedPlanDetail?.members != null) {
+    return _selectedPlanDetail!.members
+        .where((member) => member.memberId != currentMemberId)
+        .toList();
+  }
+  return [];
+}
+  
 
   // 계획에서 나가기 (현재 로그인한 사용자)
   Future<void> leavePlan(int groupId, int planId) async {
