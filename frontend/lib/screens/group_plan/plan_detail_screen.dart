@@ -10,6 +10,7 @@ import 'plan_widgets/plan_members_bar.dart';
 import 'plan_widgets/plan_notice_board.dart';
 import 'plan_widgets/timeline_plan_schedule_view.dart';
 import 'plan_widgets/plan_settlement_view.dart';
+import 'bottomsheet/plan_member_management_sheet.dart';
 
 class PlanDetailScreen extends StatefulWidget {
   final Plan plan;
@@ -98,6 +99,35 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
     }
     return 0; // 기본값
   }
+  
+  // 멤버 관리 바텀시트 표시
+  void _showMemberManagementSheet() {
+    if (_planDetail == null) return;
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // 전체 화면 크기로 확장 가능
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return PlanMemberManagementSheet(
+          planId: _currentPlan.planId,
+          groupId: widget.groupId,
+          currentMembers: _planDetail!.members,
+        );
+      },
+    ).then((memberAdded) {
+      // 멤버가 추가되었다면 상세 정보 다시 로드
+      if (memberAdded == true) {
+        _loadPlanDetail();
+      }
+    });
+  }
+  
+  // 사용자가 총무인지 확인
+  bool _isUserTreasurer() {
+    final myUserId = _getMyUserId();
+    return myUserId == _currentPlan.treasurerId;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -134,6 +164,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       treasurerId: _planDetail!.treasurerId,
                       isExpanded: _isMembersBarExpanded,
                       onToggle: _toggleMembersBar,
+                      // 총무만 멤버 추가 가능하도록 설정
+                      onAddMember: _isUserTreasurer() ? _showMemberManagementSheet : null,
                     ),
 
                     // 상단 탭 버튼

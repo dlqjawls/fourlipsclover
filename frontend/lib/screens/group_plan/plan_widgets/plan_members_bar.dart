@@ -8,6 +8,7 @@ class PlanMembersBar extends StatelessWidget {
   final int treasurerId; // 총무 사용자 ID
   final bool isExpanded; // 확장 상태 변수 추가
   final VoidCallback onToggle; // 토글 함수 추가
+  final VoidCallback? onAddMember; // 멤버 추가 함수 추가
 
   const PlanMembersBar({
     Key? key,
@@ -16,6 +17,7 @@ class PlanMembersBar extends StatelessWidget {
     required this.treasurerId,
     required this.isExpanded, // 확장 상태 필수 파라미터
     required this.onToggle, // 토글 함수 필수 파라미터
+    this.onAddMember, // 멤버 추가 함수 (옵션)
   }) : super(key: key);
 
   @override
@@ -74,30 +76,77 @@ class PlanMembersBar extends StatelessWidget {
             decoration: BoxDecoration(color: Colors.white),
             child: SizedBox(
               height: 70,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
+              child: Row(
                 children: [
-                  // 총무 먼저 표시
-                  ...members
-                      .where((m) => m.memberId == treasurerId)
-                      .map(
-                        (member) => Padding(
-                          padding: const EdgeInsets.only(right: 12.0),
-                          child: _buildMemberAvatar(member),
-                        ),
-                      ),
-                  // 일반 멤버 표시
-                  ...members
-                      .where((m) => m.memberId != treasurerId)
-                      .map(
-                        (member) => Padding(
-                          padding: const EdgeInsets.only(right: 12.0),
-                          child: _buildMemberAvatar(member),
-                        ),
-                      ),
+                  // 멤버 목록 (스크롤 가능)
+                  Expanded(
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        // 총무 먼저 표시
+                        ...members
+                            .where((m) => m.memberId == treasurerId)
+                            .map(
+                              (member) => Padding(
+                                padding: const EdgeInsets.only(right: 12.0),
+                                child: _buildMemberAvatar(member),
+                              ),
+                            ),
+                        // 일반 멤버 표시
+                        ...members
+                            .where((m) => m.memberId != treasurerId)
+                            .map(
+                              (member) => Padding(
+                                padding: const EdgeInsets.only(right: 12.0),
+                                child: _buildMemberAvatar(member),
+                              ),
+                            ),
 
-                  // 공간 추가하여 추가 버튼과 겹치지 않게
-                  const SizedBox(width: 8),
+                        // 공간 추가하여 추가 버튼과 겹치지 않게
+                        const SizedBox(width: 8),
+                      ],
+                    ),
+                  ),
+                  
+                  // 멤버 추가 버튼 (onAddMember가 제공된 경우에만 표시)
+                  if (onAddMember != null)
+                    Container(
+                      margin: const EdgeInsets.only(left: 8),
+                      child: GestureDetector(
+                        onTap: onAddMember,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 46,
+                              height: 46,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.verylightGray,
+                                border: Border.all(
+                                  color: AppColors.lightGray,
+                                  width: 1.0,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.person_add,
+                                color: AppColors.mediumGray,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '초대하기',
+                              style: TextStyle(
+                                fontFamily: 'Anemone_air',
+                                fontSize: 11,
+                                color: AppColors.mediumGray,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

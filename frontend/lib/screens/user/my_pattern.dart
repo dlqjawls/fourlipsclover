@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:csv/csv.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:frontend/config/theme.dart';
+import 'package:frontend/services/user_service.dart';
+import 'package:frontend/providers/user_provider.dart';
+import 'package:intl/intl.dart';
 
 class DataVizPage extends StatefulWidget {
   const DataVizPage({Key? key}) : super(key: key);
@@ -12,92 +15,42 @@ class DataVizPage extends StatefulWidget {
 }
 
 class _DataVizPageState extends State<DataVizPage> {
-  List<Map<String, dynamic>> groupSizeData = [];
-  List<Map<String, dynamic>> dayOfWeekData = [];
+  final UserService _userService = UserService(userProvider: UserProvider());
+  Map<String, dynamic>? categoryData;
   bool isLoading = true;
-
-  static const Map<String, int> dayOrder = {
-    'Mon': 1,
-    'Tue': 2,
-    'Wed': 3,
-    'Thu': 4,
-    'Fri': 5,
-    'Sat': 6,
-    'Sun': 7,
-  };
-
-  static const Map<int, String> dayLabels = {
-    1: '월',
-    2: '화',
-    3: '수',
-    4: '목',
-    5: '금',
-    6: '토',
-    7: '일',
-  };
+  String errorMessage = '';
 
   @override
   void initState() {
     super.initState();
-    loadData();
+    _loadData();
   }
 
-  Future<void> loadData() async {
+  Future<void> _loadData() async {
     try {
-      // CSV 파일 로드 및 파싱
-      final groupSizeData = await _loadCSVData(
-        'assets/test/spending_by_group_size.csv',
-        processGroupSizeRow,
-      );
-      final dayOfWeekData = await _loadCSVData(
-        'assets/test/spending_by_day_of_week.csv',
-        processDayOfWeekRow,
+      final now = DateTime.now();
+      final startDate = DateFormat(
+        'yyyy-MM-dd',
+      ).format(now.subtract(const Duration(days: 30)));
+      final endDate = DateFormat('yyyy-MM-dd').format(now);
+
+      final data = await _userService.getCategoryAnalysis(
+        startDate: startDate,
+        endDate: endDate,
       );
 
       setState(() {
-        this.groupSizeData = groupSizeData;
-        this.dayOfWeekData = dayOfWeekData;
+        categoryData = data;
         isLoading = false;
+        errorMessage = '';
       });
     } catch (e) {
-      print('데이터 로드 오류: $e');
-      setState(() => isLoading = false);
+      debugPrint('getCategoryAnalysis 에러: $e');
+      setState(() {
+        errorMessage = '서버와의 통신에 문제가 발생했습니다.\n잠시 후 다시 시도해주세요.';
+        isLoading = false;
+      });
     }
-  }
-
-  Future<List<Map<String, dynamic>>> _loadCSVData(
-    String path,
-    Map<String, dynamic> Function(List<dynamic>) processRow,
-  ) async {
-    final String rawData = await rootBundle.loadString(path);
-    final rows = const CsvToListConverter().convert(rawData);
-    final List<Map<String, dynamic>> processedData = [];
-
-    for (int i = 1; i < rows.length; i++) {
-      processedData.add(processRow(rows[i]));
-    }
-
-    return processedData;
-  }
-
-  Map<String, dynamic> processGroupSizeRow(List<dynamic> row) {
-    return {
-      'traveler_count': int.tryParse(row[0].toString()) ?? 0,
-      'transaction_count': int.tryParse(row[1].toString()) ?? 0,
-      'avg_amount_per_transaction':
-          double.tryParse(row[2].toString().replaceAll(',', '')) ?? 0.0,
-    };
-  }
-
-  Map<String, dynamic> processDayOfWeekRow(List<dynamic> row) {
-    final day = row[0].toString();
-    return {
-      'day_of_week': day,
-      'day_order': dayOrder[day] ?? 0,
-      'transaction_count': int.tryParse(row[1].toString()) ?? 0,
-      'avg_amount':
-          double.tryParse(row[2].toString().replaceAll(',', '')) ?? 0.0,
-    };
   }
 
   @override
@@ -126,70 +79,107 @@ class _DataVizPageState extends State<DataVizPage> {
 
   Widget _buildBody() {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text(
+              '데이터를 불러오는 중입니다...',
+              style: TextStyle(color: AppColors.darkGray, fontSize: 14),
+            ),
+          ],
+        ),
+      );
     }
+
+    final data = categoryData ?? _getExampleData();
+    final isExampleData = categoryData == null;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _buildGroupSizeChart(),
-          const SizedBox(height: 24),
-          _buildDayOfWeekChart(),
+          if (isExampleData)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.lightGray.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        color: AppColors.darkGray,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '서버와의 통신에 문제가 있어 예시 데이터를 보여드립니다.',
+                          style: TextStyle(
+                            color: AppColors.darkGray.withOpacity(0.7),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: _loadData,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 8,
+                      ),
+                      minimumSize: const Size(double.infinity, 36),
+                    ),
+                    child: const Text('다시 시도'),
+                  ),
+                ],
+              ),
+            ),
+          _buildCategoryChart(data),
         ],
       ),
     );
   }
 
-  Widget _buildGroupSizeChart() {
-    if (groupSizeData.isEmpty) {
-      return const Center(child: Text('데이터가 없습니다'));
-    }
-
-    double maxY = groupSizeData
-        .map((data) => data['avg_amount_per_transaction'] as double)
-        .reduce((max, value) => value > max ? value : max);
-
-    return _buildChartCard(
-      title: '인원별 평균 소비 금액',
-      maxY: maxY,
-      buildBarGroups:
-          () =>
-              groupSizeData
-                  .map(
-                    (data) => _buildBarGroup(
-                      x: data['traveler_count'],
-                      y: data['avg_amount_per_transaction'],
-                    ),
-                  )
-                  .toList(),
-      getTitleText: (value) => '${value.toInt()}명',
-    );
+  Map<String, dynamic> _getExampleData() {
+    return {
+      'categories': ['양식', '일식', '한식', '디저트', '분식'],
+      'amounts': [80000, 50000, 70000, 90000, 60000],
+    };
   }
 
-  Widget _buildDayOfWeekChart() {
-    if (dayOfWeekData.isEmpty) {
-      return const Center(child: Text('데이터가 없습니다'));
-    }
+  Widget _buildCategoryChart(Map<String, dynamic> data) {
+    final categories = data['categories'] as List<dynamic>;
+    final amounts = data['amounts'] as List<dynamic>;
 
-    double maxY = dayOfWeekData
-        .map((data) => data['avg_amount'] as double)
+    double maxY = amounts
+        .map((amount) => double.tryParse(amount.toString()) ?? 0.0)
         .reduce((max, value) => value > max ? value : max);
 
     return _buildChartCard(
-      title: '요일별 평균 소비 금액',
+      title: '카테고리별 지출',
       maxY: maxY,
       buildBarGroups:
-          () =>
-              dayOfWeekData
-                  .map(
-                    (data) => _buildBarGroup(
-                      x: data['day_order'],
-                      y: data['avg_amount'],
-                    ),
-                  )
-                  .toList(),
-      getTitleText: (value) => dayLabels[value.toInt()] ?? '',
+          () => List.generate(
+            categories.length,
+            (index) => _buildBarGroup(
+              x: index,
+              y: double.tryParse(amounts[index].toString()) ?? 0.0,
+            ),
+          ),
+      getTitleText: (value) => categories[value.toInt()].toString(),
     );
   }
 

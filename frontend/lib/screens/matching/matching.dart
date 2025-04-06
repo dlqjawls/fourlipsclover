@@ -3,6 +3,7 @@ import 'package:frontend/config/theme.dart';
 import 'package:frontend/screens/matching/matchingcreate/matching_hashtag.dart';
 import 'package:frontend/screens/matching/matching_detail.dart';
 import 'package:frontend/screens/matching/matchinglocal/matching_local_list.dart';
+import 'package:frontend/screens/matching/matchingchat/matching_chat.dart';
 import 'package:frontend/services/matching/matching_service.dart';
 import 'package:frontend/models/matching/matching_main_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -295,6 +296,15 @@ class _MatchingScreenState extends State<MatchingScreen>
                     ),
                   ),
                   const Spacer(),
+                  if (match.status == 'CONFIRMED')
+                    TextButton.icon(
+                      onPressed: () => _navigateToChat(match),
+                      icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                      label: const Text('채팅하기'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                      ),
+                    ),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -367,6 +377,16 @@ class _MatchingScreenState extends State<MatchingScreen>
       context,
       MaterialPageRoute(
         builder: (context) => MatchingDetailScreen(matchId: match.matchId),
+      ),
+    );
+  }
+
+  void _navigateToChat(dynamic match) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => MatchingChatScreen(groupId: match.matchId.toString()),
       ),
     );
   }
