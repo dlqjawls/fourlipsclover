@@ -44,11 +44,7 @@ class SettlementProvider with ChangeNotifier {
     setLoading(true);
     try {
       await _settlementApi.createSettlement(planId);
-      _error = null;
-      
-      // 성공 후 상세 정보 바로 로드
-      await fetchSettlementDetail(planId);
-      
+      _error = null;  
       return true;
     } catch (e) {
       _error = '정산 생성에 실패했습니다: $e';
