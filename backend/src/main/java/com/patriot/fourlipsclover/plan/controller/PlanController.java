@@ -139,12 +139,21 @@ public class PlanController {
         return planService.addMemberToPlan(planId, groupId, currentMemberId, request);
     }
 
-    // 계획 인원 나가기
+    // 계획 나가기(마지막 1명인 경우 plan 삭제)
     @DeleteMapping("/{planId}/leave")
     public ResponseEntity<Void> leavePlan(@PathVariable int planId) {
         long currentMemberId = getCurrentMemberId();
         planService.leavePlan(planId, currentMemberId);
         return ResponseEntity.noContent().build();
+    }
+
+    // 계획 총무 수정
+    @PutMapping("/{planId}/edit-treasurer")
+    public ResponseEntity<EditTreasurerResponse> editTreasurer(@PathVariable int planId,
+                                                               @RequestBody EditTreasurerRequest request) {
+        long currentMemberId = getCurrentMemberId();
+        EditTreasurerResponse response = planService.editTreasurer(planId, currentMemberId, request);
+        return ResponseEntity.ok(response);
     }
 
 }

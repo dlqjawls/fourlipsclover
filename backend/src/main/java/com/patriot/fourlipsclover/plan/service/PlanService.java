@@ -17,6 +17,7 @@ import com.patriot.fourlipsclover.plan.entity.PlanMember;
 import com.patriot.fourlipsclover.plan.entity.PlanMemberId;
 import com.patriot.fourlipsclover.plan.entity.PlanSchedule;
 import com.patriot.fourlipsclover.plan.repository.PlanMemberRepository;
+import com.patriot.fourlipsclover.plan.repository.PlanNoticeRepository;
 import com.patriot.fourlipsclover.plan.repository.PlanRepository;
 import com.patriot.fourlipsclover.plan.repository.PlanScheduleRepository;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
@@ -44,6 +45,7 @@ public class PlanService {
     private final PlanScheduleRepository planScheduleRepository;
     private final RestaurantJpaRepository restaurantJpaRepository;
     private final MemberMapper memberMapper;
+    private final PlanNoticeRepository planNoticeRepository;
 
     public PlanResponse createPlan(int groupId, PlanCreateRequest request, long currentMemberId) {
         Group group = groupRepository.findById(groupId)
@@ -351,6 +353,7 @@ public class PlanService {
         return new AddMemberToPlanResponse(addedMembers);
     }
 
+    // Plan 떠나기
     @Transactional
     public void leavePlan(Integer planId, long currentMemberId) {
         Plan plan = planRepository.findById(planId)
@@ -360,5 +363,61 @@ public class PlanService {
                 .orElseThrow(() -> new NotPlanMemberException("해당 계획에 소속되어 있지 않습니다."));
 
         planMemberRepository.delete(planMember);
+
+        long remainingMembers = planMemberRepository.countByPlan_PlanId(planId);
+        if (remainingMembers == 0) {
+            // PlanSchedule 삭제
+            planScheduleRepository.deleteByPlan_PlanId(planId);
+
+            // PlanNotice 삭제
+            planNoticeRepository.deleteByPlan_PlanId(planId);
+
+            // Plan 삭제
+            planRepository.delete(plan);
+        }
     }
+
+    public EditTreasurerResponse editTreasurer(int planId, long currentMemberId, EditTreasurerRequest request) {
+        long newTreasurerId = request.getNewTreasurerId();
+
+        Plan plan = planRepository.findById(planId)
+                .orElseThrow(() -> new PlanNotFoundException("계획을 찾을 수 없습니다. id=" + planId));
+        if (plan.getTreasurer() != currentMemberId) {
+            throw new UnauthorizedAccessException("현재 총무만 총무를 변경할 수 있습니다.");
+        }
+
+        // 새 총무 후보가 해당 계획의 구성원인지 및 역할이 PARTICIPANT인지 확인
+        PlanMemberId newMemberId = new PlanMemberId(planId, newTreasurerId);
+        PlanMember newTreasurerMember = planMemberRepository.findById(newMemberId)
+                .orElseThrow(() -> new NotPlanMemberException("해당 계획에 참여 중인 회원이 아닙니다: " + newTreasurerId));
+        if (!"PARTICIPANT".equalsIgnoreCase(newTreasurerMember.getRole())) {
+            throw new IllegalArgumentException("선택한 회원은 총무로 변경할 수 없는 역할입니다.");
+        }
+
+        // 기존 총무 PlanMember 조회
+        PlanMemberId currentTreasurerId = new PlanMemberId(planId, plan.getTreasurer());
+        PlanMember currentTreasurerMember = planMemberRepository.findById(currentTreasurerId)
+                .orElseThrow(() -> new NotPlanMemberException("현재 총무 정보가 존재하지 않습니다."));
+
+        // 역할 업데이트
+        currentTreasurerMember.setRole("PARTICIPANT"); // 기존 총무 -> 일반 참여자로 변경
+        newTreasurerMember.setRole("TREASURER");        // 선택된 회원 -> 총무로 변경
+
+        planMemberRepository.save(currentTreasurerMember);
+        planMemberRepository.save(newTreasurerMember);
+
+        // Plan 엔티티의 총무 ID 업데이트
+        plan.setTreasurer(newTreasurerId);
+        planRepository.save(plan);
+
+        // 응답 객체 생성 및 반환
+        EditTreasurerResponse response = new EditTreasurerResponse();
+        response.setPlanId(planId);
+        response.setOldTreasurerId(currentTreasurerMember.getMember().getMemberId());
+        response.setOldTreasurerNickname(currentTreasurerMember.getMember().getNickname());
+        response.setNewTreasurerId(newTreasurerId);
+        response.setNewTreasurerNickname(newTreasurerMember.getMember().getNickname());
+        return response;
+    }
+
 }

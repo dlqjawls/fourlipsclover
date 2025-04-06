@@ -8,8 +8,11 @@ import com.patriot.fourlipsclover.locals.entity.LocalCertification;
 import com.patriot.fourlipsclover.locals.repository.LocalCertificationRepository;
 import com.patriot.fourlipsclover.locals.repository.LocalsElasticsearchRepository;
 import com.patriot.fourlipsclover.member.entity.MemberReviewTag;
+import com.patriot.fourlipsclover.restaurant.document.RestaurantDocument;
+import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
 import com.patriot.fourlipsclover.restaurant.entity.RestaurantTag;
 import com.patriot.fourlipsclover.restaurant.entity.Review;
+import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
 import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
 import com.patriot.fourlipsclover.tag.dto.response.TagInfo;
 import com.patriot.fourlipsclover.tag.dto.response.TagListResponse;
@@ -25,6 +28,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.elasticsearch.core.geo.GeoPoint;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +46,7 @@ public class TagService {
 	private final ElasticsearchClient elasticsearchClient;
 	private final LocalsElasticsearchRepository localsElasticsearchRepository;
 	private final LocalCertificationRepository localCertificationRepository;
+	private final RestaurantJpaRepository restaurantJpaRepository;
 	@Value("${model.server.uri}")
 	private String MODEL_SERVER_URI;
 
@@ -174,5 +179,45 @@ public class TagService {
 
 		// Elasticsearch에 저장
 		localsElasticsearchRepository.save(localsDocument);
+	}
+	@Transactional(readOnly = true)
+	public int uploadRestaurantDocument() {
+		List<Restaurant> restaurants = restaurantJpaRepository.findAll();
+		int count = 0;
+
+		for (Restaurant restaurant : restaurants) {
+			List<RestaurantTag> tags = restaurantTagRepository.findByRestaurant(restaurant);
+
+			List<RestaurantDocument.TagData> tagDataList = tags.stream()
+					.map(tag -> RestaurantDocument.TagData.builder()
+							.tagName(tag.getTag().getName())
+							.category(tag.getTag().getCategory())
+							.frequency(tag.getFrequency())
+							.avgConfidence(tag.getAvgConfidence())
+							.build())
+					.collect(Collectors.toList());
+
+			RestaurantDocument restaurantDocument = RestaurantDocument.builder()
+					.id(restaurant.getKakaoPlaceId())
+					.kakaoPlaceId(restaurant.getKakaoPlaceId())
+					.name(restaurant.getPlaceName())
+					.address(restaurant.getAddressName())
+					.category(restaurant.getCategory())
+					.location(new GeoPoint(restaurant.getY(), restaurant.getX()))
+					.tags(tagDataList)
+					.build();
+
+			try {
+				elasticsearchClient.index(i -> i
+						.index("restaurants")
+						.id(restaurant.getKakaoPlaceId())
+						.document(restaurantDocument));
+				count++;
+			} catch (Exception e) {
+				System.err.println("레스토랑 인덱싱 실패: " + restaurant.getKakaoPlaceId() + " - " + e.getMessage());
+			}
+		}
+
+		return count;
 	}
 }

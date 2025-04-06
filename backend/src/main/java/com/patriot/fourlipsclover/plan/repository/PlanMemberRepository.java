@@ -19,4 +19,6 @@ public interface PlanMemberRepository extends JpaRepository<PlanMember, PlanMemb
     Optional<Object> findByPlan_PlanIdAndMember_MemberId(Integer planId, long currentMemberId);
 
     Integer plan(Plan plan);
+
+    long countByPlan_PlanId(Integer planId);
 }
