@@ -10,6 +10,9 @@ import '../models/plan/plan_schedule_create_request.dart';
 import '../models/plan/plan_schedule_update_model.dart';
 import '../models/plan/plan_schedule_update_request.dart';
 import '../models/plan/plan_schedule_detail_model.dart';
+import '../models/plan/member_info_response.dart';
+import '../models/plan/add_member_to_plan_request.dart';
+import '../models/plan/add_member_to_plan_response.dart';
 import '../services/api/plan_api.dart';
 
 class PlanProvider with ChangeNotifier {
@@ -29,6 +32,9 @@ class PlanProvider with ChangeNotifier {
 
   // 계획별 총무 이름을 캐시하는 맵
   final Map<int, String> _planTreasurerNames = {};
+  
+  // 계획에 추가 가능한 멤버 목록
+  final Map<int, List<MemberInfoResponse>> _availableMembers = {}; // planId를 키로 사용
 
   // 로딩 및 에러 상태
   bool _isLoading = false;
@@ -39,6 +45,8 @@ class PlanProvider with ChangeNotifier {
   PlanDetail? get selectedPlanDetail => _selectedPlanDetail;
   List<PlanSchedule> getSchedulesForPlan(int planId) =>
       _planSchedules[planId] ?? [];
+  List<MemberInfoResponse> getAvailableMembersForPlan(int planId) =>
+      _availableMembers[planId] ?? [];
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -427,29 +435,114 @@ class PlanProvider with ChangeNotifier {
 
   // PlanProvider 클래스에 다음 메서드를 추가합니다
 
-// 계획-일정 상세 조회
-Future<PlanScheduleDetail> getPlanScheduleDetail(
-  int groupId,
-  int planId,
-  int scheduleId,
-) async {
-  _setLoading(true);
-  try {
-    final scheduleDetail = await _planApi.getPlanScheduleDetail(
-      groupId,
-      planId,
-      scheduleId,
-    );
-    _error = null;
-    return scheduleDetail;
-  } catch (e) {
-    _error = '일정 상세 정보를 불러오는데 실패했습니다: $e';
-    debugPrint(_error);
-    throw Exception(_error);
-  } finally {
-    _setLoading(false);
+  // 계획-일정 상세 조회
+  Future<PlanScheduleDetail> getPlanScheduleDetail(
+    int groupId,
+    int planId,
+    int scheduleId,
+  ) async {
+    _setLoading(true);
+    try {
+      final scheduleDetail = await _planApi.getPlanScheduleDetail(
+        groupId,
+        planId,
+        scheduleId,
+      );
+      _error = null;
+      return scheduleDetail;
+    } catch (e) {
+      _error = '일정 상세 정보를 불러오는데 실패했습니다: $e';
+      debugPrint(_error);
+      throw Exception(_error);
+    } finally {
+      _setLoading(false);
+    }
   }
-}
+
+  // 계획에 추가 가능한 멤버 목록 조회
+  Future<List<MemberInfoResponse>> fetchAvailableMembers(int groupId, int planId) async {
+    _setLoading(true);
+    try {
+      final members = await _planApi.getAvailableMembers(groupId, planId);
+      _availableMembers[planId] = members;
+      _error = null;
+      notifyListeners();
+      return members;
+    } catch (e) {
+      _error = '추가 가능한 멤버 목록을 불러오는데 실패했습니다: $e';
+      debugPrint(_error);
+      throw Exception(_error);
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // 계획에 멤버 추가하기
+  Future<AddMemberToPlanResponse> addMembersToPlan(int groupId, int planId, List<int> memberIds) async {
+    _setLoading(true);
+    try {
+      // memberIds 리스트를 AddMemberToPlanRequest 리스트로 변환
+      final requests = memberIds.map((id) => AddMemberToPlanRequest(memberId: id)).toList();
+      
+      final response = await _planApi.addMembersToPlan(groupId, planId, requests);
+      
+      // 계획 상세 정보 다시 로드하여 멤버 목록 갱신
+      if (_selectedPlanDetail?.planId == planId) {
+        await fetchPlanDetail(groupId, planId);
+      }
+      
+      // 계획의 멤버 수 업데이트
+      if (_planMemberCounts.containsKey(planId)) {
+        _planMemberCounts[planId] = (_planMemberCounts[planId] ?? 0) + response.addedMembers.length;
+      }
+      
+      // 추가 가능한 멤버 목록 다시 로드
+      await fetchAvailableMembers(groupId, planId);
+      
+      _error = null;
+      notifyListeners();
+      return response;
+    } catch (e) {
+      _error = '멤버 추가에 실패했습니다: $e';
+      debugPrint(_error);
+      throw Exception(_error);
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // 계획에서 나가기 (현재 로그인한 사용자)
+  Future<void> leavePlan(int groupId, int planId) async {
+    _setLoading(true);
+    try {
+      await _planApi.leavePlan(groupId, planId);
+      
+      // 계획 목록에서 해당 계획 제거
+      if (_planLists[groupId] != null) {
+        _planLists[groupId]!.removeWhere((plan) => plan.planId == planId);
+      }
+      
+      // 선택된 계획이 나간 계획이라면 선택 해제
+      if (_selectedPlanDetail?.planId == planId) {
+        _selectedPlanDetail = null;
+      }
+      
+      // 캐시에서 계획 관련 정보 제거
+      _planMemberCounts.remove(planId);
+      _planTreasurerNames.remove(planId);
+      _planSchedules.remove(planId);
+      _availableMembers.remove(planId);
+      
+      _error = null;
+      notifyListeners();
+    } catch (e) {
+      _error = '계획에서 나가기에 실패했습니다: $e';
+      debugPrint(_error);
+      throw Exception(_error);
+    } finally {
+      _setLoading(false);
+    }
+  }
 
   void _setLoading(bool loading) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
