@@ -1,5 +1,6 @@
 package com.patriot.fourlipsclover.restaurant.document;
 
+import com.patriot.fourlipsclover.locals.document.LocalsDocument.TagData;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,7 +29,7 @@ public class RestaurantDocument {
 	@Field(type = FieldType.Text, analyzer = "korean")
 	private String category;
 	@Field(type = FieldType.Nested)
-	private List<String> tags;
+	private List<TagData> tags;
 	@GeoPointField
 	private GeoPoint location;
 
@@ -37,4 +38,23 @@ public class RestaurantDocument {
 
 	@Field(type = FieldType.Keyword)
 	private Integer restaurantId;
+
+	@Data
+	@NoArgsConstructor
+	@AllArgsConstructor
+	@Builder
+	public static class TagData {
+
+		@Field(type = FieldType.Text, analyzer = "nori")
+		private String tagName;
+
+		@Field(type = FieldType.Keyword)
+		private String category;
+
+		@Field(type = FieldType.Integer)
+		private int frequency;
+
+		@Field(type = FieldType.Float)
+		private float avgConfidence;
+	}
 }

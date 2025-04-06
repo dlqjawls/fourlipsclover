@@ -532,7 +532,23 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                               'plan': plan,
                               'groupId': _currentGroup.groupId,
                             },
-                          );
+                          ).then((result) {
+                            // 계획에서 나갔다면 해당 계획을 목록에서 즉시 제거
+                            if (result != null &&
+                                result is Map &&
+                                result['action'] == 'leave') {
+                              int planId = result['planId'];
+                              setState(() {
+                                // UI에서 즉시 제거
+                                _plans?.removeWhere(
+                                  (plan) => plan.planId == planId,
+                                );
+                              });
+
+                              // 백그라운드에서 계획 목록 다시 로드 (UI는 이미 업데이트됨)
+                              _loadPlans();
+                            }
+                          });
                         },
                         treasurerNames: _getTreasurerNames(plans),
                         memberCounts: _getMemberCounts(plans),
@@ -637,6 +653,9 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.mediumGray,
+                ),
                 child: const Text('취소'),
               ),
               TextButton(

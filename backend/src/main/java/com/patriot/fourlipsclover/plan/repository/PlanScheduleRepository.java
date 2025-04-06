@@ -10,4 +10,5 @@ public interface PlanScheduleRepository extends JpaRepository<PlanSchedule, Inte
 
     List<PlanSchedule> findByPlan(Plan plan);
 
+    void deleteByPlan_PlanId(Integer planId);
 }

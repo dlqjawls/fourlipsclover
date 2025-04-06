@@ -60,9 +60,7 @@ class UserService {
       final token = prefs.getString('jwtToken');
       final baseUrl = dotenv.env['API_BASE_URL'];
 
-      final url = Uri.parse(
-        '$baseUrl/api/mypage/$userId/upload-profile-image',
-      );
+      final url = Uri.parse('$baseUrl/api/mypage/$userId/upload-profile-image');
 
       var request = http.MultipartRequest('POST', url);
       request.headers['Authorization'] = '$token';
@@ -79,6 +77,68 @@ class UserService {
       }
     } catch (e) {
       debugPrint('uploadProfileImage 에러: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getSpendingHistory({
+    required String startDate,
+    required String endDate,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwtToken');
+      final baseUrl = dotenv.env['API_BASE_URL'];
+
+      final response = await http.get(
+        Uri.parse(
+          '$baseUrl/api/spending-analysis/history?startDate=$startDate&endDate=$endDate',
+        ),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Authorization': '$token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = utf8.decode(response.bodyBytes);
+        return json.decode(data);
+      } else {
+        throw Exception('소비 내역 조회 실패: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('getSpendingHistory 에러: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getCategoryAnalysis({
+    required String startDate,
+    required String endDate,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwtToken');
+      final baseUrl = dotenv.env['API_BASE_URL'];
+
+      final response = await http.get(
+        Uri.parse(
+          '$baseUrl/api/spending-analysis/category?startDate=$startDate&endDate=$endDate',
+        ),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Authorization': '$token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = utf8.decode(response.bodyBytes);
+        return json.decode(data);
+      } else {
+        throw Exception('카테고리 분석 조회 실패: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('getCategoryAnalysis 에러: $e');
       rethrow;
     }
   }

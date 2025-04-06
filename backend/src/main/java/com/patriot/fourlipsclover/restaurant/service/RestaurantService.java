@@ -99,13 +99,13 @@ public class RestaurantService {
 				LikeStatus.DISLIKE);
 		response.setLikedCount(likedCount.intValue());
 		response.setDislikedCount(dislikedCount.intValue());
-		try {
-			Member member = loadCurrentMember();
+		Member member = loadCurrentMember();
+		if (member != null) {
 			boolean userLiked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.LIKE);
 			boolean userDisliked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.DISLIKE);
 			response.setUserLiked(userLiked);
 			response.setUserDisliked(userDisliked);
-		} catch (UnauthorizedAccessException e) {
+		} else {
 			response.setUserLiked(false);
 			response.setUserDisliked(false);
 		}
@@ -114,8 +114,9 @@ public class RestaurantService {
 
 	private Member loadCurrentMember() {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (authentication == null || !authentication.isAuthenticated()) {
-			throw new UnauthorizedAccessException("인증되지 않은 사용자입니다.");
+		if (authentication == null || !authentication.isAuthenticated() ||
+				!(authentication.getPrincipal() instanceof CustomUserDetails)) {
+			return null;
 		}
 		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 		return userDetails.getMember();
@@ -140,13 +141,13 @@ public class RestaurantService {
 							reviewId, LikeStatus.DISLIKE);
 					response.setLikedCount(likedCount.intValue());
 					response.setDislikedCount(dislikedCount.intValue());
-					try {
-						Member member = loadCurrentMember();
+					Member member = loadCurrentMember();
+					if (member != null) {
 						boolean userLiked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.LIKE);
 						boolean userDisliked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.DISLIKE);
 						response.setUserLiked(userLiked);
 						response.setUserDisliked(userDisliked);
-					} catch (UnauthorizedAccessException e) {
+					} else {
 						response.setUserLiked(false);
 						response.setUserDisliked(false);
 					}
@@ -182,10 +183,13 @@ public class RestaurantService {
 
 	private void checkReviewerIsCurrentUser(Long reviewMemberId) {
 		Member member =loadCurrentMember();
-
+		if (member == null) {
+			throw new UnauthorizedAccessException("로그인이 필요한 기능입니다.");
+		}
 		if (!Objects.equals(member.getMemberId(), reviewMemberId)) {
 			throw new UnauthorizedAccessException("현재 User ID가 작성자 ID와 다릅니다.");
 		}
+
 	}
 
 	@Transactional

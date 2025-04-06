@@ -5,6 +5,7 @@ import com.patriot.fourlipsclover.tag.service.TagService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,6 +23,12 @@ public class TagController {
     public ResponseEntity<List<TagListResponse>> getTagList() {
         List<TagListResponse> response = tagService.getTagList();
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/restaurant")
+    public ResponseEntity<Integer> uploadRestaurantIndex(){
+        int count = tagService.uploadRestaurantDocument();
+        return ResponseEntity.ok(count);
     }
 
 }

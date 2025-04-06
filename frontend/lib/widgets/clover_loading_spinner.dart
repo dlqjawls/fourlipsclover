@@ -1,6 +1,7 @@
 // lib/widgets/clover_loading_spinner.dart
 import 'package:flutter/material.dart';
 import 'dart:async';
+import '../config/theme.dart';
 
 // 로딩 스피너 클래스
 class CloverLoadingSpinner extends StatelessWidget {
@@ -31,7 +32,7 @@ class LoadingOverlay extends StatefulWidget {
     Key? key,
     required this.isLoading,
     required this.child,
-    this.overlayColor = Colors.white70, // 기본값 0.7 opacity
+    this.overlayColor = AppColors.background,
     this.minDisplayTime = const Duration(milliseconds: 1200), // 기본값 1.2초
   }) : super(key: key);
 

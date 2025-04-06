@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../../models/plan/plan_model.dart';
 import '../../../models/plan/plan_schedule_model.dart';
 import '../../../models/plan/plan_schedule_update_request.dart';
 import '../../../providers/plan_provider.dart';
 import '../../../config/theme.dart';
+import 'custom_time_picker.dart';
 
 class ScheduleUpdateBottomSheet extends StatefulWidget {
   final int groupId;
   final int planId;
   final PlanSchedule schedule;
   final Function onScheduleUpdated;
+  final DateTime startDate; // 여행 시작일
+  final DateTime endDate; // 여행 종료일
 
   const ScheduleUpdateBottomSheet({
     Key? key,
@@ -18,43 +22,46 @@ class ScheduleUpdateBottomSheet extends StatefulWidget {
     required this.planId,
     required this.schedule,
     required this.onScheduleUpdated,
+    required this.startDate,
+    required this.endDate,
   }) : super(key: key);
 
   @override
-  State<ScheduleUpdateBottomSheet> createState() => _ScheduleUpdateBottomSheetState();
+  State<ScheduleUpdateBottomSheet> createState() =>
+      _ScheduleUpdateBottomSheetState();
 }
 
 class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
   final _formKey = GlobalKey<FormState>();
   final _notesController = TextEditingController();
-  
-  DateTime _selectedDate = DateTime.now();
-  TimeOfDay _selectedTime = TimeOfDay.now();
+
+  late DateTime _selectedDate;
+  late TimeOfDay _selectedTime;
   bool _isLoading = false;
-  
+
   // 일정 상세 정보에서 가져올 restaurantId
   int? _restaurantId;
 
   @override
   void initState() {
     super.initState();
-    
+
     // 기존 일정 데이터로 초기화
     _selectedDate = DateTime(
       widget.schedule.visitAt.year,
       widget.schedule.visitAt.month,
       widget.schedule.visitAt.day,
     );
-    
+
     _selectedTime = TimeOfDay(
       hour: widget.schedule.visitAt.hour,
       minute: widget.schedule.visitAt.minute,
     );
-    
+
     if (widget.schedule.notes != null) {
       _notesController.text = widget.schedule.notes!;
     }
-    
+
     // 일정 상세 정보 조회
     _fetchScheduleDetail();
   }
@@ -62,20 +69,20 @@ class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
   // 일정 상세 정보를 조회하는 메서드
   Future<void> _fetchScheduleDetail() async {
     setState(() {
-      _isLoading = true;
+      _isLoading = false;
     });
-    
+
     try {
       final planProvider = Provider.of<PlanProvider>(context, listen: false);
-      
+
       // 참고: PlanProvider에 이 메서드가 구현되어 있어야 합니다.
       // 없다면 PlanProvider에 추가해야 함
       final scheduleDetail = await planProvider.getPlanScheduleDetail(
-        widget.groupId, 
+        widget.groupId,
         widget.planId,
-        widget.schedule.planScheduleId
+        widget.schedule.planScheduleId,
       );
-      
+
       // 찾은 정보에서 restaurantId 가져오기
       if (scheduleDetail.restaurant != null) {
         setState(() {
@@ -84,9 +91,9 @@ class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('일정 상세 정보를 불러오는데 실패했습니다: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('일정 상세 정보를 불러오는데 실패했습니다: $e')));
       }
     } finally {
       if (mounted) {
@@ -103,13 +110,13 @@ class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
     super.dispose();
   }
 
-  // 날짜 선택 다이얼로그 표시
+  // 날짜 선택 다이얼로그 표시 - 여행 기간으로 제한
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: widget.startDate,
+      lastDate: widget.endDate,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -131,30 +138,17 @@ class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
     }
   }
 
-  // 시간 선택 다이얼로그 표시
-  Future<void> _selectTime(BuildContext context) async {
-    final TimeOfDay? picked = await showTimePicker(
+  // 시간 선택 - CustomTimePicker 사용
+  void _selectTime(BuildContext context) {
+    CustomTimePicker.show(
       context: context,
       initialTime: _selectedTime,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.primary,
-              onPrimary: Colors.white,
-              onSurface: AppColors.darkGray,
-            ),
-          ),
-          child: child!,
-        );
+      onTimeSelected: (TimeOfDay time) {
+        setState(() {
+          _selectedTime = time;
+        });
       },
     );
-
-    if (picked != null && picked != _selectedTime) {
-      setState(() {
-        _selectedTime = picked;
-      });
-    }
   }
 
   // 일정 업데이트
@@ -200,15 +194,15 @@ class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('일정이 수정되었습니다')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('일정이 수정되었습니다')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('일정 수정에 실패했습니다: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('일정 수정에 실패했습니다: $e')));
       }
     } finally {
       if (mounted) {
@@ -238,13 +232,10 @@ class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
 
     // 형식화된 날짜 및 시간 문자열
     final dateStr = DateFormat('yyyy년 MM월 dd일').format(_selectedDate);
-    final timeStr = DateFormat('HH:mm').format(
-      DateTime(
-        2022, 1, 1, 
-        _selectedTime.hour, 
-        _selectedTime.minute
-      )
-    );
+    final timeStr = DateFormat(
+      'a h:mm',
+      'ko_KR',
+    ).format(DateTime(2022, 1, 1, _selectedTime.hour, _selectedTime.minute));
 
     return Padding(
       padding: EdgeInsets.only(
@@ -262,24 +253,28 @@ class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    '일정 수정',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+              // 상단 핸들
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(height: 8),
-              
+
+              // 타이틀
+              const Center(
+                child: Text(
+                  '일정 수정하기',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 24),
+
               // 장소명 표시 (수정 불가)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -304,7 +299,7 @@ class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               // 방문 날짜 및 시간 선택
               Row(
                 children: [
@@ -342,7 +337,7 @@ class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  
+
                   // 시간 선택
                   Expanded(
                     child: InkWell(
@@ -379,7 +374,7 @@ class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // 메모 입력
               TextFormField(
                 controller: _notesController,
@@ -393,7 +388,7 @@ class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
                 ),
               ),
               const SizedBox(height: 24),
-              
+
               // 수정 버튼
               SizedBox(
                 width: double.infinity,
@@ -407,16 +402,17 @@ class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text('일정 수정하기'),
+                  child:
+                      _isLoading
+                          ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                          : const Text('저장'),
                 ),
               ),
             ],

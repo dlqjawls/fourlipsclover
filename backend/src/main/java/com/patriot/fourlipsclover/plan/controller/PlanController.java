@@ -2,13 +2,12 @@ package com.patriot.fourlipsclover.plan.controller;
 
 import com.patriot.fourlipsclover.config.CustomUserDetails;
 import com.patriot.fourlipsclover.group.repository.GroupRepository;
-import com.patriot.fourlipsclover.plan.dto.request.PlanCreateRequest;
-import com.patriot.fourlipsclover.plan.dto.request.PlanScheduleCreateRequest;
-import com.patriot.fourlipsclover.plan.dto.request.PlanScheduleUpdateRequest;
-import com.patriot.fourlipsclover.plan.dto.request.PlanUpdateRequest;
+import com.patriot.fourlipsclover.member.dto.response.MemberInfoResponse;
+import com.patriot.fourlipsclover.plan.dto.request.*;
 import com.patriot.fourlipsclover.plan.dto.response.*;
 import com.patriot.fourlipsclover.plan.entity.PlanSchedule;
 import com.patriot.fourlipsclover.plan.service.PlanService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -119,4 +118,42 @@ public class PlanController {
         planService.deletePlanSchedule(scheduleId, currentMemberId);
         return ResponseEntity.noContent().build();
     }
+
+    // plan이 소속된 group의 인원 중 현재 plan에 소속되지 않은 member list 조회
+    @GetMapping("/{planId}/available-members")
+    public ResponseEntity<List<MemberInfoResponse>> getAvailableMembers(
+            @PathVariable Integer groupId,
+            @PathVariable Integer planId) {
+        long currentMemberId = getCurrentMemberId();
+        List<MemberInfoResponse> response = planService.getAvailableMemberInfo(groupId, planId, currentMemberId);
+        return ResponseEntity.ok(response);
+    }
+
+    // 계획 인원 추가
+    @Transactional
+    @PostMapping("/{planId}/add-member")
+    public AddMemberToPlanResponse addMemberToPlan(@PathVariable int groupId,
+                                                   @PathVariable int planId,
+                                                   @RequestBody List<AddMemberToPlanRequest> request) {
+        long currentMemberId = getCurrentMemberId();
+        return planService.addMemberToPlan(planId, groupId, currentMemberId, request);
+    }
+
+    // 계획 나가기(마지막 1명인 경우 plan 삭제)
+    @DeleteMapping("/{planId}/leave")
+    public ResponseEntity<Void> leavePlan(@PathVariable int planId) {
+        long currentMemberId = getCurrentMemberId();
+        planService.leavePlan(planId, currentMemberId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // 계획 총무 수정
+    @PutMapping("/{planId}/edit-treasurer")
+    public ResponseEntity<EditTreasurerResponse> editTreasurer(@PathVariable int planId,
+                                                               @RequestBody EditTreasurerRequest request) {
+        long currentMemberId = getCurrentMemberId();
+        EditTreasurerResponse response = planService.editTreasurer(planId, currentMemberId, request);
+        return ResponseEntity.ok(response);
+    }
+
 }
