@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:frontend/models/restaurant_model.dart';
 import 'package:frontend/widgets/clover_loading_spinner.dart';
 import '../../config/theme.dart';
 import '../../services/restaurant_service.dart';
 import '../../services/review_service.dart';
+import '../../services/favorite_service.dart';
 import '../../models/review_model.dart';
+import '../../providers/app_provider.dart';
 import 'restaurant_info.dart';
 import 'widgets/menu_list.dart';
 import 'review_list.dart';
 
 class RestaurantDetailScreen extends StatefulWidget {
   final String restaurantId;
-
   const RestaurantDetailScreen({Key? key, required this.restaurantId}) : super(key: key);
 
   @override
@@ -18,15 +21,26 @@ class RestaurantDetailScreen extends StatefulWidget {
 }
 
 class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
-  late Future<Map<String, dynamic>> restaurantData;
+  late Future<RestaurantResponse> restaurantData;
   late Future<List<Review>> reviews;
   bool isFavorite = false;
   String? representativeImageUrl;
+  int? memberId;
 
   @override
   void initState() {
     super.initState();
     fetchData();
+
+    // 로그인된 사용자 정보 가져오기
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final appProvider = Provider.of<AppProvider>(context, listen: false);
+      final id = appProvider.user?.id;
+      if (id != null) {
+        memberId = id;
+        checkFavoriteStatus(id);
+      }
+    });
   }
 
   void fetchData() {
@@ -42,6 +56,53 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     });
   }
 
+  void checkFavoriteStatus(int memberId) async {
+    final favorites = await FavoriteService.getFavoriteRestaurantIds(memberId);
+    restaurantData.then((restaurant) {
+      if (restaurant.restaurantId != null && favorites.contains(restaurant.restaurantId)) {
+        setState(() {
+          isFavorite = true;
+        });
+      }
+    });
+  }
+
+  void toggleFavorite() async {
+    if (memberId == null) return;
+    final appProvider = Provider.of<AppProvider>(context, listen: false);
+    final token = appProvider.jwtToken;
+
+    restaurantData.then((restaurant) async {
+      final id = restaurant.restaurantId;
+      if (id == null) return;
+
+      if (!isFavorite) {
+        // 즐겨찾기 추가
+        final success = await FavoriteService.addFavorite(id, memberId!);
+        if (success) {
+          setState(() {
+            isFavorite = true;
+          });
+        }
+      } else {
+        // 즐겨찾기 삭제
+        if (token == null) return;
+
+        final success = await FavoriteService.removeFavorite(
+          restaurantId: id,
+          memberId: memberId!,
+          accessToken: token,
+        );
+
+        if (success) {
+          setState(() {
+            isFavorite = false;
+          });
+        }
+      }
+    });
+  }
+
   String? getRepresentativeImage(List<Review> reviews) {
     final withImages = reviews.where((r) => r.imageUrl != null && r.imageUrl!.isNotEmpty).toList();
     if (withImages.isEmpty) return null;
@@ -54,15 +115,9 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     return withImages.first.imageUrl;
   }
 
-  void toggleFavorite() {
-    setState(() {
-      isFavorite = !isFavorite;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, dynamic>>(
+    return FutureBuilder<RestaurantResponse>(
       future: restaurantData,
       builder: (context, snapshot) {
         final isLoading = snapshot.connectionState == ConnectionState.waiting;
@@ -78,7 +133,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               elevation: 0,
               centerTitle: true,
               title: Text(
-                snapshot.data?['placeName'] ?? "가게 정보",
+                snapshot.data?.placeName ?? "가게 정보",
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               leading: IconButton(
@@ -128,8 +183,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                     padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
                     child: Text("메뉴", style: TextStyle(fontSize: 16)),
                   ),
-                  if ((snapshot.data!['menu'] ?? []).isNotEmpty)
-                    MenuList(menu: snapshot.data!['menu'])
+                  if ((snapshot.data!.menu ?? []).isNotEmpty)
+                    MenuList(menu: snapshot.data!.menu!)
                   else
                     const Center(
                       child: Padding(
