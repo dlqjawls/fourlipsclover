@@ -183,7 +183,9 @@ public class RestaurantService {
 
 	private void checkReviewerIsCurrentUser(Long reviewMemberId) {
 		Member member =loadCurrentMember();
-
+		if (member == null) {
+			throw new UnauthorizedAccessException("로그인이 필요한 기능입니다.");
+		}
 		if (!Objects.equals(member.getMemberId(), reviewMemberId)) {
 			throw new UnauthorizedAccessException("현재 User ID가 작성자 ID와 다릅니다.");
 		}

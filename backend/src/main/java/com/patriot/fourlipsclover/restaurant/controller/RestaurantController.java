@@ -113,7 +113,7 @@ public class RestaurantController {
 	}
 
 	@Operation(summary = "리뷰 수정", description = "식당에 대한 리뷰를 수정합니다.")
-	@PutMapping("/reviews/{reviewId}")
+	@PutMapping(value = "/reviews/{reviewId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<ReviewResponse> reviewUpdate(
 			@PathVariable(name = "reviewId") Integer reviewId,
 			@Valid @RequestPart(name = "data") ReviewUpdate reviewUpdate,
