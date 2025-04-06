@@ -16,6 +16,7 @@ import com.patriot.fourlipsclover.match.entity.GuideRequestForm;
 import com.patriot.fourlipsclover.match.entity.Match;
 import com.patriot.fourlipsclover.match.repository.GuideRequestFormRepository;
 import com.patriot.fourlipsclover.match.repository.MatchRepository;
+import com.patriot.fourlipsclover.match.repository.MatchTagRepository;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberRepository;
 import com.patriot.fourlipsclover.notification.service.NotificationService;
@@ -48,6 +49,7 @@ public class GroupService {
     private final PlanRepository planRepository;
     private final PlanMemberRepository planMemberRepository;
     private final MatchRepository matchRepository;
+    private final MatchTagRepository matchTagRepository;
 
     public GroupResponse createGroup(GroupCreateRequest request, Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
@@ -230,32 +232,38 @@ public class GroupService {
             throw new UnauthorizedAccessException("그룹 생성자만 수정할 수 있습니다");
         }
 
-        // 1. 그룹과 연관된 match 테이블의 데이터 삭제
+        // 그룹과 연관된 Match 및 MatchTag 데이터 삭제
+        // guide_request_form을 통해 연결된 Match 리스트를 조회
         List<Match> matches = matchRepository.findByGuideRequestForm_Group_GroupId(groupId);
+        // 각 match에 대해 match_tag 테이블의 데이터 삭제
         for (Match match : matches) {
-            matchRepository.deleteByGuideRequestForm(match.getGuideRequestForm());
+            // matchTagRepository는 match와 연관된 모든 match_tag 데이터를 삭제하는 메서드가 있어야 함
+            matchTagRepository.deleteByMatch(match);
+        }
+        // match 테이블의 데이터 삭제
+        for (Match match : matches) {
+            matchRepository.delete(match);
         }
 
-        // 2. 그룹과 연관된 GuideRequestForm 삭제
+        // 그룹과 연관된 GuideRequestForm 삭제
         guideRequestFormRepository.deleteByGroup_GroupId(groupId);
 
-        // 3. 그룹에 속한 Plan 삭제 및 Plan에 연관된 PlanMember 삭제
+        // 그룹에 속한 Plan 및 PlanMember 삭제
         List<Plan> plans = planRepository.findByGroup_GroupId(groupId);
         for (Plan plan : plans) {
             planMemberRepository.deleteByPlan_PlanId(plan.getPlanId());
         }
         planRepository.deleteByGroup_GroupId(groupId);
 
-        // 4. 그룹 초대 관련(GroupInvitation) 데이터 삭제
+        // 그룹 초대(GroupInvitation) 데이터 삭제
         groupInvitationRepository.deleteByGroupId(groupId);
 
-        // 5. 그룹 가입 요청(GroupJoinRequest) 데이터 삭제
+        // 그룹 가입 요청(GroupJoinRequest) 데이터 삭제
         groupJoinRequestRepository.deleteByGroup_GroupId(groupId);
 
-        // 6. 그룹 멤버(GroupMember) 삭제
+        // 그룹 멤버(GroupMember) 삭제
         groupMemberRepository.deleteByGroup_groupId(groupId);
 
-        // 7. 마지막으로 그룹 삭제
         groupRepository.delete(group);
     }
 
