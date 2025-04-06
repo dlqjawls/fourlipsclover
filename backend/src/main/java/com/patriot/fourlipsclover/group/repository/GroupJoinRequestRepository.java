@@ -13,4 +13,6 @@ public interface GroupJoinRequestRepository extends JpaRepository<GroupJoinReque
     Optional<GroupJoinRequest> findByGroup_GroupIdAndMember_MemberIdAndToken(Integer groupId, Long memberId, String token);
 
     List<GroupJoinRequest> findByGroup_GroupId(Integer groupId);
+
+    void deleteByGroup_GroupId(int groupId);
 }
