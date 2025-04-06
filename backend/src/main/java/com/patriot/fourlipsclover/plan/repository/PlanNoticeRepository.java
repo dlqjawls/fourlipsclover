@@ -18,4 +18,5 @@ public interface PlanNoticeRepository extends JpaRepository<PlanNotice, Integer>
     // 특정 planNoticeId로 공지사항 조회
     PlanNotice findByPlanNoticeId(Integer planNoticeId);
 
+    void deleteByPlan_PlanId(Integer planId);
 }
