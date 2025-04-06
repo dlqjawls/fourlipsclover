@@ -13,7 +13,9 @@ import com.patriot.fourlipsclover.group.repository.GroupJoinRequestRepository;
 import com.patriot.fourlipsclover.group.repository.GroupMemberRepository;
 import com.patriot.fourlipsclover.group.repository.GroupRepository;
 import com.patriot.fourlipsclover.match.entity.GuideRequestForm;
+import com.patriot.fourlipsclover.match.entity.Match;
 import com.patriot.fourlipsclover.match.repository.GuideRequestFormRepository;
+import com.patriot.fourlipsclover.match.repository.MatchRepository;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberRepository;
 import com.patriot.fourlipsclover.notification.service.NotificationService;
@@ -45,6 +47,7 @@ public class GroupService {
     private final GuideRequestFormRepository guideRequestFormRepository;
     private final PlanRepository planRepository;
     private final PlanMemberRepository planMemberRepository;
+    private final MatchRepository matchRepository;
 
     public GroupResponse createGroup(GroupCreateRequest request, Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
@@ -225,6 +228,12 @@ public class GroupService {
 
         if (!(group.getMember().getMemberId()).equals(loggedInMemberId)) {
             throw new UnauthorizedAccessException("그룹 생성자만 수정할 수 있습니다");
+        }
+
+        // 1. 그룹과 연관된 match 테이블의 데이터 삭제
+        List<Match> matches = matchRepository.findByGuideRequestForm_Group_GroupId(groupId);
+        for (Match match : matches) {
+            matchRepository.deleteByGuideRequestForm(match.getGuideRequestForm());
         }
 
         // 2. 그룹과 연관된 GuideRequestForm 삭제
