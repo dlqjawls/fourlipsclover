@@ -1,11 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:frontend/models/matching/matching_guide_model.dart';
+import 'package:frontend/config/api_config.dart';
 
 class LocalGuideService {
   final Dio _dio;
 
   LocalGuideService() : _dio = Dio() {
-    _dio.options.baseUrl = 'https://fourlipsclover.duckdns.org';
+    final String url = ApiConfig.baseUrl;
+
+    _dio.options.baseUrl = url;
   }
 
   Future<List<LocalGuide>> getLocalGuides(int memberId, int regionId) async {

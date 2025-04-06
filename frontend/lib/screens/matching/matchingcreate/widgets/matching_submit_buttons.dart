@@ -3,6 +3,7 @@ import 'package:frontend/config/theme.dart';
 import 'package:frontend/models/group/group_model.dart';
 import 'package:frontend/screens/matching/matchingcreate/widgets/bottomsheet_widget.dart';
 import 'package:frontend/services/matching/matching_create.dart';
+import 'package:frontend/widgets/clover_loading_spinner.dart';
 
 class MatchingSubmitButtons extends StatefulWidget {
   final Group? selectedGroup;
@@ -92,7 +93,7 @@ class _MatchingSubmitButtonsState extends State<MatchingSubmitButtons> {
         startDate: widget.startDate!,
         endDate: widget.endDate!,
       );
-      
+
       if (!mounted) return;
 
       showModalBottomSheet(
@@ -177,12 +178,7 @@ class _MatchingSubmitButtonsState extends State<MatchingSubmitButtons> {
                       ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
+                        child: CloverLoadingSpinner(size: 20),
                       )
                       : const Text(
                         '신청하기',

@@ -1,16 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:frontend/config/api_config.dart';
 class MatchingCreateService {
-  String get baseUrl {
-    final url = dotenv.env['API_BASE_URL'];
-    if (url == null) throw Exception('API_BASE_URL이 .env 파일에 정의되지 않았습니다.');
-    return url;
-  }
-
+  final String baseUrl = ApiConfig.baseUrl;
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('jwtToken');

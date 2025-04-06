@@ -1,24 +1,6 @@
-// lib/widgets/clover_loading_spinner.dart
 import 'package:flutter/material.dart';
 import 'dart:async';
-
-// 로딩 스피너 클래스
-class CloverLoadingSpinner extends StatelessWidget {
-  final double size;
-
-  const CloverLoadingSpinner({Key? key, this.size = 50.0}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Image.asset(
-        'assets/images/loading.gif',
-        width: size,
-        height: size,
-      ),
-    );
-  }
-}
+import 'clover_loading_spinner.dart';
 
 // 로딩 상태를 관리하는 확장된 로딩 오버레이 클래스
 class LoadingOverlay extends StatefulWidget {
