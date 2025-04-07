@@ -124,6 +124,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ChangeNotifierProvider(create: (_) => SettlementProvider()), 
         ChangeNotifierProvider(create: (context) => MapProvider()),
         ChangeNotifierProvider(create: (_) => MatchingProvider()),
+        ChangeNotifierProvider(create: (_) => ReviewProvider()),
       ],
       child: MaterialApp(
         title: '네입클로버',
