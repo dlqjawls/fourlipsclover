@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/config/theme.dart';
-import 'package:frontend/screens/user/edit_widgets/profile_image_section.dart';
-import 'package:frontend/models/user_model.dart';
+import '../../config/theme.dart';
+import 'edit_widgets/profile_image_section.dart';
+import '../../models/user_model.dart';
 
 class UserEditScreen extends StatefulWidget {
   final UserProfile profile;
@@ -32,7 +32,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ProfileImageSection(
-              userId: widget.profile.userId, // memberId에서 userId로 변경
+              userId: widget.profile.memberId.toString(),
               initialImageUrl: widget.profile.profileUrl,
             ),
           ],

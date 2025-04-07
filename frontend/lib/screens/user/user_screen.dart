@@ -4,9 +4,10 @@ import '../../providers/user_provider.dart';
 import 'widgets/cloverprofilesection.dart';
 import 'widgets/statistics_section.dart';
 import 'widgets/action_buttons.dart';
-import 'widgets/Luckeyindicator.dart';
-import 'widgets/current_journey_section.dart';
+import 'widgets/trust_score_indicator.dart';
+import 'widgets/plan_section.dart';
 import 'widgets/payment_history.dart';
+import 'widgets/tags_section.dart';
 import '../../config/theme.dart';
 // import '../../models/user_model.dart';
 
@@ -25,9 +26,9 @@ class _UserScreenState extends State<UserScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final userProfile = context.read<UserProvider>().userProfile;
       debugPrint('초기 유저 정보 로드: ${userProfile?.toJson()}');
-      debugPrint('유저 ID: ${userProfile?.userId}');
-      debugPrint('ID: ${userProfile?.userId}');
-      debugPrint('이름: ${userProfile?.name}');
+      debugPrint('멤버 ID: ${userProfile?.memberId}');
+      debugPrint('닉네임: ${userProfile?.nickname}');
+      debugPrint('이메일: ${userProfile?.email}');
     });
   }
 
@@ -54,12 +55,16 @@ class _UserScreenState extends State<UserScreen> {
                 const SizedBox(height: 16),
                 const ActionButtons(),
                 const SizedBox(height: 16),
-                LuckGaugeIndicator(luckGauge: userProfile.luckGauge),
+                TrustScoreIndicator(trustScore: userProfile.trustScore),
                 const SizedBox(height: 16),
-                if (userProfile.currentJourney != null)
-                  CurrentJourneySection(journey: userProfile.currentJourney!),
+                if (userProfile.planResponses.isNotEmpty)
+                  PlanSection(plans: userProfile.planResponses),
                 const SizedBox(height: 16),
                 PaymentHistory(payments: userProfile.recentPayments),
+                if (userProfile.tags.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  TagsSection(tags: userProfile.tags),
+                ],
               ],
             ),
           ),

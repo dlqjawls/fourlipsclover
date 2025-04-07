@@ -1,56 +1,56 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/config/theme.dart';
-import 'package:frontend/models/user_model.dart';
+import '../../../../config/theme.dart';
+import '../../../../models/user_model.dart';
 
 class StatisticsSection extends StatelessWidget {
   final UserProfile profile;
 
-  const StatisticsSection({Key? key, required this.profile}) : super(key: key);
+  const StatisticsSection({super.key, required this.profile});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            _buildStatItem(
-              icon: Icons.edit_note, // 변경
-              label: '작성한 리뷰', // 변경
-              value: '${profile.reviewCount}개', // 변경
-            ),
-            const SizedBox(height: 12),
-            _buildStatItem(
-              icon: Icons.favorite, // 변경
-              label: '작성한 앨범', // 변경
-              value: '${profile.albumCount}개', // 변경
-            ),
-            const SizedBox(height: 12),
-            _buildStatItem(
-              icon: Icons.group, // 변경
-              label: '참여한 그룹', // 변경
-              value: '${profile.groupCount}개', // 변경
-            ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatItem(
+            '리뷰',
+            profile.reviewCount.toString(),
+            Icons.rate_review,
+          ),
+          _buildStatItem('그룹', profile.groupCount.toString(), Icons.group),
+          _buildStatItem('지역 랭크', profile.localRank, Icons.place),
+        ],
       ),
     );
   }
 
-  Widget _buildStatItem({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Row(
+  Widget _buildStatItem(String label, String value, IconData icon) {
+    return Column(
       children: [
-        Icon(icon, color: AppColors.primary, size: 20),
-        const SizedBox(width: 8),
-        Text(label, style: TextStyle(color: AppColors.darkGray)),
-        const Spacer(),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Icon(icon, color: AppColors.primary, size: 24),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: AppColors.mediumGray),
+        ),
       ],
     );
   }

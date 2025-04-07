@@ -26,9 +26,7 @@ class UserService {
       }
 
       final response = await http.get(
-        Uri.parse(
-          '$baseUrl/api/mypage/dummy?memberId=$userIdStr',
-        ), // int 변환 없이 문자열 그대로 사용
+        Uri.parse('$baseUrl/api/mypage/$userIdStr'),
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           'Authorization': '$token',
@@ -42,9 +40,16 @@ class UserService {
         final jsonData = json.decode(data);
         debugPrint('응답 데이터: $jsonData'); // 디버깅
 
-        final userProfile = UserProfile.fromJson(jsonData);
-        userProvider.setUserProfile(userProfile);
-        return userProfile;
+        try {
+          final userProfile = UserProfile.fromJson(jsonData);
+          userProvider.setUserProfile(userProfile);
+          return userProfile;
+        } catch (e) {
+          debugPrint('UserProfile 변환 실패: $e');
+          throw Exception('사용자 프로필 데이터 형식이 올바르지 않습니다.');
+        }
+      } else if (response.statusCode == 404) {
+        throw Exception('사용자 정보를 찾을 수 없습니다.');
       } else {
         throw Exception('서버 응답 오류: ${response.statusCode}');
       }
