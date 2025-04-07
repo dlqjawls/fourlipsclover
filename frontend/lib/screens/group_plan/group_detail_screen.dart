@@ -21,6 +21,7 @@ import './plan_detail_screen.dart';
 import '../../widgets/clover_loading_spinner.dart';
 import '../../services/kakao_share_service.dart';
 import './group_widgets/group_invitation_dialog.dart';
+import 'plan_widgets/group_expenses_analysis_view.dart';
 
 class GroupDetailScreen extends StatefulWidget {
   final Group group;
@@ -375,7 +376,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 children: [
                   _buildTabButton('캘린더', 0, Icons.calendar_today),
                   _buildTabButton('여행계획', 1, Icons.list_alt),
-                  _buildTabButton('공동앨범', 2, Icons.photo_library),
+                  _buildTabButton('그룹 분석', 2, Icons.bar_chart),
                 ],
               ),
             ),
@@ -556,37 +557,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             ),
           ],
         );
-
-      case 2: // 앨범
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.photo_library,
-                size: 80,
-                color: Colors.grey.withOpacity(0.5),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '공동 앨범',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.withOpacity(0.7),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '앨범 기능이 곧 추가될 예정입니다',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.withOpacity(0.7),
-                ),
-              ),
-            ],
-          ),
-        );
+      case 2:
+        return GroupExpensesAnalysisView(groupId: _currentGroup.groupId);
 
       default:
         return Container();
