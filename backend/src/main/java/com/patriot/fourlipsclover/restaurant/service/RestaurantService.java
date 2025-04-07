@@ -162,9 +162,8 @@ public class RestaurantService {
 
 	private Member loadCurrentMember() {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (authentication == null || !authentication.isAuthenticated() ||
-				!(authentication.getPrincipal() instanceof CustomUserDetails)) {
-			return null;
+		if (authentication == null || !authentication.isAuthenticated()) {
+			throw new UnauthorizedAccessException("인증되지 않은 사용자입니다.");
 		}
 		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 		return userDetails.getMember();

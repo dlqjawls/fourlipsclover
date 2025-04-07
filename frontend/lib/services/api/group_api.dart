@@ -304,28 +304,40 @@ class GroupApi {
   /// 그룹 가입 요청 목록 조회하기
   /// [groupId] 그룹 ID
   Future<List<GroupJoinRequest>> getJoinRequestList(int groupId) async {
-    final token = await _getAuthToken();
+  final token = await _getAuthToken();
 
-    // 토큰 유효성 검사
-    if (!_validateToken(token)) {
-      throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
-    }
+  // 토큰 유효성 검사
+  if (!_validateToken(token)) {
+    throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+  }
 
-    final url = Uri.parse('$baseUrl$apiPrefix/join-requests-list/$groupId');
+  final url = Uri.parse('$baseUrl$apiPrefix/join-requests-list/$groupId');
+  debugPrint('가입 요청 목록 API 호출: $url');
+  
+  try {
     final response = await http.get(
       url,
       headers: {'Authorization': 'Bearer $token'},
     );
 
+    debugPrint('응답 코드: ${response.statusCode}');
+    
     if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+      final responseBody = utf8.decode(response.bodyBytes);
+      debugPrint('응답 데이터: $responseBody');
+      
+      final List<dynamic> data = jsonDecode(responseBody);
       return data.map((json) => GroupJoinRequest.fromJson(json)).toList();
     } else {
       throw Exception(
         '가입 요청 목록 조회에 실패했습니다: ${response.statusCode}, ${response.body}',
       );
     }
+  } catch (e) {
+    debugPrint('가입 요청 API 호출 오류: $e');
+    rethrow;
   }
+}
 
   /// 그룹 삭제하기
   /// [groupId] 그룹 ID
