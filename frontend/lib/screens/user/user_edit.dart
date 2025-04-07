@@ -20,7 +20,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
       appBar: AppBar(
         scrolledUnderElevation: 0,
         backgroundColor: AppColors.verylightGray,
-        title: const Text('프로필 사진 변경'),
+        title: const Text('나의 정보 수정'),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),

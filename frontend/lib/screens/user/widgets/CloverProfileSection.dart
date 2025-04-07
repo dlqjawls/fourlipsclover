@@ -95,7 +95,7 @@ class _CloverProfileSectionState extends State<CloverProfileSection> {
               const SizedBox(height: 16),
               InkWell(
                 onTap:
-                    auth.isAuthorized
+                    widget.profile.localAuth
                         ? null
                         : () async {
                           final bool? result = await Navigator.push(
@@ -120,23 +120,44 @@ class _CloverProfileSectionState extends State<CloverProfileSection> {
                   ),
                   decoration: BoxDecoration(
                     color:
-                        auth.isAuthorized
+                        widget.profile.localAuth
                             ? AppColors.verylightGray.withOpacity(0.1)
                             : AppColors.verylightGray,
                     borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    auth.isAuthorized
-                        ? '${auth.regionName} 현지인!'
-                        : '현지인 인증 하실래요?',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                    border: Border.all(
                       color:
-                          auth.isAuthorized
-                              ? AppColors.darkGray
-                              : AppColors.darkGray,
+                          widget.profile.localAuth
+                              ? AppColors.primary
+                              : AppColors.mediumGray,
+                      width: 1,
                     ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        size: 20,
+                        color:
+                            widget.profile.localAuth
+                                ? AppColors.primary
+                                : AppColors.mediumGray,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.profile.localAuth
+                            ? '${widget.profile.localRegion} 현지인!'
+                            : '현지인 인증 하실래요?',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color:
+                              widget.profile.localAuth
+                                  ? AppColors.primary
+                                  : AppColors.mediumGray,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

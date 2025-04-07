@@ -25,7 +25,7 @@ class KeywordSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.bookmark_outlined, color: AppColors.primary, size: 24),
+              Icon(Icons.eco, color: AppColors.primary, size: 24),
               const SizedBox(width: 8),
               const Text(
                 '나의 맛집 키워드',
@@ -71,7 +71,7 @@ class KeywordChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.local_florist, color: AppColors.primary, size: 16),
+          Icon(Icons.eco, color: AppColors.primary, size: 16),
           const SizedBox(width: 4),
           Text(
             label,
