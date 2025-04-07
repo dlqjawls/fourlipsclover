@@ -31,4 +31,7 @@ public class RestaurantResponse {
 	@JsonRawValue
 	private String openingHours;
 	private List<RestaurantImageResponse> restaurantImages;
+
+	@JsonRawValue
+	private String avgAmount;
 }
