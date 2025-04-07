@@ -5,6 +5,8 @@ import 'package:frontend/screens/matching/matchingcreate/matching_select_local.d
 import 'package:frontend/config/theme.dart';
 import 'package:frontend/screens/matching/matchingcreate/styles/matching_styles.dart';
 import 'package:frontend/models/matching/matching_tag_model.dart';
+// import 'package:frontend/widgets/clover_loading_spinner.dart';
+import 'package:frontend/widgets/loading_overlay.dart';
 
 class MatchingLocationScreen extends StatefulWidget {
   final List<Tag> selectedTags;
@@ -61,9 +63,10 @@ class _MatchingLocationScreenState extends State<MatchingLocationScreen> {
         context,
         MaterialPageRoute(
           builder:
-              (context) =>
-                  MatchingSelectLocalScreen(selectedRegion: selectedRegion!,
-                  selectedTags: widget.selectedTags,),
+              (context) => MatchingSelectLocalScreen(
+                selectedRegion: selectedRegion!,
+                selectedTags: widget.selectedTags,
+              ),
         ),
       );
     }
@@ -73,13 +76,18 @@ class _MatchingLocationScreenState extends State<MatchingLocationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: MatchingStyles.buildAppBar(context, '여행 지역 선택'),
-      body: Column(
-        children: [
-          MatchingStyles.buildProgressIndicator(0.6),
-          _buildHeader(),
-          _buildContent(),
-          _buildNextButton(),
-        ],
+      body: LoadingOverlay(
+        isLoading: _isLoading,
+        overlayColor: Colors.white.withOpacity(0.7),
+        minDisplayTime: const Duration(milliseconds: 1200),
+        child: Column(
+          children: [
+            MatchingStyles.buildProgressIndicator(0.6),
+            _buildHeader(),
+            _buildContent(),
+            _buildNextButton(),
+          ],
+        ),
       ),
     );
   }
@@ -99,10 +107,6 @@ class _MatchingLocationScreenState extends State<MatchingLocationScreen> {
   }
 
   Widget _buildContent() {
-    if (_isLoading) {
-      return Expanded(child: Center(child: CircularProgressIndicator()));
-    }
-
     if (_error != null) {
       return Expanded(
         child: Center(

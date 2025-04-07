@@ -23,20 +23,41 @@ class AppProvider with ChangeNotifier {
 
   // 초기 상태 로드
   Future<void> initializeApp() async {
-    final loginState = await _authService.loadLoginState();
-    _isLoggedIn = loginState['isLoggedIn'];
-    _jwtToken = loginState['jwtToken'];
+    try {
+      final loginState = await _authService.loadLoginState();
+      _isLoggedIn = loginState['isLoggedIn'];
+      _jwtToken = loginState['jwtToken'];
 
-    // 로그인 상태라면 사용자 정보 로드
-    if (_isLoggedIn) {
-      try {
-        await _userService.getUserProfile();
-      } catch (e) {
-        print('초기 사용자 정보 로드 실패: $e');
+      // 로그인 상태라면 사용자 정보 로드
+      if (_isLoggedIn && _jwtToken != null) {
+        try {
+          // 카카오 사용자 정보 로드
+          final kakaoUser = await UserApi.instance.me();
+          _user = kakaoUser;
+
+          // 서버 사용자 정보 로드
+          await _userService.getUserProfile();
+        } catch (e) {
+          print('초기 사용자 정보 로드 실패: $e');
+          _isLoggedIn = false;
+          _user = null;
+          _jwtToken = null;
+          await _authService.saveLoginState(false, null);
+        }
+      } else {
+        _isLoggedIn = false;
+        _user = null;
+        _jwtToken = null;
       }
-    }
 
-    notifyListeners();
+      notifyListeners();
+    } catch (e) {
+      print('앱 초기화 실패: $e');
+      _isLoggedIn = false;
+      _user = null;
+      _jwtToken = null;
+      notifyListeners();
+    }
   }
 
   // 카카오 로그인

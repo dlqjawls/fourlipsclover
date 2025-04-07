@@ -18,6 +18,7 @@ import 'providers/notice_provider.dart'; // 추가된 NoticeProvider
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:frontend/services/user_service.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
+import 'providers/matching_provider.dart';
 
 void main() async {
   // Flutter 엔진 초기화
@@ -36,8 +37,34 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // 앱이 백그라운드에서 돌아올 때 로그인 상태 확인
+      final appProvider = Provider.of<AppProvider>(context, listen: false);
+      appProvider.initializeApp();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +89,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NoticeProvider()), 
         ChangeNotifierProvider(create: (_) => SettlementProvider()), 
         ChangeNotifierProvider(create: (context) => MapProvider()),
+        ChangeNotifierProvider(create: (_) => MatchingProvider()),
       ],
       child: MaterialApp(
         title: '네입클로버',

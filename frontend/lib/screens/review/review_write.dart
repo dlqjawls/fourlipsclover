@@ -15,7 +15,12 @@ class ReviewWriteScreen extends StatefulWidget {
   final Review? review; // 수정할 리뷰 (null이면 새 리뷰 작성)
   final String kakaoPlaceId;
 
+
+  const ReviewWriteScreen({Key? key, this.review, required this.kakaoPlaceId})
+    : super(key: key);
+
   const ReviewWriteScreen({Key? key, this.review, required this.kakaoPlaceId}) : super(key: key);
+
 
   @override
   _ReviewWriteScreenState createState() => _ReviewWriteScreenState();
@@ -49,7 +54,9 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
   }
 
   Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+    );
     if (pickedFile != null) {
       setState(() {
         newImages.add(File(pickedFile.path));
@@ -74,23 +81,23 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
     final content = _contentController.text.trim();
 
     if (content.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("리뷰 내용을 입력해주세요.")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("리뷰 내용을 입력해주세요.")));
       return;
     }
 
     if (content.length < 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("리뷰는 10자 이상 작성해주세요.")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("리뷰는 10자 이상 작성해주세요.")));
       return;
     }
 
     if (_visitedAt == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("방문일자를 선택해주세요.")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("방문일자를 선택해주세요.")));
       return;
     }
 
@@ -109,6 +116,8 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
 
 
       if (widget.review == null) {
+        if (appProvider.user == null) throw Exception("사용자 정보를 불러올 수 없습니다.");
+
         final response = await ReviewService.createReview(
           memberId: int.parse(appProvider.user!.id.toString()),
           kakaoPlaceId: widget.kakaoPlaceId,
@@ -119,7 +128,20 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
         );
         print("✅ 리뷰 작성 응답: ${response.reviewImageUrls}");
 
+
+        final refreshed = await ReviewService.getReviewDetail(
+          kakaoPlaceId: widget.kakaoPlaceId,
+          reviewId: response.reviewId!,
+        );
+        final createdReview = Review.fromResponse(refreshed);
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("리뷰가 등록되었습니다.")));
+        Navigator.pop(context, createdReview);
+
         Navigator.pop(context, Review.fromResponse(response));
+
       } else {
         final updated = await ReviewService.updateReview(
           reviewId: int.parse(widget.review!.id),
@@ -132,9 +154,20 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
         print("✅ 리뷰 수정 응답: ${updated.reviewImageUrls}");
 
         Navigator.pop(context, Review.fromResponse(updated));
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("리뷰가 수정되었습니다.")));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("오류 발생: $e")));
+
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("오류 발생: \$e")));
+
     } finally {
       setState(() => isSubmitting = false);
     }
@@ -182,6 +215,31 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
                 },
               ),
               const SizedBox(height: 16),
+
+              if (!isEditMode)
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    width: double.infinity,
+                    height: 150,
+                    decoration: BoxDecoration(
+                      color: AppColors.lightGray,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.lightGray),
+                    ),
+                    child:
+                        _image != null
+                            ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(_image!, fit: BoxFit.cover),
+                            )
+                            : Center(
+                              child: Text(
+                                "이미지 선택",
+                                style: TextStyle(color: AppColors.darkGray),
+                              ),
+                            ),
+
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -220,6 +278,7 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
                       color: AppColors.lightGray,
                       child: Icon(Icons.add_a_photo, color: AppColors.darkGray),
                     ),
+
                   ),
                 ],
               ),

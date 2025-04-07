@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/config/theme.dart';
 import 'package:frontend/screens/matching/matchingcreate/styles/matching_styles.dart';
 import 'package:frontend/screens/matching/matchingcreate/matching_resist.dart';
-import 'package:frontend/widgets/skeleton_loading.dart';
+import 'package:frontend/widgets/loading_overlay.dart';
 import 'package:frontend/models/matching/matching_region.dart';
 import 'package:frontend/models/matching/matching_tag_model.dart';
 import 'package:frontend/models/matching/matching_guide_model.dart';
@@ -180,13 +180,18 @@ class _MatchingSelectLocalScreenState extends State<MatchingSelectLocalScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: MatchingStyles.buildAppBar(context, '가이드 선택'),
-      body: Column(
-        children: [
-          MatchingStyles.buildProgressIndicator(0.9),
-          _buildHeader(),
-          _buildFilterSection(),
-          _buildGuideList(),
-        ],
+      body: LoadingOverlay(
+        isLoading: _isLoading,
+        overlayColor: Colors.white.withOpacity(0.7),
+        minDisplayTime: const Duration(milliseconds: 1200),
+        child: Column(
+          children: [
+            MatchingStyles.buildProgressIndicator(0.9),
+            _buildHeader(),
+            _buildFilterSection(),
+            _buildGuideList(),
+          ],
+        ),
       ),
     );
   }
@@ -264,9 +269,7 @@ class _MatchingSelectLocalScreenState extends State<MatchingSelectLocalScreen> {
   Widget _buildGuideList() {
     return Expanded(
       child:
-          _isLoading
-              ? const SkeletonLoading()
-              : _error.isNotEmpty
+          _error.isNotEmpty
               ? _buildErrorView()
               : _guides.isEmpty
               ? _buildEmptyView()

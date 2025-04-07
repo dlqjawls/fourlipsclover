@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/config/theme.dart';
+import 'package:frontend/services/matching/chat_service.dart';
+import 'dart:async';
 
 class ChatMessage {
   final String message;
@@ -30,37 +32,126 @@ class MatchingChatScreen extends StatefulWidget {
 
 class _MatchingChatScreenState extends State<MatchingChatScreen> {
   final TextEditingController _messageController = TextEditingController();
-  final List<ChatMessage> _messages = [
-    ChatMessage(
-      message: '안녕하세요! 매칭이 확정되어서 반갑습니다.',
-      isSentByMe: false,
-      time: '10:30',
-      userName: '김현지',
-      userIcon: 'assets/default_profile.png',
-    ),
-    ChatMessage(
-      message: '네, 반갑습니다! 여행 일정에 대해 이야기해볼까요?',
-      isSentByMe: true,
-      time: '10:31',
-      userName: '나',
-      userIcon: 'assets/default_profile.png',
-    ),
-    ChatMessage(
-      message: '제가 추천하는 여행 코스입니다.',
-      isSentByMe: false,
-      time: '10:32',
-      imageUrl: 'assets/images/sample_travel.jpg',
-      userName: '김현지',
-      userIcon: 'assets/default_profile.png',
-    ),
-    ChatMessage(
-      message: '좋아보이네요! 이 코스로 진행해도 될까요?',
-      isSentByMe: true,
-      time: '10:33',
-      userName: '나',
-      userIcon: 'assets/default_profile.png',
-    ),
-  ];
+  final List<ChatMessage> _messages = [];
+  final ChatService _chatService = ChatService();
+  Timer? _pollingTimer;
+  bool _isPolling = false;
+  DateTime? _lastMessageTime;
+  String? _currentUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeChat();
+  }
+
+  Future<void> _initializeChat() async {
+    _currentUserId = await _chatService.getCurrentUserId();
+    await _loadInitialMessages();
+    _startPolling();
+  }
+
+  Future<void> _loadInitialMessages() async {
+    try {
+      final response = await _chatService.getChatHistory(
+        widget.groupId,
+        limit: 20,
+      );
+
+      setState(() {
+        _messages.addAll(
+          response.map(
+            (data) => ChatMessage(
+              message: data['content'],
+              isSentByMe: data['senderId'] == _currentUserId,
+              time: data['timestamp'],
+              userName: data['userName'],
+              userIcon: data['userIcon'],
+              imageUrl: data['imageUrl'],
+            ),
+          ),
+        );
+
+        if (_messages.isNotEmpty) {
+          _lastMessageTime = DateTime.parse(_messages.last.time);
+        }
+      });
+    } catch (e) {
+      debugPrint('Failed to load chat history: $e');
+    }
+  }
+
+  void _startPolling() {
+    _isPolling = true;
+    _pollingTimer = Timer.periodic(Duration(seconds: 2), (timer) async {
+      if (!_isPolling) return;
+
+      try {
+        final newMessages = await _chatService.pollNewMessages(
+          widget.groupId,
+          lastMessageTime: _lastMessageTime,
+        );
+
+        if (newMessages.isNotEmpty) {
+          setState(() {
+            _messages.addAll(
+              newMessages.map(
+                (data) => ChatMessage(
+                  message: data['content'],
+                  isSentByMe: data['senderId'] == _currentUserId,
+                  time: data['timestamp'],
+                  userName: data['userName'],
+                  userIcon: data['userIcon'],
+                  imageUrl: data['imageUrl'],
+                ),
+              ),
+            );
+
+            _lastMessageTime = DateTime.parse(newMessages.last['timestamp']);
+          });
+        }
+      } catch (e) {
+        debugPrint('Polling error: $e');
+        Future.delayed(Duration(seconds: 5), () {
+          if (mounted) _startPolling();
+        });
+      }
+    });
+  }
+
+  Future<void> _sendMessage() async {
+    if (_messageController.text.trim().isEmpty) return;
+
+    try {
+      final message = {
+        'groupId': widget.groupId,
+        'content': _messageController.text,
+        'senderId': _currentUserId,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      await _chatService.sendMessage(message);
+
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            message: _messageController.text,
+            isSentByMe: true,
+            time: DateTime.now().toIso8601String(),
+            userName: '나',
+            userIcon: 'assets/default_profile.png',
+          ),
+        );
+      });
+
+      _messageController.clear();
+    } catch (e) {
+      debugPrint('Failed to send message: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('메시지 전송에 실패했습니다. 다시 시도해주세요.')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -337,26 +428,10 @@ class _MatchingChatScreenState extends State<MatchingChatScreen> {
     );
   }
 
-  void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
-
-    setState(() {
-      _messages.add(
-        ChatMessage(
-          message: _messageController.text,
-          isSentByMe: true,
-          time: '${DateTime.now().hour}:${DateTime.now().minute}',
-          userName: '나',
-          userIcon: 'assets/default_profile.png',
-        ),
-      );
-    });
-
-    _messageController.clear();
-  }
-
   @override
   void dispose() {
+    _isPolling = false;
+    _pollingTimer?.cancel();
     _messageController.dispose();
     super.dispose();
   }
