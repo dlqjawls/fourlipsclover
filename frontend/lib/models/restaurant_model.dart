@@ -36,6 +36,7 @@ class RestaurantResponse {
     this.distance,
     this.tags,
     this.menu,
+
   });
 
   factory RestaurantResponse.fromJson(Map<String, dynamic> json) {
@@ -156,6 +157,8 @@ class ReviewResponse {
   final List<String> reviewImageUrls;
   final int likedCount;
   final int dislikedCount;
+  final bool? userLiked;
+  final bool? userDisliked;
 
   ReviewResponse({
     this.reviewId,
@@ -168,6 +171,9 @@ class ReviewResponse {
     required this.reviewImageUrls,
     required this.likedCount,
     required this.dislikedCount,
+    this.userLiked,
+    this.userDisliked,
+
   });
 
   factory ReviewResponse.fromJson(Map<String, dynamic> json) {
@@ -192,6 +198,8 @@ class ReviewResponse {
       reviewImageUrls: List<String>.from(json['reviewImageUrls'] ?? []),
       likedCount: json['likedCount'] ?? 0,
       dislikedCount: json['dislikedCount'] ?? 0,
+      userLiked: json['userLiked'],
+      userDisliked: json['userDisliked'],
     );
   }
 

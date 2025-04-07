@@ -5,6 +5,7 @@ import 'config/routes.dart';
 import 'config/theme.dart';
 import 'providers/app_provider.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/onboarding/onboarding_screen.dart';
 import 'services/kakao_service.dart';
 import 'providers/search_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -20,7 +21,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:frontend/services/user_service.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 import 'providers/matching_provider.dart';
-import 'services/deep_link_service.dart'; // 추가: DeepLinkService 임포트
+import 'services/deep_link_service.dart';
+import 'providers/review_provider.dart';
 
 void main() async {
   // Flutter 엔진 초기화
@@ -49,6 +51,8 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   
+  bool _showOnboarding = true;
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +68,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       } else {
         print('딥링크 서비스 초기화 실패: 컨텍스트가 없음');
       }
+      
+      _checkOnboarding();
+    });
+  }
+
+  Future<void> _checkOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    final showOnboarding = prefs.getBool('showOnboarding') ?? true;
+    setState(() {
+      _showOnboarding = showOnboarding;
     });
   }
 
@@ -120,9 +134,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           builder: (context) {
             // 홈 화면에서 저장된 초대 토큰 확인
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _checkPendingInvitation(context);
+              if (_showOnboarding) {
+                // 온보딩 후 초대 토큰 확인
+                _checkPendingInvitation(context);
+              } else {
+                // 로그인 화면에서 초대 토큰 확인
+                _checkPendingInvitation(context);
+              }
             });
-            return const LoginScreen();
+            
+            // 온보딩 화면과 로그인 화면 중 선택
+            return _showOnboarding 
+              ? const OnboardingScreen() 
+              : const LoginScreen();
           },
         ),
         routes: AppRoutes.routes,
