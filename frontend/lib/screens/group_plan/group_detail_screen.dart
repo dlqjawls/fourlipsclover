@@ -8,6 +8,7 @@ import '../../models/plan/plan_list_model.dart';
 import '../../providers/plan_provider.dart';
 import '../../providers/group_provider.dart';
 import '../../config/theme.dart';
+import 'bottomsheet/join_request_bottom_sheet.dart';
 import 'group_widgets/group_calendar.dart';
 import 'plan_widgets/empty_plan_view.dart';
 import 'plan_widgets/plan_list_view.dart';
@@ -227,7 +228,16 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         centerTitle: true,
         elevation: 0,
         actions: [
-          // 그룹장인 경우에만 메뉴 버튼 표시
+          // 가입 요청 관리 버튼 (그룹장인 경우에만 표시)
+          if (isGroupOwner())
+            IconButton(
+              icon: const Icon(Icons.person_add, color: AppColors.primary),
+              tooltip: '가입 요청 관리',
+              onPressed: () {
+                _showJoinRequestBottomSheet();
+              },
+            ),
+          // 기존 메뉴 버튼
           if (isGroupOwner())
             PopupMenuButton<String>(
               onSelected: (value) {
@@ -562,6 +572,53 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
       default:
         return Container();
+    }
+  }
+
+  // 가입 요청 바텀시트 표시
+  void _showJoinRequestBottomSheet() async {
+    // 로딩 상태 설정
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 가입 요청 목록 가져오기
+      final groupProvider = Provider.of<GroupProvider>(context, listen: false);
+      final requests = await groupProvider.fetchJoinRequestList(
+        _currentGroup.groupId,
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder:
+              (context) => JoinRequestBottomSheet(
+                groupId: _currentGroup.groupId,
+                requests: requests ?? [],
+                onRequestProcessed: () {
+                  // 요청 처리 후 그룹 상세 정보 새로고침
+                  _loadGroupDetail();
+                },
+              ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('가입 요청 목록을 불러오는데 실패했습니다: $e')));
+      }
     }
   }
 
