@@ -2,6 +2,7 @@ package com.patriot.fourlipsclover.payment.repository;
 
 import com.patriot.fourlipsclover.payment.entity.PaymentApproval;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import javax.swing.text.html.Option;
@@ -21,5 +22,7 @@ public interface PaymentApprovalRepository extends JpaRepository<PaymentApproval
 			String memberId);
 
 	Optional<PaymentApproval> findByTid(String tid);
+
+	List<PaymentApproval> findTop3ByPartnerUserIdOrderByApprovedAtDesc(String partnerUserId);
 }
 

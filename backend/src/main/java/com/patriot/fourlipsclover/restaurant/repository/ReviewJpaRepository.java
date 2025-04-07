@@ -14,4 +14,5 @@ public interface ReviewJpaRepository extends JpaRepository<Review, Integer> {
 	List<Review> findByKakaoPlaceId(@Param("kakaoPlaceId") String kakaoPlaceId);
 
 
+	int countByMember_MemberId(long memberId);
 }
