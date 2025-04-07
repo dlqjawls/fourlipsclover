@@ -62,7 +62,4 @@ public class Restaurant {
     @Column(name = "opening_hours")
     private String openingHours;
 
-    @Column(name = "avg_amount", columnDefinition = "JSON")
-    private String avgAmount;
-
 }
