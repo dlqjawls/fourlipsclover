@@ -11,19 +11,23 @@ class ReviewService {
   static String get baseUrl => dotenv.env['API_BASE_URL'] ?? '';
   static const String apiPrefix = '/api/restaurant';
 
-  /// ✅ 리뷰 목록 조회
-  static Future<List<Review>> fetchReviews(String kakaoPlaceId) async {
-    print("📌 리뷰 데이터 요청: restaurantId = $kakaoPlaceId");
+  /// ✅ 리뷰 목록 조회 (accessToken 포함 가능)
+  static Future<List<Review>> fetchReviews(String kakaoPlaceId, {String? accessToken}) async {
+    print("📍 리뷰 데이터 요청: restaurantId = $kakaoPlaceId");
 
     List<Review> allReviews = [];
 
     try {
       final url = Uri.parse('$baseUrl$apiPrefix/$kakaoPlaceId/reviews');
-      final response = await http.get(url);
+      final headers = {
+        'Content-Type': 'application/json',
+        if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+      };
+
+      final response = await http.get(url, headers: headers);
 
       if (response.statusCode == 200) {
         final String decodedBody = utf8.decode(response.bodyBytes);
-
         print("🔎 응답 바디:\n$decodedBody");
 
         List<dynamic> apiData = jsonDecode(decodedBody);
@@ -42,7 +46,6 @@ class ReviewService {
 
     return allReviews;
   }
-
 
   /// ✅ 리뷰 상세 조회
   static Future<ReviewResponse> getReviewDetail({

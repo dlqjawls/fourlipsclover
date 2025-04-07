@@ -7,6 +7,11 @@ import '../review/review_write.dart';
 import '../../services/review_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../providers/review_provider.dart';
+import 'package:provider/provider.dart';
+import '../../providers/app_provider.dart';
+import '../../providers/user_provider.dart';
+
 
 class ReviewList extends StatefulWidget {
   final String restaurantId;
@@ -30,61 +35,57 @@ class _ReviewListState extends State<ReviewList> {
   @override
   void initState() {
     super.initState();
-    _loadAuthInfo();
-    _fetchReviews();
-  }
 
-  Future<void> _loadAuthInfo() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userIdStr = prefs.getString('userId');
-    final parsedId = int.tryParse(userIdStr ?? '');
-    setState(() {
-      accessToken = prefs.getString("jwtToken");
-      memberId = parsedId ?? 0;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final appProvider = Provider.of<AppProvider>(context, listen: false);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+      setState(() {
+        accessToken = appProvider.jwtToken;
+        memberId = userProvider.userProfile?.memberId ?? 0;
+      });
+
+      _fetchReviews();
     });
   }
+
+
 
   void _fetchReviews() {
-    setState(() {
-      reviewData = ReviewService.fetchReviews(widget.restaurantId).then((reviews) {
-        reviews.sort((a, b) => b.date.compareTo(a.date)); // 최신순 정렬
-        return reviews;
-      });
+    final appProvider = Provider.of<AppProvider>(context, listen: false);
+    final token = appProvider.jwtToken;
+
+    reviewData = ReviewService.fetchReviews(
+      widget.restaurantId,
+      accessToken: token,
+    ).then((reviews) {
+      reviews.sort((a, b) => b.date.compareTo(a.date));
+      Provider.of<ReviewProvider>(context, listen: false).setReviews(reviews);
+      return reviews;
     });
   }
 
-  Future<void> _toggleLike(Review review, String likeStatus) async {
-    if (review.memberId == memberId) return;
+
+  Future<void> _toggleLike(String reviewId, String likeStatus) async {
+    final provider = Provider.of<ReviewProvider>(context, listen: false);
+    final review = provider.getReview(reviewId);
+
+    if (review == null || review.memberId == memberId) return;
 
     try {
-      final message = await ReviewService.toggleLikeStatus(
+      await ReviewService.toggleLikeStatus(
         reviewId: int.parse(review.id),
         memberId: memberId,
         likeStatus: likeStatus,
         accessToken: accessToken!,
       );
 
-      setState(() {
-        if (likeStatus == "LIKE") {
-          review.isLiked = !review.isLiked;
-          review.likes += review.isLiked ? 1 : -1;
-          if (review.isDisliked) {
-            review.isDisliked = false;
-            review.dislikes -= 1;
-          }
-        } else {
-          review.isDisliked = !review.isDisliked;
-          review.dislikes += review.isDisliked ? 1 : -1;
-          if (review.isLiked) {
-            review.isLiked = false;
-            review.likes -= 1;
-          }
-        }
-      });
+      provider.toggleLike(reviewId, likeStatus);
     } catch (e) {
       print("❌ 좋아요/싫어요 처리 오류: $e");
     }
   }
+
 
   Future<void> _onReviewWritten() async {
     final createdReview = await Navigator.push(
@@ -95,8 +96,10 @@ class _ReviewListState extends State<ReviewList> {
     );
 
     if (createdReview != null && createdReview is Review) {
+      widget.onReviewUpdated(); // 레스토랑 대표 이미지 등 갱신
+      _fetchReviews();
       // 리뷰 상세로 바로 이동
-      Navigator.push(
+      final updated = await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ReviewDetail(
@@ -105,10 +108,10 @@ class _ReviewListState extends State<ReviewList> {
           ),
         ),
       );
-
-      // 리스트도 갱신
-      await Future.delayed(const Duration(milliseconds: 300));
-      _fetchReviews();
+      if (updated == true) {
+        widget.onReviewUpdated();
+        _fetchReviews();
+      }
     }
   }
 
@@ -172,7 +175,8 @@ class _ReviewListState extends State<ReviewList> {
                           );
 
                           if (updated == true) {
-                            _fetchReviews(); // ✅ 무조건 다시 불러오기
+                            widget.onReviewUpdated();
+                            _fetchReviews();
                           }
                         },
                         child: Column(
@@ -204,31 +208,38 @@ class _ReviewListState extends State<ReviewList> {
                             const SizedBox(height: 8),
                             _buildReviewImage(review.imageUrl, index),
                             const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.thumb_up,
-                                    size: 18,
-                                    color: review.isLiked ? AppColors.primary : AppColors.lightGray,
-                                  ),
-                                  onPressed: review.memberId == memberId
-                                      ? null
-                                      : () => _toggleLike(review, "LIKE"),
-                                ),
-                                Text('${review.likes}', style: const TextStyle(fontSize: 12)),
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.thumb_down,
-                                    size: 18,
-                                    color: review.isDisliked ? AppColors.primary : AppColors.lightGray,
-                                  ),
-                                  onPressed: review.memberId == memberId
-                                      ? null
-                                      : () => _toggleLike(review, "DISLIKE"),
-                                ),
-                                Text('${review.dislikes}', style: const TextStyle(fontSize: 12)),
-                              ],
+                            Consumer<ReviewProvider>(
+                              builder: (context, provider, _) {
+                                final currentReview = provider.getReview(review.id);
+                                if (currentReview == null) return SizedBox.shrink();
+
+                                return Row(
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.thumb_up,
+                                        size: 18,
+                                        color: currentReview.isLiked ? AppColors.primary : AppColors.lightGray,
+                                      ),
+                                      onPressed: currentReview.memberId == memberId
+                                          ? null
+                                          : () => _toggleLike(currentReview.id, "LIKE"),
+                                    ),
+                                    Text('${currentReview.likes}', style: const TextStyle(fontSize: 12)),
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.thumb_down,
+                                        size: 18,
+                                        color: currentReview.isDisliked ? AppColors.primary : AppColors.lightGray,
+                                      ),
+                                      onPressed: currentReview.memberId == memberId
+                                          ? null
+                                          : () => _toggleLike(currentReview.id, "DISLIKE"),
+                                    ),
+                                    Text('${currentReview.dislikes}', style: const TextStyle(fontSize: 12)),
+                                  ],
+                                );
+                              },
                             ),
                             if (index < reviews.length - 1)
                               Padding(
