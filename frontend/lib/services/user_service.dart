@@ -18,43 +18,82 @@ class UserService {
       final baseUrl = dotenv.env['API_BASE_URL'];
       final userIdStr = prefs.getString('userId');
 
-      debugPrint('토큰: $token'); // 디버깅
-      debugPrint('userId 문자열: $userIdStr'); // 디버깅
+      debugPrint('=== 사용자 프로필 조회 시작 ===');
+      debugPrint('API_BASE_URL: $baseUrl');
+      debugPrint('userId: $userIdStr');
+      debugPrint('JWT 토큰 존재 여부: ${token != null}');
 
       if (userIdStr == null) {
         throw Exception('사용자 ID를 찾을 수 없습니다.');
       }
 
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/mypage/$userIdStr'),
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-          'Authorization': '$token',
-        },
-      );
+      if (baseUrl == null) {
+        throw Exception('API_BASE_URL이 설정되지 않았습니다.');
+      }
 
-      debugPrint('응답 상태 코드: ${response.statusCode}'); // 디버깅
+      if (token == null) {
+        throw Exception('JWT 토큰이 없습니다. 다시 로그인해주세요.');
+      }
 
-      if (response.statusCode == 200) {
-        final data = utf8.decode(response.bodyBytes);
-        final jsonData = json.decode(data);
-        debugPrint('응답 데이터: $jsonData'); // 디버깅
+      final url = Uri.parse('$baseUrl/api/mypage/$userIdStr');
+      debugPrint('요청 URL: $url');
 
-        try {
-          final userProfile = UserProfile.fromJson(jsonData);
-          userProvider.setUserProfile(userProfile);
-          return userProfile;
-        } catch (e) {
-          debugPrint('UserProfile 변환 실패: $e');
-          throw Exception('사용자 프로필 데이터 형식이 올바르지 않습니다.');
+      try {
+        final response = await http.get(
+          url,
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Authorization': token,
+          },
+        );
+
+        debugPrint('=== 서버 응답 ===');
+        debugPrint('상태 코드: ${response.statusCode}');
+        debugPrint('응답 헤더: ${response.headers}');
+        debugPrint('응답 본문: ${response.body}');
+
+        if (response.statusCode == 200) {
+          final data = utf8.decode(response.bodyBytes);
+          final jsonData = json.decode(data);
+
+          try {
+            final userProfile = UserProfile.fromJson(jsonData);
+            userProvider.setUserProfile(userProfile);
+            debugPrint('=== 프로필 변환 성공 ===');
+            debugPrint('프로필 데이터: ${userProfile.toJson()}');
+            return userProfile;
+          } catch (e) {
+            debugPrint('=== 프로필 변환 실패 ===');
+            debugPrint('오류: $e');
+            debugPrint('원본 데이터: $jsonData');
+            throw Exception('사용자 프로필 데이터 형식이 올바르지 않습니다.');
+          }
+        } else if (response.statusCode == 401) {
+          throw Exception('인증이 만료되었습니다. 다시 로그인해주세요.');
+        } else if (response.statusCode == 404) {
+          throw Exception('사용자 정보를 찾을 수 없습니다.');
+        } else if (response.statusCode == 500) {
+          // 서버 오류 시 상세 정보 로깅
+          try {
+            final errorData = json.decode(response.body);
+            debugPrint('=== 서버 오류 상세 ===');
+            debugPrint('에러 메시지: ${errorData['message'] ?? errorData['error']}');
+            debugPrint('경로: ${errorData['path']}');
+          } catch (e) {
+            debugPrint('서버 오류 응답 파싱 실패: $e');
+          }
+          throw Exception('서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+        } else {
+          throw Exception('서버 응답 오류: ${response.statusCode}\n${response.body}');
         }
-      } else if (response.statusCode == 404) {
-        throw Exception('사용자 정보를 찾을 수 없습니다.');
-      } else {
-        throw Exception('서버 응답 오류: ${response.statusCode}');
+      } catch (e) {
+        debugPrint('=== API 호출 실패 ===');
+        debugPrint('오류: $e');
+        rethrow;
       }
     } catch (e) {
-      debugPrint('getUserProfile 에러: $e');
+      debugPrint('=== getUserProfile 전체 실패 ===');
+      debugPrint('오류: $e');
       rethrow;
     }
   }
