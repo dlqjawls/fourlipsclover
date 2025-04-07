@@ -29,6 +29,7 @@ public class RestaurantMapper {
 				.x(restaurant.getX())
 				.y(restaurant.getY())
 				.openingHours(restaurant.getOpeningHours())
+				.avgAmount(restaurant.getAvgAmount())
 				.build();
 	}
 

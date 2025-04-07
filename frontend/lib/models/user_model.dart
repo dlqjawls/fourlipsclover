@@ -38,8 +38,8 @@ class UserProfile {
   final List<RecentPayment> recentPayments;
   final List<PlanResponse> planResponses;
   final bool localAuth;
-  final String localRank;
-  final String localRegion;
+  final String? localRank;
+  final String? localRegion;
   final String? badgeName;
   final List<RestaurantTag> tags;
 
@@ -55,8 +55,8 @@ class UserProfile {
     required this.recentPayments,
     required this.planResponses,
     required this.localAuth,
-    required this.localRank,
-    required this.localRegion,
+    this.localRank,
+    this.localRegion,
     this.badgeName,
     required this.tags,
   });
@@ -80,8 +80,8 @@ class UserProfile {
               .map((e) => PlanResponse.fromJson(e))
               .toList(),
       localAuth: json['localAuth'],
-      localRank: json['localRank'],
-      localRegion: json['localRegion'],
+      localRank: json['localRank'] as String?,
+      localRegion: json['localRegion'] as String?,
       badgeName: json['badgeName'],
       tags:
           (json['tags'] as List).map((e) => RestaurantTag.fromJson(e)).toList(),

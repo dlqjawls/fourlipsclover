@@ -1,5 +1,7 @@
 package com.patriot.fourlipsclover.restaurant.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patriot.fourlipsclover.config.CustomUserDetails;
 import com.patriot.fourlipsclover.exception.DeletedResourceAccessException;
 import com.patriot.fourlipsclover.exception.InvalidDataException;
@@ -9,6 +11,8 @@ import com.patriot.fourlipsclover.exception.UserNotFoundException;
 import com.patriot.fourlipsclover.image.service.ReviewImageService;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberJpaRepository;
+import com.patriot.fourlipsclover.payment.entity.VisitPayment;
+import com.patriot.fourlipsclover.payment.repository.VisitPaymentRepository;
 import com.patriot.fourlipsclover.restaurant.dto.kafka.RestaurantKafkaDto;
 import com.patriot.fourlipsclover.restaurant.dto.request.LikeStatus;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
@@ -17,6 +21,7 @@ import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
 import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
+import com.patriot.fourlipsclover.restaurant.dto.response.ReviewSentimentResponse;
 import com.patriot.fourlipsclover.restaurant.entity.City;
 import com.patriot.fourlipsclover.restaurant.entity.FoodCategory;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
@@ -24,6 +29,8 @@ import com.patriot.fourlipsclover.restaurant.entity.RestaurantImage;
 import com.patriot.fourlipsclover.restaurant.entity.Review;
 import com.patriot.fourlipsclover.restaurant.entity.ReviewLike;
 import com.patriot.fourlipsclover.restaurant.entity.ReviewLikePK;
+import com.patriot.fourlipsclover.restaurant.entity.ReviewSentiment;
+import com.patriot.fourlipsclover.restaurant.entity.SentimentStatus;
 import com.patriot.fourlipsclover.restaurant.mapper.RestaurantMapper;
 import com.patriot.fourlipsclover.restaurant.mapper.ReviewMapper;
 import com.patriot.fourlipsclover.restaurant.repository.CityRepository;
@@ -32,20 +39,29 @@ import com.patriot.fourlipsclover.restaurant.repository.RestaurantImageRepositor
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewLikeJpaRepository;
+import com.patriot.fourlipsclover.restaurant.repository.ReviewSentimentRepository;
 import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
 import com.patriot.fourlipsclover.tag.service.TagService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.elasticsearch.ResourceNotFoundException;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.reactive.function.client.WebClient;
 
 @Slf4j
 @Service
@@ -63,6 +79,11 @@ public class RestaurantService {
 	private final FoodCategoryRepository foodCategoryRepository;
 	private final TagService tagService;
 	private final RestaurantImageRepository restaurantImageRepository;
+	private final WebClient webClient;
+	private final ReviewSentimentRepository reviewSentimentRepository;
+	private final VisitPaymentRepository visitPaymentRepository;
+	@Value("${model.server.uri}")
+	private String MODEL_SERVER_URI;
 
 	@Transactional
 	public ReviewResponse create(ReviewCreate reviewCreate, List<MultipartFile> images) {
@@ -80,11 +101,36 @@ public class RestaurantService {
 		reviewRepository.save(review);
 		CompletableFuture.runAsync(() -> tagService.generateTag(review));
 
+		String reviewTextSentiment = analyzeSentiment(review);
 		List<String> imageUrls = reviewImageService.uploadFiles(review, images);
 		ReviewResponse response = reviewMapper.toReviewImageDto(review, imageUrls);
 		response.setLikedCount(0);
 		response.setDislikedCount(0);
 		return response;
+	}
+
+	public String analyzeSentiment(Review review) {
+		Map<String, String> requestMap = new HashMap<>();
+		requestMap.put("text", review.getContent());
+		String requestBody = null;
+		try {
+			requestBody = new ObjectMapper().writeValueAsString(requestMap);
+		} catch (JsonProcessingException e) {
+			throw new RuntimeException(e);
+		}
+		ReviewSentimentResponse reviewSentimentResponse = webClient.post()
+				.uri(MODEL_SERVER_URI + "/analyze")
+				.contentType(
+						MediaType.APPLICATION_JSON).bodyValue(requestBody).retrieve()
+				.bodyToMono(
+						ReviewSentimentResponse.class).block();
+		ReviewSentiment reviewSentiment = new ReviewSentiment();
+		reviewSentiment.setReview(review);
+		reviewSentiment.setSentimentStatus(
+				Objects.requireNonNull(reviewSentimentResponse).getSentiment().equals("긍정적") ?
+						SentimentStatus.POSITIVE : SentimentStatus.NEGATIVE);
+		reviewSentimentRepository.save(reviewSentiment);
+		return reviewSentimentResponse.getSentiment();
 	}
 
 	@Transactional(readOnly = true)
@@ -101,8 +147,10 @@ public class RestaurantService {
 		response.setDislikedCount(dislikedCount.intValue());
 		Member member = loadCurrentMember();
 		if (member != null) {
-			boolean userLiked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.LIKE);
-			boolean userDisliked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.DISLIKE);
+			boolean userLiked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review,
+					member, LikeStatus.LIKE);
+			boolean userDisliked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(
+					review, member, LikeStatus.DISLIKE);
 			response.setUserLiked(userLiked);
 			response.setUserDisliked(userDisliked);
 		} else {
@@ -143,8 +191,10 @@ public class RestaurantService {
 					response.setDislikedCount(dislikedCount.intValue());
 					Member member = loadCurrentMember();
 					if (member != null) {
-						boolean userLiked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.LIKE);
-						boolean userDisliked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(review, member, LikeStatus.DISLIKE);
+						boolean userLiked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(
+								review, member, LikeStatus.LIKE);
+						boolean userDisliked = reviewLikeJpaRepository.existsByReviewAndMemberAndLikeStatus(
+								review, member, LikeStatus.DISLIKE);
 						response.setUserLiked(userLiked);
 						response.setUserDisliked(userDisliked);
 					} else {
@@ -182,7 +232,7 @@ public class RestaurantService {
 	}
 
 	private void checkReviewerIsCurrentUser(Long reviewMemberId) {
-		Member member =loadCurrentMember();
+		Member member = loadCurrentMember();
 		if (member == null) {
 			throw new UnauthorizedAccessException("로그인이 필요한 기능입니다.");
 		}
@@ -221,14 +271,16 @@ public class RestaurantService {
 		restaurantResponse.setTags(restaurantTagResponses);
 
 		// 식당 이미지 조회 및 설정
-		List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(restaurant);
-		restaurantResponse.setRestaurantImages(restaurantMapper.toRestaurantImageDtoList(restaurantImages));
+		List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(
+				restaurant);
+		restaurantResponse.setRestaurantImages(
+				restaurantMapper.toRestaurantImageDtoList(restaurantImages));
 		return restaurantResponse;
 	}
 
 	@Transactional(readOnly = true)
 	public List<RestaurantResponse> findNearbyRestaurants(Double latitude, Double longitude,
-														  Integer radius) {
+			Integer radius) {
 		List<RestaurantResponse> response = new ArrayList<>();
 		List<Restaurant> nearbyRestaurants = restaurantRepository.findNearbyRestaurants(
 				latitude, longitude, radius);
@@ -237,8 +289,10 @@ public class RestaurantService {
 			RestaurantResponse restaurantResponse = restaurantMapper.toDto(data);
 
 			// 식당 이미지 조회 및 설정
-			List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(data);
-			restaurantResponse.setRestaurantImages(restaurantMapper.toRestaurantImageDtoList(restaurantImages));
+			List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(
+					data);
+			restaurantResponse.setRestaurantImages(
+					restaurantMapper.toRestaurantImageDtoList(restaurantImages));
 
 			// 태그 설정
 			List<RestaurantTagResponse> tags = tagService.findRestaurantTagByRestaurantId(
@@ -380,5 +434,89 @@ public class RestaurantService {
 			restaurantRepository.delete(restaurant);
 			log.info("Restaurant deleted from Kafka: {}", dto.getRestaurantId());
 		});
+	}
+
+	@Transactional
+	public void updateRestaurantAvgAmount(Integer restaurantId) {
+		Restaurant restaurant = restaurantRepository.findById(restaurantId)
+				.orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
+
+		List<VisitPayment> payments = visitPaymentRepository.findByRestaurantId_RestaurantId(
+				restaurantId);
+
+		if (payments.isEmpty()) {
+			log.info("No payment data for restaurant ID: {}", restaurantId);
+			return;
+		}
+
+		Map<String, Integer> avgAmountInfo = new LinkedHashMap<>();
+
+		// 1인당 평균 금액 계산
+		for (VisitPayment payment : payments) {
+			Integer perPersonAmount = payment.getAmount() / payment.getVisitedPersonnel();
+			String range = calculatePriceRange(perPersonAmount);
+
+			// 해당 가격 범위의 인원 추가
+			avgAmountInfo.merge(range, 1, Integer::sum);
+		}
+
+		// 가장 많은 분포의 범위 찾기
+		String avgPriceRange = avgAmountInfo.entrySet().stream()
+				.max(Comparator.comparing(Map.Entry::getValue))
+				.map(Map.Entry::getKey)
+				.orElse("1 ~ 10000");
+
+		Map<String, Object> result = new LinkedHashMap<>();
+		result.put("avg", avgPriceRange);
+
+		// 0이 아닌 값만 결과에 포함
+		avgAmountInfo.forEach((key, value) -> {
+			if (value > 0) {
+				result.put(key, value);
+			}
+		});
+
+		try {
+			// JSON 문자열로 변환하여 저장
+			restaurant.setAvgAmount(new ObjectMapper().writeValueAsString(result));
+			restaurantRepository.save(restaurant);
+			log.info("Updated average amount for restaurant {}: {}", restaurantId, avgPriceRange);
+		} catch (Exception e) {
+			log.error("Error updating restaurant avg amount", e);
+		}
+	}
+
+	private String calculatePriceRange(Integer amount) {
+		if (amount <= 10000) {
+			return "1 ~ 10000";
+		}
+		if (amount <= 20000) {
+			return "10000 ~ 20000";
+		}
+		if (amount <= 30000) {
+			return "20000 ~ 30000";
+		}
+		if (amount <= 40000) {
+			return "30000 ~ 40000";
+		}
+		if (amount <= 50000) {
+			return "40000 ~ 50000";
+		}
+		if (amount <= 60000) {
+			return "50000 ~ 60000";
+		}
+		if (amount <= 70000) {
+			return "60000 ~ 70000";
+		}
+		if (amount <= 80000) {
+			return "70000 ~ 80000";
+		}
+		if (amount <= 90000) {
+			return "80000 ~ 90000";
+		}
+		if (amount <= 100000) {
+			return "90000 ~ 100000";
+		}
+		return "100000 ~";
 	}
 }
