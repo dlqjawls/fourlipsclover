@@ -732,10 +732,6 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
     // 그룹 생성자 ID와 비교
     final isOwner = _currentGroup.memberId == myId;
-    debugPrint(
-      '현재 사용자 ID: $myId, 그룹장 ID: ${_currentGroup.memberId}, 그룹장 여부: $isOwner',
-    );
-
     return isOwner;
   }
 
