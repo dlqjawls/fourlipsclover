@@ -176,16 +176,4 @@ public class PaymentService {
         return paymentApprovals.stream().map(paymentMapper::toDto).toList();
     }
 
-    @Transactional
-    public VisitPayment createVisitPayment(VisitPayment visitPayment) {
-        // 결제 데이터 저장
-        VisitPayment savedPayment = visitPaymentRepository.save(visitPayment);
-
-        // 레스토랑 평균 금액 업데이트
-        if (savedPayment.getRestaurantId() != null) {
-            restaurantService.updateRestaurantAvgAmount(savedPayment.getRestaurantId().getRestaurantId());
-        }
-
-        return savedPayment;
-    }
 }
