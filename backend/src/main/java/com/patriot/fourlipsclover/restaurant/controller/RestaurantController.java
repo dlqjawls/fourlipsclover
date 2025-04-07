@@ -5,6 +5,7 @@ import com.patriot.fourlipsclover.restaurant.dto.request.ReviewLikeCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
 import com.patriot.fourlipsclover.restaurant.dto.response.ApiResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
+import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantSearchResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.service.RestaurantElasticsearchService;
@@ -38,7 +39,12 @@ public class RestaurantController {
 
 	private final RestaurantService restaurantService;
 	private final RestaurantElasticsearchService restaurantElasticsearchService;
+	@GetMapping("/search-location")
+	public ResponseEntity<List<RestaurantSearchResponse>> locationSearch(@RequestParam Double latitude, @RequestParam Double longitude, @RequestParam int radius){
+		List<RestaurantSearchResponse> response = restaurantElasticsearchService.searchRestaurantsByLocation(latitude, longitude, radius);
+		return ResponseEntity.ok(response);
 
+	}
 	/**
 	 * 레스토랑 검색 API 엔드포인트
 	 *
