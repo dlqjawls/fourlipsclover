@@ -105,25 +105,25 @@ class ActionButtons extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => _handleLogout(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.background,
-                    foregroundColor: AppColors.error,
-                    side: const BorderSide(color: AppColors.error, width: 2.0),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    '로그아웃',
-                    style: TextStyle(color: AppColors.error),
-                  ),
-                ),
-              ),
+              // const SizedBox(height: 12),
+              // SizedBox(
+              //   width: double.infinity,
+              //   child: ElevatedButton(
+              //     onPressed: () => _handleLogout(context),
+              //     style: ElevatedButton.styleFrom(
+              //       backgroundColor: AppColors.background,
+              //       foregroundColor: AppColors.error,
+              //       side: const BorderSide(color: AppColors.error, width: 2.0),
+              //       shape: RoundedRectangleBorder(
+              //         borderRadius: BorderRadius.circular(8),
+              //       ),
+              //     ),
+              //     child: const Text(
+              //       '로그아웃',
+              //       style: TextStyle(color: AppColors.error),
+              //     ),
+              //   ),
+              // ),
             ],
           ),
     );

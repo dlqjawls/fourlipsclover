@@ -23,5 +23,13 @@ class ReviewProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setReviews(List<Review> reviews) {
+    _reviews.clear();
+    for (var review in reviews) {
+      _reviews[review.id] = review;
+    }
+    notifyListeners();
+  }
+
   Review? getReview(String id) => _reviews[id];
 }

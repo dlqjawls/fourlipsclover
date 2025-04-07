@@ -73,8 +73,8 @@ class Review {
       dislikes: response.dislikedCount,
       date: response.visitedAt ?? DateTime.now(),
       menu: [],
-      isLiked: false,
-      isDisliked: false,
+        isLiked: response.userLiked ?? false,
+        isDisliked: response.userDisliked ?? false,
       imageUrls: response.reviewImageUrls.map((url) => normalizeUrl(url)).toList(),
     );
   }

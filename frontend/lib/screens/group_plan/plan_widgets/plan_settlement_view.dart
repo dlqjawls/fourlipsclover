@@ -5,6 +5,7 @@ import '../../../config/theme.dart';
 import '../../../providers/plan_provider.dart';
 import '../../../providers/settlement_provider.dart';
 import '../../../models/settlement/settlement_model.dart';
+import 'dart:convert';
 
 class PlanSettlementView extends StatefulWidget {
   final int planId;
@@ -74,14 +75,20 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
   Future<void> _loadSettlementData() async {
     if (!mounted) return;
 
-    final settlementProvider = Provider.of<SettlementProvider>(context, listen: false);
-    
+    final settlementProvider = Provider.of<SettlementProvider>(
+      context,
+      listen: false,
+    );
+
     try {
       // 정산 상세 정보 조회
-      final settlement = await settlementProvider.fetchSettlementDetail(widget.planId);
-      
+      final settlement = await settlementProvider.fetchSettlementDetail(
+        widget.planId,
+      );
+      debugPrint(jsonEncode(settlement));
+
       if (!mounted) return;
-      
+
       setState(() {
         _settlement = settlement;
         _isLoading = false;
@@ -106,21 +113,24 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
       _isLoading = true;
     });
 
-    final settlementProvider = Provider.of<SettlementProvider>(context, listen: false);
-    
+    final settlementProvider = Provider.of<SettlementProvider>(
+      context,
+      listen: false,
+    );
+
     try {
       // 정산 생성 API 호출
       final result = await settlementProvider.createSettlement(widget.planId);
-      
+
       if (!mounted) return;
-      
+
       if (result) {
         // 성공 시 정산 데이터 다시 로드
         await _loadSettlementData();
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('정산이 성공적으로 생성되었습니다.')),
-        );
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('정산이 성공적으로 생성되었습니다.')));
       } else {
         setState(() {
           _isLoading = false;
@@ -158,7 +168,7 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    
+
     if (_errorMessage != null) {
       return Center(
         child: Column(
@@ -178,7 +188,7 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
         ),
       );
     }
-    
+
     // 정산 데이터가 없는 경우 (아직 생성되지 않은 경우)
     if (_settlement == null) {
       return Center(
@@ -202,10 +212,7 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
             const SizedBox(height: 10),
             const Text(
               '여행 계획에 대한 정산을 생성해보세요!',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.mediumGray,
-              ),
+              style: TextStyle(fontSize: 14, color: AppColors.mediumGray),
             ),
             const SizedBox(height: 30),
             ElevatedButton.icon(
@@ -214,7 +221,10 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
               label: const Text('정산 생성하기'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -246,10 +256,7 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
             const Text(
               '여행 중 발생한 비용을 카카오페이로 결제하면\n자동으로 여기에 표시됩니다.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.mediumGray,
-              ),
+              style: TextStyle(fontSize: 14, color: AppColors.mediumGray),
             ),
           ],
         ),
@@ -386,7 +393,8 @@ class ReceiptWidget extends StatelessWidget {
                     shrinkWrap: true,
                     physics: const AlwaysScrollableScrollPhysics(),
                     itemCount: settlement.expenses.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 4),
+                    separatorBuilder:
+                        (context, index) => const SizedBox(height: 4),
                     itemBuilder: (context, index) {
                       final expense = settlement.expenses[index];
                       return Padding(
@@ -411,7 +419,9 @@ class ReceiptWidget extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    DateFormat('yyyy.MM.dd HH:mm').format(expense.approvedAt),
+                                    DateFormat(
+                                      'yyyy.MM.dd HH:mm',
+                                    ).format(expense.approvedAt),
                                     style: TextStyle(
                                       fontFamily: 'Anemone_air',
                                       fontSize: 10,
@@ -584,10 +594,11 @@ class TapeClipper extends CustomClipper<Path> {
 class DottedLinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.grey.shade400
-      ..strokeWidth = 1
-      ..style = PaintingStyle.stroke;
+    final paint =
+        Paint()
+          ..color = Colors.grey.shade400
+          ..strokeWidth = 1
+          ..style = PaintingStyle.stroke;
 
     double dashWidth = 5, dashSpace = 5, startX = 0;
 
@@ -605,9 +616,10 @@ class DottedLinePainter extends CustomPainter {
 class BarcodePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.fill;
+    final paint =
+        Paint()
+          ..color = Colors.black
+          ..style = PaintingStyle.fill;
 
     final random = List.generate(
       50,
