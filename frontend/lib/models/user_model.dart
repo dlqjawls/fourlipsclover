@@ -27,71 +27,166 @@ class Payment {
 }
 
 class UserProfile {
-  final String userId;
-  final String name;
+  final int memberId;
+  final String email;
   final String nickname;
-  final String profileUrl;
-  final List<Payment> recentPayments;
-  final String badgeName;
-  final bool localAuth;
-  final int albumCount;
-  final int groupCount;
+  final String? profileUrl;
+  final DateTime createdAt;
+  final double trustScore;
   final int reviewCount;
-  final int luckGauge;
-  final String currentJourney;
+  final int groupCount;
+  final List<RecentPayment> recentPayments;
+  final List<PlanResponse> planResponses;
+  final bool localAuth;
+  final String localRank;
+  final String localRegion;
+  final String? badgeName;
+  final List<RestaurantTag> tags;
 
   UserProfile({
-    required this.userId,
-    required this.name,
+    required this.memberId,
+    required this.email,
     required this.nickname,
-    required this.profileUrl,
-    required this.recentPayments,
-    required this.badgeName,
-    required this.localAuth,
-    required this.albumCount,
-    required this.groupCount,
+    this.profileUrl,
+    required this.createdAt,
+    required this.trustScore,
     required this.reviewCount,
-    required this.luckGauge,
-    required this.currentJourney,
+    required this.groupCount,
+    required this.recentPayments,
+    required this.planResponses,
+    required this.localAuth,
+    required this.localRank,
+    required this.localRegion,
+    this.badgeName,
+    required this.tags,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
-      userId: json['userId'].toString(),
-      name: json['name'] ?? '',
-      nickname: json['nickname'] ?? '',
-      profileUrl: json['profileUrl'] ?? '',
+      memberId: json['memberId'],
+      email: json['email'],
+      nickname: json['nickname'],
+      profileUrl: json['profileUrl'],
+      createdAt: DateTime.parse(json['createdAt']),
+      trustScore: json['trustScore'].toDouble(),
+      reviewCount: json['reviewCount'],
+      groupCount: json['groupCount'],
       recentPayments:
-          (json['recentPayments'] as List<dynamic>? ?? [])
-              .map(
-                (payment) => Payment.fromJson(payment as Map<String, dynamic>),
-              )
+          (json['recentPayments'] as List)
+              .map((e) => RecentPayment.fromJson(e))
               .toList(),
-      badgeName: json['badgeName'] ?? '',
-      localAuth: json['localAuth'] ?? false,
-      albumCount: json['albumCount'] ?? 0,
-      groupCount: json['groupCount'] ?? 0,
-      reviewCount: json['reviewCount'] ?? 0,
-      luckGauge: json['luckGauge'] ?? 0,
-      currentJourney: json['currentJourney'] ?? '',
+      planResponses:
+          (json['planResponses'] as List)
+              .map((e) => PlanResponse.fromJson(e))
+              .toList(),
+      localAuth: json['localAuth'],
+      localRank: json['localRank'],
+      localRegion: json['localRegion'],
+      badgeName: json['badgeName'],
+      tags:
+          (json['tags'] as List).map((e) => RestaurantTag.fromJson(e)).toList(),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'userId': userId,
-      'name': name,
+      'memberId': memberId,
+      'email': email,
       'nickname': nickname,
       'profileUrl': profileUrl,
-      'recentPayments':
-          recentPayments.map((payment) => payment.toJson()).toList(),
-      'badgeName': badgeName,
-      'localAuth': localAuth,
-      'albumCount': albumCount,
-      'groupCount': groupCount,
+      'createdAt': createdAt.toIso8601String(),
+      'trustScore': trustScore,
       'reviewCount': reviewCount,
-      'luckGauge': luckGauge,
-      'currentJourney': currentJourney,
+      'groupCount': groupCount,
+      'recentPayments': recentPayments.map((e) => e.toJson()).toList(),
+      'planResponses': planResponses.map((e) => e.toJson()).toList(),
+      'localAuth': localAuth,
+      'localRank': localRank,
+      'localRegion': localRegion,
+      'badgeName': badgeName,
+      'tags': tags.map((e) => e.toJson()).toList(),
+    };
+  }
+}
+
+class RecentPayment {
+  final String storeName;
+  final int paymentAmount;
+
+  RecentPayment({required this.storeName, required this.paymentAmount});
+
+  factory RecentPayment.fromJson(Map<String, dynamic> json) {
+    return RecentPayment(
+      storeName: json['storeName'],
+      paymentAmount: json['paymentAmount'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'storeName': storeName, 'paymentAmount': paymentAmount};
+  }
+}
+
+class PlanResponse {
+  final int planId;
+  final String title;
+  final String description;
+  final DateTime startDate;
+  final DateTime endDate;
+
+  PlanResponse({
+    required this.planId,
+    required this.title,
+    required this.description,
+    required this.startDate,
+    required this.endDate,
+  });
+
+  factory PlanResponse.fromJson(Map<String, dynamic> json) {
+    return PlanResponse(
+      planId: json['planId'],
+      title: json['title'],
+      description: json['description'],
+      startDate: DateTime.parse(json['startDate']),
+      endDate: DateTime.parse(json['endDate']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'planId': planId,
+      'title': title,
+      'description': description,
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate.toIso8601String(),
+    };
+  }
+}
+
+class RestaurantTag {
+  final int restaurantTagId;
+  final String tagName;
+  final String category;
+
+  RestaurantTag({
+    required this.restaurantTagId,
+    required this.tagName,
+    required this.category,
+  });
+
+  factory RestaurantTag.fromJson(Map<String, dynamic> json) {
+    return RestaurantTag(
+      restaurantTagId: json['restaurantTagId'],
+      tagName: json['tagName'],
+      category: json['category'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'restaurantTagId': restaurantTagId,
+      'tagName': tagName,
+      'category': category,
     };
   }
 }

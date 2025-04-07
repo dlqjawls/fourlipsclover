@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
 import '../../providers/app_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../config/routes.dart';
 import '../../config/theme.dart'; // 테마 import 추가
+import '../../models/user_model.dart';
+import '../../services/user_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,15 +18,59 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleKakaoLogin(BuildContext context) async {
     try {
-      await context.read<AppProvider>().kakaoLogin();
-      if (mounted) {
-        AppRoutes.navigateTo(context, '/home');
+      debugPrint('카카오 로그인 시작');
+      final appProvider = context.read<AppProvider>();
+      await appProvider.kakaoLogin();
+      debugPrint('카카오 로그인 성공');
+
+      // UserProvider에서 프로필 정보 설정
+      final userProvider = context.read<UserProvider>();
+      final userService = UserService(userProvider: userProvider);
+
+      try {
+        final userProfile = await userService.getUserProfile();
+        debugPrint('서버에서 사용자 프로필 가져오기 성공: ${userProfile.toJson()}');
+      } catch (e) {
+        debugPrint('서버에서 사용자 프로필 가져오기 실패: $e');
+        // 임시 프로필 생성
+        if (appProvider.user != null) {
+          final kakaoUser = appProvider.user!;
+          final tempProfile = UserProfile(
+            memberId: 0,
+            email: kakaoUser.kakaoAccount?.email ?? '',
+            nickname: kakaoUser.kakaoAccount?.profile?.nickname ?? '',
+            profileUrl: kakaoUser.kakaoAccount?.profile?.profileImageUrl,
+            createdAt: DateTime.now(),
+            trustScore: 0.0,
+            reviewCount: 0,
+            groupCount: 0,
+            recentPayments: [],
+            planResponses: [],
+            localAuth: false,
+            localRank: '',
+            localRegion: '',
+            badgeName: '',
+            tags: [],
+          );
+          userProvider.setUserProfile(tempProfile);
+          debugPrint('임시 프로필 설정 완료: ${userProvider.userProfile?.toJson()}');
+        }
       }
-    } catch (error) {
+
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('로그인에 실패했습니다')));
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } catch (error, stackTrace) {
+      debugPrint('로그인 오류: $error');
+      debugPrint('스택 트레이스: $stackTrace');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('로그인에 실패했습니다: ${error.toString()}'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     }
   }
@@ -97,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: InkWell(
                     onTap: () {
                       // 임시로 홈 화면으로 이동
-                      AppRoutes.navigateTo(context, '/home');
+                      Navigator.pushReplacementNamed(context, '/home');
                     },
                     borderRadius: BorderRadius.circular(12),
                     child: const Center(
@@ -113,8 +161,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              // 여기까지 임시 홈 화면 이동 버튼
 
+              // 여기까지 임시 홈 화면 이동 버튼
               const SizedBox(height: 20),
 
               // 여기부터 카카오페이 테스트 결제 버튼
@@ -129,7 +177,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () {
-                      AppRoutes.navigateTo(context, '/kakaopay_official'); //kakaopay_test
+                      Navigator.pushReplacementNamed(
+                        context,
+                        '/kakaopay_official',
+                      ); //kakaopay_test
                     },
                     borderRadius: BorderRadius.circular(12),
                     child: const Center(

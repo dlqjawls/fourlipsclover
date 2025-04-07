@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:frontend/config/theme.dart';
-import 'package:frontend/screens/user/user_authorization.dart';
-import 'package:frontend/providers/auth_provider.dart';
-import 'package:frontend/models/user_model.dart';
+import '../../../../config/theme.dart';
+import '../../../../screens/user/user_authorization.dart';
+import '../../../../providers/auth_provider.dart';
+import '../../../../models/user_model.dart';
 
 class CloverProfileSection extends StatefulWidget {
   final UserProfile profile;
@@ -44,44 +44,45 @@ class _CloverProfileSectionState extends State<CloverProfileSection> {
                 ],
               ),
               const SizedBox(height: 16),
-             Container(
-  width: 180,
-  height: 180,
-  decoration: BoxDecoration(
-    shape: BoxShape.circle,
-    color: AppColors.lightGray,
-  ),
-  child: ClipOval(
-    child: Image.network(
-      widget.profile.profileUrl,
-      width: 180,
-      height: 180,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return Image.asset(
-          'assets/images/logo.png',
-          width: 180,
-          height: 180,
-          fit: BoxFit.contain,
-        );
-      },
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) {
-          return child;
-        }
-        return Center(
-          child: CircularProgressIndicator(
-            value: loadingProgress.expectedTotalBytes != null
-                ? loadingProgress.cumulativeBytesLoaded /
-                    loadingProgress.expectedTotalBytes!
-                : null,
-            color: AppColors.primary,
-          ),
-        );
-      },
-    ),
-  ),
-),
+              Container(
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.lightGray,
+                ),
+                child: ClipOval(
+                  child: Image.network(
+                    widget.profile.profileUrl ?? '',
+                    width: 180,
+                    height: 180,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Image.asset(
+                        'assets/images/logo.png',
+                        width: 180,
+                        height: 180,
+                        fit: BoxFit.contain,
+                      );
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) {
+                        return child;
+                      }
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value:
+                              loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                          color: AppColors.primary,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
               const SizedBox(height: 16),
               Text(
                 widget.profile.nickname,
@@ -102,7 +103,8 @@ class _CloverProfileSectionState extends State<CloverProfileSection> {
                             MaterialPageRoute(
                               builder:
                                   (context) => UserAuthorizationScreen(
-                                    memberId: widget.profile.userId,
+                                    memberId:
+                                        widget.profile.memberId.toString(),
                                   ),
                             ),
                           );

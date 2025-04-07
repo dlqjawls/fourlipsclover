@@ -15,12 +15,8 @@ class ReviewWriteScreen extends StatefulWidget {
   final Review? review; // 수정할 리뷰 (null이면 새 리뷰 작성)
   final String kakaoPlaceId;
 
-
   const ReviewWriteScreen({Key? key, this.review, required this.kakaoPlaceId})
     : super(key: key);
-
-  const ReviewWriteScreen({Key? key, this.review, required this.kakaoPlaceId}) : super(key: key);
-
 
   @override
   _ReviewWriteScreenState createState() => _ReviewWriteScreenState();
@@ -34,6 +30,7 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
   List<String> existingImages = []; // 기존 이미지 URL
   List<String> imagesToDelete = []; // 삭제할 이미지 URL
   bool isSubmitting = false;
+  File? _image; // 단일 이미지 선택을 위한 변수
 
   @override
   void initState() {
@@ -59,7 +56,7 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
     );
     if (pickedFile != null) {
       setState(() {
-        newImages.add(File(pickedFile.path));
+        _image = File(pickedFile.path);
       });
     }
   }
@@ -114,7 +111,6 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
       print("📤 삭제할 이미지: $imagesToDelete");
       print("📤 새 이미지: ${newImages.map((e) => e.path).toList()}");
 
-
       if (widget.review == null) {
         if (appProvider.user == null) throw Exception("사용자 정보를 불러올 수 없습니다.");
 
@@ -128,7 +124,6 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
         );
         print("✅ 리뷰 작성 응답: ${response.reviewImageUrls}");
 
-
         final refreshed = await ReviewService.getReviewDetail(
           kakaoPlaceId: widget.kakaoPlaceId,
           reviewId: response.reviewId!,
@@ -139,9 +134,6 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text("리뷰가 등록되었습니다.")));
         Navigator.pop(context, createdReview);
-
-        Navigator.pop(context, Review.fromResponse(response));
-
       } else {
         final updated = await ReviewService.updateReview(
           reviewId: int.parse(widget.review!.id),
@@ -153,21 +145,15 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
         );
         print("✅ 리뷰 수정 응답: ${updated.reviewImageUrls}");
 
-        Navigator.pop(context, Review.fromResponse(updated));
-
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text("리뷰가 수정되었습니다.")));
+        Navigator.pop(context, Review.fromResponse(updated));
       }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("오류 발생: $e")));
-
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("오류 발생: \$e")));
-
     } finally {
       setState(() => isSubmitting = false);
     }
@@ -215,7 +201,6 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
                 },
               ),
               const SizedBox(height: 16),
-
               if (!isEditMode)
                 GestureDetector(
                   onTap: _pickImage,
@@ -239,49 +224,67 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
                                 style: TextStyle(color: AppColors.darkGray),
                               ),
                             ),
-
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ...existingImages.map((url) => Stack(
-                    children: [
-                      Image.network(url, width: 100, height: 100, fit: BoxFit.cover),
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: GestureDetector(
-                          onTap: () => _removeExistingImage(url),
-                          child: Icon(Icons.cancel, color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  )),
-                  ...newImages.map((file) => Stack(
-                    children: [
-                      Image.file(file, width: 100, height: 100, fit: BoxFit.cover),
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: GestureDetector(
-                          onTap: () => _removeNewImage(file),
-                          child: Icon(Icons.cancel, color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  )),
-                  GestureDetector(
-                    onTap: _pickImage,
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      color: AppColors.lightGray,
-                      child: Icon(Icons.add_a_photo, color: AppColors.darkGray),
-                    ),
-
                   ),
-                ],
-              ),
+                ),
+              if (isEditMode)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ...existingImages.map(
+                      (url) => Stack(
+                        children: [
+                          Image.network(
+                            url,
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                          ),
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: GestureDetector(
+                              onTap: () => _removeExistingImage(url),
+                              child: Icon(Icons.cancel, color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ...newImages.map(
+                      (file) => Stack(
+                        children: [
+                          Image.file(
+                            file,
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                          ),
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: GestureDetector(
+                              onTap: () => _removeNewImage(file),
+                              child: Icon(Icons.cancel, color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        color: AppColors.lightGray,
+                        child: Icon(
+                          Icons.add_a_photo,
+                          color: AppColors.darkGray,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               const SizedBox(height: 16),
               Expanded(
                 child: TextField(

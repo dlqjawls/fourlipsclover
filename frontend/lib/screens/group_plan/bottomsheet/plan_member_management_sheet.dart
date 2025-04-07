@@ -21,7 +21,8 @@ class PlanMemberManagementSheet extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<PlanMemberManagementSheet> createState() => _PlanMemberManagementSheetState();
+  State<PlanMemberManagementSheet> createState() =>
+      _PlanMemberManagementSheetState();
 }
 
 class _PlanMemberManagementSheetState extends State<PlanMemberManagementSheet> {
@@ -46,8 +47,11 @@ class _PlanMemberManagementSheetState extends State<PlanMemberManagementSheet> {
 
     try {
       final planProvider = Provider.of<PlanProvider>(context, listen: false);
-      final members = await planProvider.fetchAvailableMembers(widget.groupId, widget.planId);
-      
+      final members = await planProvider.fetchAvailableMembers(
+        widget.groupId,
+        widget.planId,
+      );
+
       if (mounted) {
         setState(() {
           _availableMembers = members;
@@ -85,7 +89,7 @@ class _PlanMemberManagementSheetState extends State<PlanMemberManagementSheet> {
         widget.planId,
         _selectedMemberIds.toList(),
       );
-      
+
       if (mounted) {
         // 성공 메시지 표시 후 팝업 닫기
         ScaffoldMessenger.of(context).showSnackBar(
@@ -110,15 +114,8 @@ class _PlanMemberManagementSheetState extends State<PlanMemberManagementSheet> {
   Widget build(BuildContext context) {
     // 현재 로그인한 사용자 정보 가져오기
     final userProvider = Provider.of<UserProvider>(context);
-    final currentUserId = userProvider.userProfile?.userId;
-    int? parsedUserId;
-    if (currentUserId != null) {
-      try {
-        parsedUserId = int.parse(currentUserId);
-      } catch (e) {
-        debugPrint('userId를 정수로 변환하는 중 오류: $e');
-      }
-    }
+    final currentUserId = userProvider.userProfile?.memberId;
+    int? parsedUserId = currentUserId;
 
     return LoadingOverlay(
       isLoading: _isLoading,
@@ -133,7 +130,10 @@ class _PlanMemberManagementSheetState extends State<PlanMemberManagementSheet> {
           children: [
             // 상단 바 및 제목
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -157,9 +157,10 @@ class _PlanMemberManagementSheetState extends State<PlanMemberManagementSheet> {
                       '추가',
                       style: TextStyle(
                         fontFamily: 'Anemone_air',
-                        color: _currentStep == 1 
-                            ? AppColors.primary
-                            : AppColors.mediumGray,
+                        color:
+                            _currentStep == 1
+                                ? AppColors.primary
+                                : AppColors.mediumGray,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -197,14 +198,21 @@ class _PlanMemberManagementSheetState extends State<PlanMemberManagementSheet> {
                     // 선택된 멤버 수 표시
                     Container(
                       padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 8.0,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.primaryLight.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.people, color: AppColors.primary, size: 20),
+                          Icon(
+                            Icons.people,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             '선택된 멤버: ${_selectedMemberIds.length}명',
@@ -218,11 +226,9 @@ class _PlanMemberManagementSheetState extends State<PlanMemberManagementSheet> {
                         ],
                       ),
                     ),
-                    
+
                     // 멤버 선택 UI
-                    Expanded(
-                      child: _buildMemberSelection(parsedUserId),
-                    ),
+                    Expanded(child: _buildMemberSelection(parsedUserId)),
                   ],
                 ),
               ),
@@ -239,11 +245,7 @@ class _PlanMemberManagementSheetState extends State<PlanMemberManagementSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.people,
-            size: 64,
-            color: AppColors.mediumGray,
-          ),
+          Icon(Icons.people, size: 64, color: AppColors.mediumGray),
           const SizedBox(height: 16),
           Text(
             '추가할 수 있는 멤버가 없습니다',
@@ -286,13 +288,14 @@ class _PlanMemberManagementSheetState extends State<PlanMemberManagementSheet> {
   // 기차 좌석 UI를 사용한 멤버 선택 위젯
   Widget _buildMemberSelection(int? currentUserId) {
     // MemberInfoResponse를 Member로 변환
-    final members = _availableMembers!.map((info) {
-      return Member(
-        memberId: info.memberId,
-        email: info.email,
-        nickname: info.nickname,
-      );
-    }).toList();
+    final members =
+        _availableMembers!.map((info) {
+          return Member(
+            memberId: info.memberId,
+            email: info.email,
+            nickname: info.nickname,
+          );
+        }).toList();
 
     return TrainSeatMemberSelection(
       members: members,
