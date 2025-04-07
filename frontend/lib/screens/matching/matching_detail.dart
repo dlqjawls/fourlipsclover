@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:frontend/config/theme.dart';
 import 'package:frontend/models/matching/matching_detail.dart';
 import 'package:frontend/services/matching/matching_service.dart';
+// import 'package:frontend/widgets/clover_loading_spinner.dart';
+import 'package:frontend/widgets/loading_overlay.dart';
 
 class MatchingDetailScreen extends StatefulWidget {
   final int matchId;
@@ -61,15 +63,16 @@ class _MatchingDetailScreenState extends State<MatchingDetailScreen> {
           ),
         ],
       ),
-      body: _buildBody(),
+      body: LoadingOverlay(
+        isLoading: _isLoading,
+        overlayColor: Colors.white.withOpacity(0.7),
+        minDisplayTime: const Duration(milliseconds: 1200),
+        child: _buildBody(),
+      ),
     );
   }
 
   Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     if (_error != null) {
       return Center(
         child: Column(

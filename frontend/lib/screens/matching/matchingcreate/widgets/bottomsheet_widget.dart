@@ -4,6 +4,7 @@ import 'package:frontend/models/group/group_model.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/screens/payment/kakao_pay_official_screen.dart';
 import 'package:frontend/services/matching/matching_approve.dart';
+import 'package:frontend/widgets/clover_loading_spinner.dart';
 
 class MatchingConfirmBottomSheet extends StatefulWidget {
   final Group? selectedGroup;
@@ -269,10 +270,7 @@ class _MatchingConfirmBottomSheetState
               ? const SizedBox(
                 height: 20,
                 width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
+                child: CloverLoadingSpinner(size: 20),
               )
               : const Text(
                 '결제하기',
@@ -326,7 +324,7 @@ class _MatchingConfirmBottomSheetState
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Divider(),
           ),
-          _buildReceiptItem('주문번호', orderId),
+          _buildReceiptItem('주문번호', orderId.substring(0, 18)),
           _buildReceiptItem('그룹', widget.selectedGroup?.name ?? '나혼자 산다'),
           _buildReceiptItem('이동 수단', widget.selectedTransport),
           _buildReceiptItem('음식 종류', widget.selectedFoodCategory),

@@ -5,6 +5,7 @@ import 'package:frontend/models/matching/matching_main_model.dart'; // 추가
 import 'matching_local_resist.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../matchingchat/matching_chat.dart';
+import 'package:frontend/widgets/loading_overlay.dart';
 
 class MatchingLocalListScreen extends StatefulWidget {
   const MatchingLocalListScreen({Key? key})
@@ -282,53 +283,55 @@ class _MatchingLocalListScreenState extends State<MatchingLocalListScreen>
           ],
         ),
       ),
-      body:
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                onRefresh: _loadMatches,
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    // 접수 목록 탭
-                    Column(
-                      children: [
-                        Card(
-                          margin: const EdgeInsets.all(8),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: _buildCalendar(),
-                          ),
-                        ),
-                        Expanded(
-                          child:
-                              acceptedRequests.isEmpty
-                                  ? _buildEmptyState('접수된 요청이 없습니다')
-                                  : _buildAcceptedList(),
-                        ),
-                      ],
+      body: LoadingOverlay(
+        isLoading: isLoading,
+        overlayColor: Colors.white.withOpacity(0.7),
+        minDisplayTime: const Duration(milliseconds: 1200),
+        child: RefreshIndicator(
+          onRefresh: _loadMatches,
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              // 접수 목록 탭
+              Column(
+                children: [
+                  Card(
+                    margin: const EdgeInsets.all(8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: _buildCalendar(),
                     ),
-                    // 신청 목록 탭
-                    Column(
-                      children: [
-                        Card(
-                          margin: const EdgeInsets.all(8),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: _buildCalendar(),
-                          ),
-                        ),
-                        Expanded(
-                          child:
-                              pendingRequests.isEmpty
-                                  ? _buildEmptyState('새로운 신청이 없습니다')
-                                  : _buildPendingList(),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                  Expanded(
+                    child:
+                        acceptedRequests.isEmpty
+                            ? _buildEmptyState('접수된 요청이 없습니다')
+                            : _buildAcceptedList(),
+                  ),
+                ],
               ),
+              // 신청 목록 탭
+              Column(
+                children: [
+                  Card(
+                    margin: const EdgeInsets.all(8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: _buildCalendar(),
+                    ),
+                  ),
+                  Expanded(
+                    child:
+                        pendingRequests.isEmpty
+                            ? _buildEmptyState('새로운 신청이 없습니다')
+                            : _buildPendingList(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

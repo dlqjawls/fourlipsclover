@@ -1,11 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/matching/matching_main_model.dart';
 import '../../models/matching/matching_detail.dart';
-
+import 'package:frontend/config/api_config.dart';
 class MatchingService {
   static final MatchingService _instance = MatchingService._internal();
 
@@ -15,7 +14,7 @@ class MatchingService {
 
   MatchingService._internal();
 
-  final String baseUrl = dotenv.env['API_BASE_URL'] ?? '';
+   final String baseUrl = ApiConfig.baseUrl;
 
   static Future<void> initializeMatches() async {
     try {

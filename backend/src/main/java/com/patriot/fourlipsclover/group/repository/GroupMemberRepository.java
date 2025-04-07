@@ -21,4 +21,5 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, GroupM
     // Member ID로 Group 목록 조회
     List<GroupMember> findByIdMemberId(Long memberId);
 
+    int countByMember_MemberId(long memberId);
 }

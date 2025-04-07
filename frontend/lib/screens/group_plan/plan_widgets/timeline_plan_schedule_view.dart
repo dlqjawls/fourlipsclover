@@ -119,10 +119,6 @@ class _TimelinePlanScheduleViewState extends State<TimelinePlanScheduleView> {
             return scheduleDate.isAtSameMomentAs(targetDate);
           }).toList()
           ..sort((a, b) => a.visitAt.compareTo(b.visitAt)); // 시간순 정렬
-
-    debugPrint(
-      '선택된 날짜(${_selectedDate.toString()})의 일정 수: ${filteredSchedules.length}',
-    );
     return filteredSchedules;
   }
 

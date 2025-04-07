@@ -9,9 +9,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ReviewDetail extends StatefulWidget {
   final Review review;
-  final String restaurantId;
+  final String kakaoPlaceId;
 
-  const ReviewDetail({Key? key, required this.review, required this.restaurantId}) : super(key: key);
+  const ReviewDetail({Key? key, required this.review, required this.kakaoPlaceId}) : super(key: key);
 
   @override
   _ReviewDetailState createState() => _ReviewDetailState();
@@ -71,7 +71,7 @@ class _ReviewDetailState extends State<ReviewDetail> {
       MaterialPageRoute(
         builder: (context) => ReviewWriteScreen(
           review: _review,
-          kakaoPlaceId: widget.restaurantId,
+          kakaoPlaceId: widget.kakaoPlaceId,
         ),
       ),
     );
@@ -188,7 +188,7 @@ class _ReviewDetailState extends State<ReviewDetail> {
               const SizedBox(height: 12),
               Divider(color: Colors.grey[300], thickness: 1),
               const SizedBox(height: 12),
-              _buildReviewImage(_review.imageUrl, int.parse(_review.id)),
+              _buildReviewImage(_review.imageUrls),
               const SizedBox(height: 12),
               Text(
                 _review.content,
@@ -215,20 +215,12 @@ class _ReviewDetailState extends State<ReviewDetail> {
     }
   }
 
-  Widget _buildReviewImage(String? imageUrl, int reviewId) {
-    final baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://your-api.com';
-
-    // 이미지 없으면 아무것도 렌더링하지 않음
-    if (imageUrl == null || imageUrl.isEmpty) {
-      return const SizedBox.shrink(); // 👈 완전 빈 위젯 반환
+  Widget _buildReviewImage(List<String> imageUrls) {
+    if (imageUrls.isEmpty) {
+      return const SizedBox.shrink(); // 이미지 없으면 아무것도 안 그림
     }
 
-    String fullUrl;
-    if (!imageUrl.startsWith('http') && !imageUrl.startsWith('assets/')) {
-      fullUrl = '$baseUrl/uploads/review/$imageUrl';
-    } else {
-      fullUrl = imageUrl;
-    }
+    final firstImage = imageUrls.first;
 
     return Container(
       width: double.infinity,
@@ -237,14 +229,13 @@ class _ReviewDetailState extends State<ReviewDetail> {
         color: Colors.grey[300],
         borderRadius: BorderRadius.circular(8),
         image: DecorationImage(
-          image: fullUrl.startsWith("http")
-              ? NetworkImage(fullUrl)
-              : AssetImage(fullUrl) as ImageProvider,
+          image: NetworkImage(firstImage),
           fit: BoxFit.cover,
         ),
       ),
     );
   }
+
 
   String _formatDate(DateTime date) {
     return "${date.month}.${date.day}";
