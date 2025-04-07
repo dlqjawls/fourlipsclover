@@ -4,6 +4,7 @@ import 'config/routes.dart';
 import 'config/theme.dart'; // AppTheme 클래스 임포트
 import 'providers/app_provider.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/onboarding/onboarding_screen.dart';
 import 'services/kakao_service.dart';
 import 'providers/search_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -19,7 +20,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:frontend/services/user_service.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 import 'providers/matching_provider.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'providers/review_provider.dart';
+
 
 void main() async {
   // Flutter 엔진 초기화
@@ -46,10 +51,21 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  bool _showOnboarding = true;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _checkOnboarding();
+  }
+
+  Future<void> _checkOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    final showOnboarding = prefs.getBool('showOnboarding') ?? true;
+    setState(() {
+      _showOnboarding = showOnboarding;
+    });
   }
 
   @override
@@ -97,7 +113,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         title: '네입클로버',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const LoginScreen(),
+        home: _showOnboarding ? const OnboardingScreen() : const LoginScreen(),
         routes: AppRoutes.routes,
         // 로컬라이제이션 설정 추가
         localizationsDelegates: const [

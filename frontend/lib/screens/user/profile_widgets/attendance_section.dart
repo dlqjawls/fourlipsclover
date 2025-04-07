@@ -34,7 +34,7 @@ class AttendanceSection extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.local_florist, color: AppColors.primary, size: 40),
+              Icon(Icons.eco, color: AppColors.primary, size: 40),
               const SizedBox(width: 12),
               RichText(
                 text: TextSpan(
