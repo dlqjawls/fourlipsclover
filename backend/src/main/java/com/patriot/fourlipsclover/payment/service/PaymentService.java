@@ -7,9 +7,12 @@ import com.patriot.fourlipsclover.payment.dto.response.PaymentReadyResponse;
 import com.patriot.fourlipsclover.payment.entity.PaymentApproval;
 import com.patriot.fourlipsclover.payment.entity.PaymentItem;
 import com.patriot.fourlipsclover.payment.entity.PaymentStatus;
+import com.patriot.fourlipsclover.payment.entity.VisitPayment;
 import com.patriot.fourlipsclover.payment.mapper.PaymentMapper;
 import com.patriot.fourlipsclover.payment.repository.PaymentApprovalRepository;
 import com.patriot.fourlipsclover.payment.repository.PaymentItemRepository;
+import com.patriot.fourlipsclover.payment.repository.VisitPaymentRepository;
+import com.patriot.fourlipsclover.restaurant.service.RestaurantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -27,6 +30,8 @@ import java.util.*;
 public class PaymentService {
 
     private final PaymentItemRepository paymentItemRepository;
+    private final RestaurantService restaurantService;
+    private final VisitPaymentRepository visitPaymentRepository;
 
     private static final String KAKAO_PAY_READY_URL = "https://open-api.kakaopay.com/online/v1/payment/ready";
     private static final String KAKAO_PAY_APPROVE_URL = "https://open-api.kakaopay.com/online/v1/payment/approve";
@@ -169,5 +174,18 @@ public class PaymentService {
         List<PaymentApproval> paymentApprovals = paymentApprovalRepository.findByPartnerUserId(
                 String.valueOf(memberId));
         return paymentApprovals.stream().map(paymentMapper::toDto).toList();
+    }
+
+    @Transactional
+    public VisitPayment createVisitPayment(VisitPayment visitPayment) {
+        // 결제 데이터 저장
+        VisitPayment savedPayment = visitPaymentRepository.save(visitPayment);
+
+        // 레스토랑 평균 금액 업데이트
+        if (savedPayment.getRestaurantId() != null) {
+            restaurantService.updateRestaurantAvgAmount(savedPayment.getRestaurantId().getRestaurantId());
+        }
+
+        return savedPayment;
     }
 }

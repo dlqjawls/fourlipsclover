@@ -19,6 +19,7 @@ import com.patriot.fourlipsclover.settlement.entity.Settlement.SettlementStatus;
 import com.patriot.fourlipsclover.settlement.entity.SettlementTransaction;
 import com.patriot.fourlipsclover.settlement.entity.SettlementTransaction.TransactionStatus;
 import com.patriot.fourlipsclover.settlement.exception.SettlementAlreadyExistsException;
+import com.patriot.fourlipsclover.settlement.exception.SettlementAlreadyInProgressException;
 import com.patriot.fourlipsclover.settlement.exception.SettlementNotFoundException;
 import com.patriot.fourlipsclover.settlement.mapper.ExpenseMapper;
 import com.patriot.fourlipsclover.settlement.mapper.SettlementMapper;
@@ -67,39 +68,21 @@ public class SettlementService {
 		settlement.setEndDate(plan.getEndDate().atTime(LocalTime.MAX));
 		settlement.setSettlementStatus(SettlementStatus.PENDING);
 		settlement.setTreasurer(treasurer);
-		LocalDateTime startAt = settlement.getPlan().getStartDate().atStartOfDay();
-		LocalDateTime endAt = settlement.getPlan().getEndDate().atTime(LocalTime.MAX);
+
 		settlementRepository.save(settlement);
-		// 정산 참여자 결제 내역마다 모두 추가
-		List<PaymentApproval> paymentApprovals = paymentApprovalRepository.findByApprovedAtBetweenAndPartnerUserIdLike(
-				startAt, endAt,
-				String.valueOf(settlement.getTreasurer().getMemberId()));
-		List<PlanMember> planMembers = planMemberRepository.findByPlan_PlanId(planId);
-		for (PaymentApproval paymentApproval : paymentApprovals) {
-			Expense expense = new Expense();
-			expense.setPaymentApproval(paymentApproval);
-			expense.setSettlement(settlement);
-			expenseRepository.save(expense);
-			for (PlanMember planMember : planMembers) {
-				ExpenseParticipant expenseParticipant = new ExpenseParticipant();
-				expenseParticipant.setExpense(expense);
-				expenseParticipant.setMember(planMember.getMember());
-				expenseParticipantRepository.save(expenseParticipant);
-			}
-		}
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
 	public SettlementResponse detail(Integer planId) {
 		if (!planRepository.existsById(planId)) {
 			throw new PlanNotFoundException("존재하지 않는 계획입니다.");
 		}
-		// settlement
 		Settlement settlement = settlementRepository.findByPlan_PlanId(planId)
 				.orElseThrow(() -> new SettlementNotFoundException(
 						planId));
 		List<ExpenseResponse> expenseResponses = new ArrayList<>();
-		// expense
+
+		createExpensesAndParticipants(settlement, planId);
 		List<Expense> expenses = expenseRepository.findBySettlement(settlement);
 		for (Expense expense : expenses) {
 			List<ExpenseParticipant> participants = expenseParticipantRepository.findByExpense(
@@ -115,10 +98,14 @@ public class SettlementService {
 	public SettlementRequestResponse request(Integer planId) {
 		Settlement settlement = settlementRepository.findByPlan_PlanId(planId)
 				.orElseThrow(() -> new SettlementNotFoundException(planId));
+		if (settlement.getSettlementStatus().equals(SettlementStatus.IN_PROGRESS)) {
+			throw new SettlementAlreadyInProgressException(settlement.getSettlementId());
+		}
 		List<MemberCost> memberCosts = planMemberRepository.findByPlan_PlanId(planId).stream()
 				.map(pm -> new MemberCost(pm.getMember())).toList();
 
 		List<Expense> expenses = expenseRepository.findBySettlement(settlement);
+
 		for (Expense expense : expenses) {
 			List<ExpenseParticipant> expenseParticipants = expenseParticipantRepository.findByExpense(
 					expense);
@@ -166,8 +153,52 @@ public class SettlementService {
 		response.setSettlementTransactionResponses(settlementTransactionResponses);
 		response.setTreasurer(
 				settlementTransactionMapper.toTreasureResponse(settlement.getTreasurer()));
-
+		settlement.setSettlementStatus(SettlementStatus.IN_PROGRESS);
 		return response;
+	}
+
+	/**
+	 * 정산에 대한 지출 항목과 참여자를 생성합니다. 기존 데이터는 유지하고 새로운 데이터만 추가합니다.
+	 *
+	 * @param settlement 정산 객체
+	 * @param planId     계획 ID
+	 */
+	@Transactional
+	public void createExpensesAndParticipants(Settlement settlement, Integer planId) {
+		LocalDateTime startAt = settlement.getStartDate();
+		LocalDateTime endAt = settlement.getEndDate();
+
+		List<PaymentApproval> paymentApprovals = paymentApprovalRepository.findByApprovedAtBetweenAndPartnerUserIdLike(
+				startAt, endAt,
+				String.valueOf(settlement.getTreasurer().getMemberId()));
+
+		// 이미 등록된 결제 내역 ID 목록 조회
+		List<Long> existingPaymentApprovalIds = expenseRepository.findBySettlement(settlement)
+				.stream()
+				.map(expense -> expense.getPaymentApproval().getId())
+				.toList();
+
+		List<PlanMember> planMembers = planMemberRepository.findByPlan_PlanId(planId);
+
+		for (PaymentApproval paymentApproval : paymentApprovals) {
+			// 이미 등록된 결제 내역은 건너뜀
+			if (existingPaymentApprovalIds.contains(paymentApproval.getId())) {
+				continue;
+			}
+
+			Expense expense = new Expense();
+			expense.setPaymentApproval(paymentApproval);
+			expense.setSettlement(settlement);
+			expenseRepository.save(expense);
+
+			for (PlanMember planMember : planMembers) {
+				ExpenseParticipant expenseParticipant = new ExpenseParticipant();
+				expenseParticipant.setExpense(expense);
+				expenseParticipant.setMember(planMember.getMember());
+
+				expenseParticipantRepository.save(expenseParticipant);
+			}
+		}
 	}
 
 	private class MemberCost {
