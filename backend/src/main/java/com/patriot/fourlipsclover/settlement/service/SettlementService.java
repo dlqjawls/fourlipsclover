@@ -4,6 +4,7 @@ import com.patriot.fourlipsclover.exception.PlanNotFoundException;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.payment.entity.PaymentApproval;
 import com.patriot.fourlipsclover.payment.repository.PaymentApprovalRepository;
+import com.patriot.fourlipsclover.payment.service.PaymentService;
 import com.patriot.fourlipsclover.plan.entity.Plan;
 import com.patriot.fourlipsclover.plan.entity.PlanMember;
 import com.patriot.fourlipsclover.plan.repository.PlanMemberRepository;
@@ -53,6 +54,7 @@ public class SettlementService {
 	private final ExpenseMapper expenseMapper;
 	private final SettlementTransactionRepository settlementTransactionRepository;
 	private final SettlementTransactionMapper settlementTransactionMapper;
+	private final PaymentService paymentService;
 
 	@Transactional
 	public void create(Integer planId) {
@@ -154,6 +156,10 @@ public class SettlementService {
 		response.setTreasurer(
 				settlementTransactionMapper.toTreasureResponse(settlement.getTreasurer()));
 		settlement.setSettlementStatus(SettlementStatus.IN_PROGRESS);
+
+		// VisitPayment 데이터 생성
+		paymentService.createVisitPaymentsFromSettlement(settlement.getSettlementId());
+
 		return response;
 	}
 
