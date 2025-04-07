@@ -26,10 +26,21 @@ class _JoinRequestBottomSheetState extends State<JoinRequestBottomSheet> {
   bool _isLoading = false;
 
   @override
-  Widget build(BuildContext context) {
-    // 대기 중인 요청만 필터링
-    final pendingRequests =
-        widget.requests.where((req) => req.status == 'PENDING').toList();
+Widget build(BuildContext context) {
+  // 대기 중인 요청만 필터링 (대소문자 무시 및 다양한 표현 허용)
+  final pendingRequests = widget.requests.where((req) {
+    final status = req.status.toUpperCase();
+    return status == 'PENDING';
+  }).toList();
+  
+  // 디버깅 로그 추가
+  debugPrint('요청 총 개수: ${widget.requests.length}');
+  debugPrint('필터링된 대기 중 요청 개수: ${pendingRequests.length}');
+  
+  // 각 요청의 상태 로깅
+  for (var req in widget.requests) {
+    debugPrint('요청 ID: ${req.id}, 상태: "${req.status}"');
+  }
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,

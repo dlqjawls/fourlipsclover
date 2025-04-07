@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/theme.dart';
+import '../../models/group/member_model.dart';
 import '../../providers/group_provider.dart';
 import '../../widgets/clover_loading_spinner.dart';
 
@@ -41,41 +42,91 @@ class _GroupInvitationScreenState extends State<GroupInvitationScreen> {
   
   // 초대 정보 로드
   Future<void> _loadInvitationInfo() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  setState(() {
+    _isLoading = true;
+    _error = null;
+  });
+  
+  try {
+    debugPrint('초대 정보 로드 시작 - 토큰: ${widget.token}');
+    final groupProvider = Provider.of<GroupProvider>(context, listen: false);
+    final result = await groupProvider.checkInvitationLink(widget.token);
     
-    try {
-      debugPrint('초대 정보 로드 시작 - 토큰: ${widget.token}');
-      final groupProvider = Provider.of<GroupProvider>(context, listen: false);
-      final result = await groupProvider.checkInvitationLink(widget.token);
-      
-      debugPrint('초대 정보 로드 결과: $result');
-      
-      if (mounted) {
-        if (result != null) {
-          setState(() {
-            _invitationInfo = result;
-            _isLoading = false;
-          });
+    if (mounted) {
+      if (result != null) {
+        // 결과에서 GroupInvitation 객체 추출
+        final groupInvitation = result['groupInvitation'];
+        
+        if (groupInvitation != null) {
+          // GroupId 추출
+          final groupId = groupInvitation['groupId'];
+          
+          try {
+            // 그룹 ID로 그룹 상세 정보 가져오기
+            final groupDetail = await groupProvider.fetchGroupDetail(groupId);
+            
+            setState(() {
+              // 새로운 형식으로 _invitationInfo 구성
+              _invitationInfo = {
+                'groupName': groupDetail?.name ?? '알 수 없는 그룹',
+                'description': groupDetail?.description ?? '',
+                'isPublic': groupDetail?.isPublic ?? false,
+                'memberCount': groupDetail?.members.length ?? 0,
+                'ownerName': _findOwnerName(groupDetail?.members) ?? '알 수 없음',
+                'groupInvitation': groupInvitation,
+              };
+              _isLoading = false;
+            });
+          } catch (e) {
+            // 기본 정보만 설정
+            setState(() {
+              _invitationInfo = {
+                'groupId': groupId,
+                'groupName': '초대된 그룹', // 기본값 설정
+                'description': '그룹에 참여하시겠습니까?', // 기본값 설정
+                'isPublic': true, // 기본값 설정
+                'memberCount': 0, // 기본값 설정
+                'ownerName': '그룹 관리자', // 기본값 설정
+                'groupInvitation': groupInvitation,
+              };
+              _isLoading = false;
+            });
+          }
         } else {
           setState(() {
-            _error = '초대 정보를 불러올 수 없습니다. 초대가 만료되었거나 유효하지 않습니다.';
+            _error = '초대 정보 형식이 올바르지 않습니다.';
             _isLoading = false;
           });
         }
-      }
-    } catch (e) {
-      debugPrint('초대 정보 로드 오류: $e');
-      if (mounted) {
+      } else {
         setState(() {
-          _error = '초대 정보를 불러올 수 없습니다: $e';
+          _error = '초대 정보를 불러올 수 없습니다. 초대가 만료되었거나 유효하지 않습니다.';
           _isLoading = false;
         });
       }
     }
+  } catch (e) {
+    debugPrint('초대 정보 로드 오류: $e');
+    if (mounted) {
+      setState(() {
+        _error = '초대 정보를 불러올 수 없습니다: $e';
+        _isLoading = false;
+      });
+    }
   }
+}
+
+// 그룹 멤버 중 OWNER 역할을 가진 멤버의 이름 찾기
+String? _findOwnerName(List<Member>? members) {
+  if (members == null) return null;
+  
+  for (var member in members) {
+    if (member.role == 'OWNER') {
+      return member.nickname;
+    }
+  }
+  return members.isNotEmpty ? members.first.nickname : null;
+}
   
   // 그룹 가입 요청
   Future<void> _joinGroup() async {
@@ -242,33 +293,33 @@ class _GroupInvitationScreenState extends State<GroupInvitationScreen> {
     }
     
     // 그룹 정보 표시 및 가입 버튼
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 그룹 이름
-          Text(
-            _invitationInfo!['groupName'] ?? '알 수 없는 그룹',
-            style: const TextStyle(
-              fontFamily: 'Anemone',
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryDark,
-            ),
-          ),
-          
-          const SizedBox(height: 8),
-          
-          // 그룹 설명
-          Text(
-            _invitationInfo!['description'] ?? '그룹 설명이 없습니다',
-            style: TextStyle(
-              fontFamily: 'Anemone_air',
-              fontSize: 16,
-              color: AppColors.darkGray,
-            ),
-          ),
+return Padding(
+  padding: const EdgeInsets.all(20),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // 그룹 이름
+      Text(
+        _invitationInfo?['groupName'] ?? '알 수 없는 그룹',
+        style: const TextStyle(
+          fontFamily: 'Anemone',
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primaryDark,
+        ),
+      ),
+      
+      const SizedBox(height: 8),
+      
+      // 그룹 설명
+      Text(
+        _invitationInfo?['description'] ?? '그룹 설명이 없습니다',
+        style: TextStyle(
+          fontFamily: 'Anemone_air',
+          fontSize: 16,
+          color: AppColors.darkGray,
+        ),
+      ),
           
           const SizedBox(height: 20),
           
@@ -284,15 +335,15 @@ class _GroupInvitationScreenState extends State<GroupInvitationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 멤버 수
-                  Row(
-                    children: [
-                      const Icon(Icons.people, color: AppColors.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        '멤버 ${_invitationInfo!['memberCount'] ?? 0}명',
-                        style: const TextStyle(
-                          fontFamily: 'Anemone_air',
-                          fontSize: 16,
+Row(
+        children: [
+          const Icon(Icons.people, color: AppColors.primary),
+          const SizedBox(width: 8),
+          Text(
+            '멤버 ${_invitationInfo?['memberCount'] ?? 0}명',
+            style: const TextStyle(
+              fontFamily: 'Anemone_air',
+              fontSize: 16,
                         ),
                       ),
                     ],

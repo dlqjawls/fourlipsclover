@@ -4,13 +4,13 @@ class GroupJoinRequest {
   final int id;
   final int groupId;
   final int memberId;
-  final Member member;  // 가입 요청한 회원 (백엔드에서 변환 필요)
+  final Member member; // 가입 요청한 회원 (백엔드에서 변환 필요)
   final String status;
   final DateTime requestedAt;
   final String? adminComment;
   final DateTime? updatedAt;
   final String token;
-  
+
   GroupJoinRequest({
     required this.id,
     required this.groupId,
@@ -24,16 +24,30 @@ class GroupJoinRequest {
   });
 
   factory GroupJoinRequest.fromJson(Map<String, dynamic> json) {
+    // 상태 값 처리
+    String statusValue = 'PENDING'; // 기본값
+
+    // json['status']가 존재하면 사용
+    if (json['status'] != null) {
+      statusValue = json['status'];
+    }
+
     return GroupJoinRequest(
       id: json['id'],
-      groupId: json['group']['id'],  // 중첩된 객체에서 id 추출
-      memberId: json['member']['memberId'],  // 중첩된 객체에서 id 추출
-      member: Member.fromJson(json['member']),
-      status: json['status'],
-      requestedAt: DateTime.parse(json['requestedAt']),
+      groupId: json['group'] != null ? json['group']['id'] : 0,
+      memberId: json['member'] != null ? json['member']['memberId'] : 0,
+      member:
+          json['member'] != null
+              ? Member.fromJson(json['member'])
+              : Member(memberId: 0, email: '', nickname: '알 수 없음'),
+      status: statusValue,
+      requestedAt: DateTime.parse(
+        json['requestedAt'] ?? DateTime.now().toIso8601String(),
+      ),
       adminComment: json['adminComment'],
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
-      token: json['token'],
+      updatedAt:
+          json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      token: json['token'] ?? '',
     );
   }
 
