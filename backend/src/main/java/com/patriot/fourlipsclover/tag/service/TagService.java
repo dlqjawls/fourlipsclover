@@ -150,7 +150,7 @@ public class TagService {
 
 	private void updateElasticsearchTags(Long memberId) {
 		LocalCertification cert = localCertificationRepository.findByMember_MemberId(
-				memberId);
+				memberId).orElseThrow();
 		// 멤버 태그 정보 조회
 		List<MemberReviewTag> memberReviewTags = memberReviewTagRepository.findByMember(
 				cert.getMember());
@@ -180,6 +180,7 @@ public class TagService {
 		// Elasticsearch에 저장
 		localsElasticsearchRepository.save(localsDocument);
 	}
+
 	@Transactional(readOnly = true)
 	public int uploadRestaurantDocument() {
 		List<Restaurant> restaurants = restaurantJpaRepository.findAll();
@@ -214,7 +215,8 @@ public class TagService {
 						.document(restaurantDocument));
 				count++;
 			} catch (Exception e) {
-				System.err.println("레스토랑 인덱싱 실패: " + restaurant.getKakaoPlaceId() + " - " + e.getMessage());
+				System.err.println(
+						"레스토랑 인덱싱 실패: " + restaurant.getKakaoPlaceId() + " - " + e.getMessage());
 			}
 		}
 
