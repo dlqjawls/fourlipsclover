@@ -123,11 +123,15 @@ public class MemberService {
 		response.setRecentPayments(recentPayments);
 		response.setTags(tagList);
 
-		LocalCertification localCertification = localCertificationRepository.findByMember_MemberId(
+		Optional<LocalCertification> localCertification = localCertificationRepository.findByMember_MemberId(
 				memberId);
-		response.setLocalAuth(localCertification.isCertificated());
-		response.setLocalRank(localCertification.getLocalGrade().getValue());
-		response.setLocalRegion(localCertification.getLocalRegion().getRegionName());
+		localCertification.ifPresentOrElse(certification -> {
+			response.setLocalAuth(certification.isCertificated()); // 인증 존재 여부 설정
+			response.setLocalRank(certification.getLocalGrade().getValue());
+			response.setLocalRegion(certification.getLocalRegion().getRegionName());
+		}, () -> {
+			response.setLocalAuth(false); // 인증 정보가 없는 경우 false로 설정
+		});
 
 		List<PlanMember> planMembers = planMemberRepository.findCurrentPlansByMember(member,
 				LocalDate.now());
