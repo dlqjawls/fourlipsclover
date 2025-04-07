@@ -142,6 +142,7 @@ public class MemberService {
 			mypagePlanResponses.add(mypagePlanResponse);
 		}
 		response.setPlanResponses(mypagePlanResponses);
+		response.setBadgeName("클로버");
 		return response;
 	}
 }
