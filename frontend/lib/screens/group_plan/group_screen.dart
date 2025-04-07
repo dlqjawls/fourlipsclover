@@ -6,7 +6,6 @@ import '../../providers/group_provider.dart';
 import '../../widgets/clover_loading_spinner.dart';
 import 'group_widgets/empty_group_view.dart';
 import 'group_widgets/group_list_view.dart';
-import 'group_widgets/group_invitation_banner.dart';
 import 'bottomsheet/group_create_bottom_sheet.dart';
 import '../../services/deep_link_service.dart';
 
@@ -19,9 +18,7 @@ class GroupScreen extends StatefulWidget {
 
 class _GroupScreenState extends State<GroupScreen> {
   bool _isError = false;
-  String? _pendingInvitationToken;
-  Map<String, dynamic>? _pendingInvitationInfo;
-  bool _isCheckingInvitation = false;
+  bool _hasPendingInvitation = false;
 
   @override
   void initState() {
@@ -33,117 +30,37 @@ class _GroupScreenState extends State<GroupScreen> {
     });
   }
 
-  // 대기 중인 초대장 확인
+  // 저장된 초대가 있는지 확인
   Future<void> _checkPendingInvitation() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('pendingInvitationToken');
-    
+
     if (token != null && mounted) {
       setState(() {
-        _pendingInvitationToken = token;
-        _isCheckingInvitation = true;
+        _hasPendingInvitation = true;
       });
-      
-      try {
-        final groupProvider = Provider.of<GroupProvider>(context, listen: false);
-        final invitationInfo = await groupProvider.checkInvitationLink(token);
-        
-        if (mounted && invitationInfo != null) {
-          setState(() {
-            _pendingInvitationInfo = invitationInfo;
-            _isCheckingInvitation = false;
-          });
-        } else {
-          // 정보를 가져오지 못한 경우 토큰 삭제
-          if (mounted) {
-            await prefs.remove('pendingInvitationToken');
-            setState(() {
-              _pendingInvitationToken = null;
-              _isCheckingInvitation = false;
-            });
-          }
-        }
-      } catch (e) {
-        debugPrint('초대 정보 확인 중 오류: $e');
-        if (mounted) {
-          setState(() {
-            _isCheckingInvitation = false;
-          });
-        }
-      }
+      debugPrint('저장된 초대 토큰 발견: $token');
     }
   }
 
-  // 초대 수락
-  Future<void> _acceptInvitation() async {
-    if (_pendingInvitationToken == null) return;
-    
-    setState(() {
-      _isCheckingInvitation = true;
-    });
-    
-    try {
-      final groupProvider = Provider.of<GroupProvider>(context, listen: false);
-      final success = await groupProvider.joinGroup(_pendingInvitationToken!);
-      
-      if (mounted) {
-        if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('그룹 가입 요청이 완료되었습니다')),
-          );
-          
-          // 그룹 목록 새로고침
-          await groupProvider.fetchMyGroups();
-          
-          // 대기 중인 초대 정보 삭제
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.remove('pendingInvitationToken');
-          
-          setState(() {
-            _pendingInvitationToken = null;
-            _pendingInvitationInfo = null;
-          });
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(groupProvider.error ?? '그룹 가입 요청에 실패했습니다'),
-              backgroundColor: AppColors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('그룹 가입 요청 중 오류가 발생했습니다: $e'),
-            backgroundColor: AppColors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isCheckingInvitation = false;
-        });
-      }
-    }
-  }
-
-  // 초대 거절
-  Future<void> _declineInvitation() async {
-    // 대기 중인 초대 정보 삭제
+  // 초대 화면으로 이동
+  void _navigateToInvitationScreen() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('pendingInvitationToken');
-    
-    if (mounted) {
-      setState(() {
-        _pendingInvitationToken = null;
-        _pendingInvitationInfo = null;
+    final token = prefs.getString('pendingInvitationToken');
+
+    if (token != null && mounted) {
+      debugPrint('초대 화면으로 이동: $token');
+      Navigator.of(context).pushNamed(
+        '/group/invitation', 
+        arguments: {'token': token}
+      ).then((_) {
+        // 초대 화면에서 돌아오면 상태 업데이트
+        _checkPendingInvitation();
       });
-      
+    } else {
+      // 토큰이 없는 경우 사용자에게 알림
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('그룹 초대를 거절했습니다')),
+        const SnackBar(content: Text('처리할 초대가 없습니다'))
       );
     }
   }
@@ -181,9 +98,18 @@ class _GroupScreenState extends State<GroupScreen> {
   Widget build(BuildContext context) {
     // Provider의 isLoading 상태 감시
     final groupProvider = Provider.of<GroupProvider>(context);
-    final isLoading = groupProvider.isLoading || _isCheckingInvitation;
-    
+    final isLoading = groupProvider.isLoading;
+
     return Scaffold(
+      // 플로팅 액션 버튼 - 초대가 있을 때만 표시
+      floatingActionButton: _hasPendingInvitation ? FloatingActionButton(
+        heroTag: 'invitationFab',
+        onPressed: _navigateToInvitationScreen,
+        backgroundColor: AppColors.orange,
+        tooltip: '그룹 초대 확인',
+        child: const Icon(Icons.mail, color: Colors.white),
+      ) : null,
+
       body: LoadingOverlay(
         isLoading: isLoading,
         overlayColor: Colors.white.withOpacity(0.7),
@@ -205,18 +131,10 @@ class _GroupScreenState extends State<GroupScreen> {
                   ),
                 ),
               ),
-              
+
               // 메인 콘텐츠
               Column(
                 children: [
-                  // 초대 배너 - 대기 중인 초대가 있을 때만 표시
-                  if (_pendingInvitationToken != null && _pendingInvitationInfo != null)
-                    GroupInvitationBanner(
-                      groupName: _pendingInvitationInfo!['groupName'] ?? '그룹',
-                      onAccept: _acceptInvitation,
-                      onDecline: _declineInvitation,
-                    ),
-                  
                   // 메인 콘텐츠 (에러 또는 그룹 목록)
                   Expanded(
                     child: _isError
@@ -224,7 +142,11 @@ class _GroupScreenState extends State<GroupScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.error_outline, color: AppColors.red, size: 48),
+                              Icon(
+                                Icons.error_outline,
+                                color: AppColors.red,
+                                size: 48,
+                              ),
                               SizedBox(height: 16),
                               Text(
                                 '그룹 목록을 불러오는데 실패했습니다.',
@@ -242,7 +164,9 @@ class _GroupScreenState extends State<GroupScreen> {
                                 ),
                                 child: Text(
                                   '다시 시도',
-                                  style: TextStyle(fontFamily: 'Anemone_air'),
+                                  style: TextStyle(
+                                    fontFamily: 'Anemone_air',
+                                  ),
                                 ),
                               ),
                             ],
@@ -251,7 +175,7 @@ class _GroupScreenState extends State<GroupScreen> {
                       : Consumer<GroupProvider>(
                           builder: (context, groupProvider, child) {
                             final groups = groupProvider.groups;
-                            
+
                             return groups.isEmpty && !isLoading
                                 ? EmptyGroupView(
                                     onCreateGroup: () {

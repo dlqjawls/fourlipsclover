@@ -118,7 +118,18 @@ class GroupInvitationDialog extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () {
                     debugPrint('카카오톡 공유 버튼 클릭: $inviteUrl');
-                    onShareKakao(inviteUrl);
+                    try {
+                      // 함수 호출 결과를 무시하고 Future 체인을 끊어버림
+                      onShareKakao(inviteUrl);
+
+                      // 다이얼로그를 닫음 (선택적)
+                      Navigator.of(context).pop();
+                    } catch (e) {
+                      debugPrint('카카오 공유 호출 오류: $e');
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('카카오톡 공유를 시작할 수 없습니다')),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.black,

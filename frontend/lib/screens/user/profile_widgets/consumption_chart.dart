@@ -161,7 +161,7 @@ class _ConsumptionChartState extends State<ConsumptionChart> {
                   fontWeight: FontWeight.w500,
                 );
                 return SideTitleWidget(
-                  axisSide: meta.axisSide,
+                  meta: meta,
                   child: Text(
                     categories[value.toInt()].toString(),
                     style: style,

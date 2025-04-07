@@ -126,29 +126,17 @@ class DeepLinkService {
   }
   
   // 적절한 화면으로 이동
-  void _navigateToGroupScreen(BuildContext context, String token) {
-    // 현재 화면에 따라 다르게 처리
-    final currentRoute = ModalRoute.of(context)?.settings.name;
-    
-    // 그룹 화면에 있는 경우 새로 고침 (Provider를 통해)
-    if (currentRoute == '/home' || currentRoute == '/group') {
-      // 이미 그룹 화면에 있으므로 새로고침만 필요
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('그룹 초대 링크가 수신되었습니다. 초대를 확인해보세요.')),
-        );
-      });
-    } else {
-      // 다른 화면에 있으면 그룹 화면으로 이동
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/home', 
-          (route) => false,
-          arguments: {'initialTab': 2} // 그룹 탭으로 이동 (탭 인덱스에 맞게 조정)
-        );
-      });
-    }
-  }
+void _navigateToGroupScreen(BuildContext context, String token) {
+  debugPrint('그룹 초대 화면으로 이동: token=$token');
+  
+  // 직접 그룹 초대 화면으로 이동
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    Navigator.of(context).pushNamed(
+      '/group/invitation',
+      arguments: {'token': token}
+    );
+  });
+}
   
   // 웹 URL에서 토큰 추출
   String? extractTokenFromUrl(String url) {

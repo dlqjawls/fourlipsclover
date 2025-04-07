@@ -9,8 +9,11 @@ class KakaoShareService {
     String? description,
   }) async {
     try {
+      debugPrint('카카오톡 공유 시작: $groupName, $inviteUrl');
+      
       // 카카오톡 설치 여부 확인
       bool isKakaoTalkSharingAvailable = await ShareClient.instance.isKakaoTalkSharingAvailable();
+      debugPrint('카카오톡 설치 여부: $isKakaoTalkSharingAvailable');
       
       // 초대 URL에서 토큰 추출
       String? token;
@@ -19,6 +22,7 @@ class KakaoShareService {
         if (uri.pathSegments.isNotEmpty) {
           token = uri.pathSegments.last;
         }
+        debugPrint('추출된 토큰: $token');
       } catch (e) {
         debugPrint('토큰 추출 오류: $e');
       }
@@ -49,35 +53,46 @@ class KakaoShareService {
       if (isKakaoTalkSharingAvailable) {
         // 카카오톡이 설치된 경우 - 템플릿 ID로 공유
         try {
+          debugPrint('커스텀 템플릿으로 공유 시도: $templateId');
           Uri uri = await ShareClient.instance.shareCustom(
             templateId: templateId, 
             templateArgs: templateArgs,
             serverCallbackArgs: serverCallbackArgs
           );
-          await ShareClient.instance.launchKakaoTalk(uri);
-          debugPrint('카카오톡 공유 URI: $uri');
+          debugPrint('카카오톡 공유 URI 생성됨: $uri');
+          
+          // launchKakaoTalk 실행 전 로그
+          debugPrint('카카오톡 실행 시도');
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          debugPrint('카카오톡 공유 성공');
           return true;
         } catch (e) {
           debugPrint('커스텀 템플릿 공유 실패, 기본 템플릿으로 대체: $e');
+          debugPrint('스택 트레이스: ${StackTrace.current}');
           // 실패 시 기본 템플릿으로 대체
           return _shareFallbackTemplate(groupName, inviteUrl, description, token, serverCallbackArgs);
         }
       } else {
         // 카카오톡이 설치되지 않은 경우 - 웹 공유
         try {
+          debugPrint('웹 공유 시도');
           Uri shareUrl = await WebSharerClient.instance.makeCustomUrl(
             templateId: templateId, 
             templateArgs: templateArgs
           );
+          debugPrint('웹 공유 URL 생성됨: $shareUrl');
           await launchUrl(shareUrl, mode: LaunchMode.externalApplication);
+          debugPrint('웹 공유 성공');
           return true;
         } catch (e) {
           debugPrint('웹 공유 실패: $e');
+          debugPrint('스택 트레이스: ${StackTrace.current}');
           return false;
         }
       }
     } catch (e) {
       debugPrint('카카오톡 공유 오류: $e');
+      debugPrint('스택 트레이스: ${StackTrace.current}');
       return false;
     }
   }
@@ -91,6 +106,8 @@ class KakaoShareService {
     Map<String, String> serverCallbackArgs
   ) async {
     try {
+      debugPrint('기본 템플릿으로 공유 시도');
+      
       // 실행 파라미터 설정
       final execParams = {'token': token ?? ''};
       
@@ -119,14 +136,20 @@ class KakaoShareService {
         ],
       );
       
+      debugPrint('기본 템플릿 설정 완료');
       Uri uri = await ShareClient.instance.shareDefault(
         template: template,
         serverCallbackArgs: serverCallbackArgs
       );
+      debugPrint('기본 템플릿 URI 생성됨: $uri');
+      
+      debugPrint('기본 템플릿으로 카카오톡 실행 시도');
       await ShareClient.instance.launchKakaoTalk(uri);
+      debugPrint('기본 템플릿 공유 성공');
       return true;
     } catch (e) {
       debugPrint('기본 템플릿 공유 오류: $e');
+      debugPrint('스택 트레이스: ${StackTrace.current}');
       return false;
     }
   }

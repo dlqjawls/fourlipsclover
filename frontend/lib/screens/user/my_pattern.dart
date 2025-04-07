@@ -239,47 +239,76 @@ class _DataVizPageState extends State<DataVizPage> {
     );
   }
 
-  FlTitlesData _buildTitlesData(String Function(double) getTitleText) {
-    return FlTitlesData(
-      show: true,
-      bottomTitles: AxisTitles(
-        sideTitles: SideTitles(
-          showTitles: true,
-          getTitlesWidget:
-              (value, meta) => SideTitleWidget(
-                axisSide: meta.axisSide,
-                child: Text(
-                  getTitleText(value),
-                  style: const TextStyle(
-                    color: AppColors.darkGray,
-                    fontSize: 12,
-                  ),
+FlTitlesData _buildTitlesData(String Function(double) getTitleText) {
+  return FlTitlesData(
+    show: true,
+    bottomTitles: AxisTitles(
+      sideTitles: SideTitles(
+        showTitles: true,
+        getTitlesWidget: (double value, TitleMeta meta) {
+          return SideTitleWidget(
+            meta: meta, // TitleMeta 객체 전체를 전달
+            space: 8,
+            child: Text(
+              getTitleText(value),
+              style: const TextStyle(
+                color: AppColors.darkGray,
+                fontSize: 12,
+              ),
+            ),
+          );
+        },
+        reservedSize: 30,
+      ),
+    ),
+    leftTitles: AxisTitles(
+      sideTitles: SideTitles(
+        showTitles: true,
+        getTitlesWidget: (double value, TitleMeta meta) {
+          // 0은 그냥 0으로 표시
+          if (value == 0) {
+            return SideTitleWidget(
+              meta: meta, // TitleMeta 객체 전체를 전달
+              space: 8,
+              child: const Text(
+                '0',
+                style: TextStyle(
+                  color: AppColors.darkGray,
+                  fontSize: 12,
                 ),
               ),
-          reservedSize: 30,
-        ),
-      ),
-      leftTitles: AxisTitles(
-        sideTitles: SideTitles(
-          showTitles: true,
-          getTitlesWidget:
-              (value, meta) => SideTitleWidget(
-                axisSide: meta.axisSide,
-                child: Text(
-                  '${(value / 10000).toStringAsFixed(0)}만원',
-                  style: const TextStyle(
-                    color: AppColors.darkGray,
-                    fontSize: 12,
-                  ),
+            );
+          }
+          
+          // 1만 단위로 표시할 때만 보여주기
+          if (value % 10000 == 0) {
+            return SideTitleWidget(
+              meta: meta, // TitleMeta 객체 전체를 전달
+              space: 8,
+              child: Text(
+                '${(value / 10000).toStringAsFixed(0)}만원',
+                style: const TextStyle(
+                  color: AppColors.darkGray,
+                  fontSize: 12,
                 ),
               ),
-          reservedSize: 50,
-        ),
+            );
+          }
+          
+          // 다른 값은 빈 위젯 반환
+          return const SizedBox.shrink();
+        },
+        reservedSize: 50,
       ),
-      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-    );
-  }
+    ),
+    topTitles: const AxisTitles(
+      sideTitles: SideTitles(showTitles: false),
+    ),
+    rightTitles: const AxisTitles(
+      sideTitles: SideTitles(showTitles: false),
+    ),
+  );
+}
 
   FlGridData _buildGridData(double maxY) {
     return FlGridData(
