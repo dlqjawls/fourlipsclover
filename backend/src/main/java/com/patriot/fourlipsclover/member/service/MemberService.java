@@ -17,11 +17,8 @@ import com.patriot.fourlipsclover.mypage.dto.response.MypageResponse;
 import com.patriot.fourlipsclover.mypage.dto.response.MypageResponse.Payment;
 import com.patriot.fourlipsclover.mypage.service.MypageImageService;
 import com.patriot.fourlipsclover.payment.repository.PaymentApprovalRepository;
-import com.patriot.fourlipsclover.plan.dto.response.PlanResponse;
-import com.patriot.fourlipsclover.plan.entity.Plan;
 import com.patriot.fourlipsclover.plan.entity.PlanMember;
 import com.patriot.fourlipsclover.plan.repository.PlanMemberRepository;
-import com.patriot.fourlipsclover.plan.repository.PlanRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
 import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
 import com.patriot.fourlipsclover.tag.service.TagService;
@@ -30,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +46,7 @@ public class MemberService {
 	private final PaymentApprovalRepository paymentApprovalRepository;
 	private final LocalCertificationRepository localCertificationRepository;
 	private final PlanMemberRepository planMemberRepository;
+	private final MypageImageService mypageImageService;
 
 	public JwtResponse processKakaoLoginAndGetToken(String accessToken) {
 		String userInfo = kakaoAuthService.getUserInfo(accessToken);
@@ -96,6 +95,12 @@ public class MemberService {
 	@Transactional(readOnly = true)
 	public MypageResponse getMypageData(long memberId) {
 		Member member = memberRepository.findByMemberId(memberId);
+		String profileUrl = member.getProfileUrl();
+		if (profileUrl != null && !profileUrl.isEmpty() && !StringUtils.startsWithAny(
+				profileUrl.toLowerCase(), "http://", "https://")) {
+			String url = mypageImageService.getProfileImageUrl(profileUrl);
+			member.setProfileUrl(url);
+		}
 		MypageResponse response = memberMapper.toDto(member);
 		List<RestaurantTagResponse> tagList = tagService.findRestaurantTagByMemberId(memberId);
 		int reviewCount = reviewJpaRepository.countByMember_MemberId(memberId);
@@ -115,18 +120,19 @@ public class MemberService {
 						.build())
 				.toList();
 
-
 		response.setRecentPayments(recentPayments);
 		response.setTags(tagList);
 
-		LocalCertification localCertification = localCertificationRepository.findByMember_MemberId(memberId);
+		LocalCertification localCertification = localCertificationRepository.findByMember_MemberId(
+				memberId);
 		response.setLocalAuth(localCertification.isCertificated());
 		response.setLocalRank(localCertification.getLocalGrade().getValue());
 		response.setLocalRegion(localCertification.getLocalRegion().getRegionName());
 
-		List<PlanMember> planMembers = planMemberRepository.findCurrentPlansByMember(member, LocalDate.now());
+		List<PlanMember> planMembers = planMemberRepository.findCurrentPlansByMember(member,
+				LocalDate.now());
 		List<MypagePlanResponse> mypagePlanResponses = new ArrayList<>();
-		for(PlanMember planMember: planMembers){
+		for (PlanMember planMember : planMembers) {
 			MypagePlanResponse mypagePlanResponse = new MypagePlanResponse();
 			mypagePlanResponse.setDescription(planMember.getPlan().getDescription());
 			mypagePlanResponse.setEndDate(planMember.getPlan().getEndDate());
