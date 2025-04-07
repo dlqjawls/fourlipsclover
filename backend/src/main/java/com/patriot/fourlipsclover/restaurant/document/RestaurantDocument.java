@@ -22,6 +22,17 @@ public class RestaurantDocument {
 
 	@Id
 	private String id;
+
+	@Field(type = FieldType.Text)
+	private String openingHours;
+
+	@Field(type = FieldType.Nested)
+	private List<String> restaurantImages;
+
+	@Field(type = FieldType.Text)
+	private String avgAmount;
+
+
 	@Field(type = FieldType.Text, analyzer = "korean")
 	private String name;
 	@Field(type = FieldType.Text, analyzer = "korean")
@@ -36,9 +47,13 @@ public class RestaurantDocument {
 	@Field(type = FieldType.Keyword)
 	private String kakaoPlaceId;
 
-	@Field(type = FieldType.Keyword)
+	@Field(type = FieldType.Integer)
 	private Integer restaurantId;
 
+	@Field(type = FieldType.Integer)
+	private Integer likeSentiment;
+	@Field(type = FieldType.Integer)
+	private Integer dislikeSentiment;
 	@Data
 	@NoArgsConstructor
 	@AllArgsConstructor
