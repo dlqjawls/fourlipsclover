@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import '../services/matching/matching_service.dart';
+
 class AuthService {
   // 카카오 로그인 처리
   Future<Map<String, dynamic>> kakaoLogin() async {
@@ -20,6 +21,9 @@ class AuthService {
 
       // 로그인 성공 시 토큰 저장
       final jwtToken = loginResult['jwtToken'];
+      if (jwtToken == null) {
+        throw Exception('서버 응답에 JWT 토큰이 없습니다.');
+      }
       await saveLoginState(true, jwtToken);
 
       // 토큰 저장 확인 로그
@@ -53,21 +57,21 @@ class AuthService {
   // 서버 로그인 처리
   Future<Map<String, dynamic>> _processServerLogin(String accessToken) async {
     final baseUrl = dotenv.env['API_BASE_URL'];
+    if (baseUrl == null) {
+      throw Exception('API_BASE_URL이 설정되지 않았습니다.');
+    }
+
     try {
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/auth/kakao/login'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $accessToken',
-            },
-          );
-          // .timeout(
-          //   const Duration(seconds: 30),
-          //   onTimeout: () {
-          //     throw Exception('서버 연결 시간 초과');
-          //   },
-          // );
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/kakao/login'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      debugPrint('서버 응답 상태 코드: ${response.statusCode}');
+      debugPrint('서버 응답 본문: ${response.body}');
 
       switch (response.statusCode) {
         case 200:
@@ -75,7 +79,8 @@ class AuthService {
           if (responseData['jwtToken'] == null) {
             throw Exception('서버 응답에 JWT 토큰이 없습니다.');
           }
-           // 로그인 성공 후 매칭 목록 초기화
+
+          // 로그인 성공 후 매칭 목록 초기화
           try {
             await MatchingService.initializeMatches();
             debugPrint('매칭 목록 초기화 성공');
@@ -83,9 +88,10 @@ class AuthService {
             debugPrint('매칭 목록 초기화 실패: $e');
             // 매칭 목록 초기화 실패는 로그인 실패로 처리하지 않음
           }
+
           debugPrint('로그인 성공');
-          debugPrint(accessToken);
-          debugPrint(responseData['jwtToken']);
+          debugPrint('accessToken: $accessToken');
+          debugPrint('jwtToken: ${responseData['jwtToken']}');
           return responseData;
         case 401:
           throw Exception('인증 실패: 유효하지 않은 토큰');

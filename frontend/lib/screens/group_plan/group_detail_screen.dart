@@ -717,7 +717,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
     if (userProvider.userProfile != null) {
       try {
-        return int.parse(userProvider.userProfile!.userId);
+        return userProvider.userProfile!.memberId;
       } catch (e) {
         debugPrint('userId를 정수로 변환하는 중 오류: $e');
       }

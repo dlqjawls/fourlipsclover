@@ -138,7 +138,7 @@ class _PlanCreateBottomSheetState extends State<PlanCreateBottomSheet> {
   Widget build(BuildContext context) {
     // 현재 로그인한 사용자 정보 가져오기
     final userProvider = Provider.of<UserProvider>(context);
-    final currentUserId = userProvider.userProfile?.userId;
+    final currentUserId = userProvider.userProfile?.memberId;
     final screenHeight = MediaQuery.of(context).size.height;
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
@@ -238,7 +238,7 @@ class _PlanCreateBottomSheetState extends State<PlanCreateBottomSheet> {
                           ? null
                           : (_currentStep < 2
                               ? _nextStep
-                              : () => _createPlan(int.parse(currentUserId))),
+                              : () => _createPlan(currentUserId.toString())),
                   child:
                       _isLoading
                           ? const SizedBox(
@@ -328,7 +328,7 @@ class _PlanCreateBottomSheetState extends State<PlanCreateBottomSheet> {
   Widget _buildMemberSelectionStep() {
     // 현재 로그인한 사용자 정보 가져오기
     final userProvider = Provider.of<UserProvider>(context);
-    final currentUserId = userProvider.userProfile?.userId;
+    final currentUserId = userProvider.userProfile?.memberId;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -375,8 +375,7 @@ class _PlanCreateBottomSheetState extends State<PlanCreateBottomSheet> {
                   : TrainSeatMemberSelection(
                     members: _groupMembers!,
                     selectedMemberIds: _selectedMemberIds,
-                    currentUserId:
-                        currentUserId != null ? int.parse(currentUserId) : null,
+                    currentUserId: currentUserId,
                     onMemberSelected: (memberId, isSelected) {
                       setState(() {
                         if (isSelected) {
@@ -393,7 +392,7 @@ class _PlanCreateBottomSheetState extends State<PlanCreateBottomSheet> {
   }
 
   // 계획 생성하기
-  Future<void> _createPlan(int currentUserId) async {
+  Future<void> _createPlan(String currentUserId) async {
     final title = _titleController.text.trim();
 
     // 제목 검증
@@ -440,7 +439,7 @@ class _PlanCreateBottomSheetState extends State<PlanCreateBottomSheet> {
         startDate: _startDate!,
         endDate: _endDate!,
         members: _selectedMemberIds.toList(),
-        treasurerId: currentUserId, // 현재 사용자를 총무로 설정
+        treasurerId: int.parse(currentUserId), // 문자열을 int로 변환
       );
 
       // API 호출하여 계획 생성
