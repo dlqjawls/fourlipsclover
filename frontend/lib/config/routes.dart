@@ -5,6 +5,7 @@ import 'package:frontend/screens/home/home_screen.dart';
 import 'package:frontend/screens/auth/login_screen.dart';
 import 'package:frontend/screens/common/base_screen.dart';
 import 'package:frontend/screens/user/user_screen.dart';
+import 'package:frontend/screens/chat/chat_list_screen.dart'; // 채팅 목록 화면 import
 
 import 'package:frontend/screens/user/user_profile.dart';
 // import 'package:frontend/screens/user/my_consumption_pattern_screen.dart'; // MyConsumptionPatternScreen import 추가
@@ -25,7 +26,8 @@ class AppRoutes {
     '/login': (context) => const LoginScreen(),
     '/user': (context) => const UserScreen(),
     '/home': (context) => const BaseScreen(),
-   
+    '/chat': (context) => const ChatListScreen(), // 채팅 목록 화면 경로 추가
+
     '/user_profile': (context) => const MyConsumptionPatternScreen(),
 
     '/kakaopay_test': (context) => KakaoPayScreen(),
