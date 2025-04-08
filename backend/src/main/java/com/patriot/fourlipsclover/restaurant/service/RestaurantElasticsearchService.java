@@ -155,9 +155,13 @@ public class RestaurantElasticsearchService {
 				}
 
 				if (!tagQueries.isEmpty()) {
-					boolQueryBuilder.should(tagQueries);
-					// 태그 검색이 있는 경우, 최소 하나의 태그는 일치해야 함
-					boolQueryBuilder.minimumShouldMatch("1");
+					// 태그 쿼리를 별도의 bool로 묶어서 처리
+					BoolQuery.Builder tagBoolQuery = new BoolQuery.Builder();
+					tagBoolQuery.should(tagQueries);
+					tagBoolQuery.minimumShouldMatch("1");
+
+					// 메인 bool 쿼리에 태그 bool 쿼리를 must로 추가
+					boolQueryBuilder.must(q -> q.bool(tagBoolQuery.build()));
 				}
 			}
 
