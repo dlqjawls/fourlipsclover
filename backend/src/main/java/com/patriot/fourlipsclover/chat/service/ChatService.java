@@ -13,6 +13,7 @@ import com.patriot.fourlipsclover.exception.AlreadyExistException;
 import com.patriot.fourlipsclover.exception.MatchNotFoundException;
 import com.patriot.fourlipsclover.exception.MemberNotFoundException;
 import com.patriot.fourlipsclover.exception.NotFoundException;
+import com.patriot.fourlipsclover.group.entity.Group;
 import com.patriot.fourlipsclover.match.entity.Match;
 import com.patriot.fourlipsclover.match.repository.MatchRepository;
 import com.patriot.fourlipsclover.member.entity.Member;
@@ -21,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -34,6 +36,8 @@ public class ChatService {
     private final ChatMemberRepository chatMemberRepository;
     private final MemberRepository memberRepository;
     private final MatchRepository matchRepository;
+    private final ChatImageService chatImageService;
+
 
     // 특정 chatRoomId의, after 이후의 메시지를 조회하는 메서드
     @Transactional
@@ -57,6 +61,7 @@ public class ChatService {
                         message.getSender().getProfileUrl(),
                         message.getMessageContent(),
                         message.getMessageType(),
+                        message.getImageUrls(),
                         message.getCreatedAt()))
                 .collect(Collectors.toList());
     }
@@ -106,10 +111,30 @@ public class ChatService {
                 .map(chatMember -> {
                     ChatRoom chatRoom = chatMember.getChatRoom();  // ChatMember에서 ChatRoom 추출
                     int participantNum = chatMemberRepository.countByChatRoom_ChatRoomId(chatRoom.getChatRoomId()); // 채팅방 참여자 수 조회
+
+                    // 채팅방에 해당하는 matchId와 groupId를 가져옵니다.
+                    Integer matchId = null;
+                    Integer groupId = null;
+
+                    // 채팅방에 해당하는 매칭이 있는지 확인
+                    if (chatRoom.getMatch() != null) {
+                        matchId = chatRoom.getMatch().getMatchId();
+                    }
+
+                    // 채팅방이 소속된 그룹을 가져옵니다.
+                    if (chatRoom.getMatch() != null && chatRoom.getMatch().getGuideRequestForm() != null) {
+                        Group group = chatRoom.getMatch().getGuideRequestForm().getGroup();
+                        if (group != null) {
+                            groupId = group.getGroupId();
+                        }
+                    }
+
                     return new ChattingListResponse(
                             chatRoom.getChatRoomId(),
                             chatRoom.getName(),
-                            participantNum
+                            participantNum,
+                            matchId,
+                            groupId
                     );
                 })
                 .collect(Collectors.toList());
@@ -147,6 +172,7 @@ public class ChatService {
                         message.getSender().getProfileUrl(),
                         message.getMessageContent(),
                         message.getMessageType(),
+                        message.getImageUrls(),
                         message.getCreatedAt()))
                 .collect(Collectors.toList());
 
@@ -192,5 +218,61 @@ public class ChatService {
                 .build();
     }
 
+    @Transactional
+    // 이미지 메시지 저장
+    public ChatMessageResponse sendImageMessage(Integer chatRoomId, Long senderId, String messageContent, List<MultipartFile> images) throws Exception {
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId).orElseThrow(() -> new IllegalArgumentException("Chat room not found"));
+
+        Member sender = memberRepository.findById(senderId).orElseThrow(() -> new IllegalArgumentException("Sender not found"));
+
+        // 이미지를 MinIO에 업로드하고 URL 반환
+        List<String> imageUrls = chatImageService.uploadImages(images);
+
+        // 채팅 메시지 생성
+        ChatMessage message = new ChatMessage();
+        message.setChatRoom(chatRoom);
+        message.setSender(sender);
+        message.setMessageContent(messageContent);
+        message.setMessageType(MessageType.IMAGE);  // 이미지 메시지 타입
+        message.setImageUrls(imageUrls);  // 이미지 URL 저장
+        message.setCreatedAt(LocalDateTime.now());
+
+        ChatMessage savedMessage = chatMessageRepository.save(message);
+
+        // 생성된 메시지를 반환하면서, 이미지 URL도 포함
+        return new ChatMessageResponse(
+                savedMessage.getMessageId(),
+                savedMessage.getChatRoom().getChatRoomId(),
+                savedMessage.getSender().getMemberId(),
+                savedMessage.getSender().getNickname(),
+                savedMessage.getSender().getProfileUrl(),
+                savedMessage.getMessageContent(),
+                savedMessage.getMessageType(),
+                savedMessage.getImageUrls(),  // 이미지 URL 포함
+                savedMessage.getCreatedAt()
+        );
+    }
+
+//    @Transactional
+//    public void leaveChatRoom(Integer chatRoomId, Long memberId) {
+//        // 채팅방을 찾아옵니다.
+//        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+//                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다: " + chatRoomId));
+//
+//        // 채팅방에 속한 멤버를 찾습니다.
+//        ChatMember chatMember = (ChatMember) chatMemberRepository.findByChatRoom_ChatRoomIdAndMember_MemberId(chatRoomId, memberId)
+//                .orElseThrow(() -> new IllegalArgumentException("해당 채팅방에서 멤버를 찾을 수 없습니다."));
+//
+//        // 채팅방에서 해당 멤버를 삭제합니다.
+//        chatMemberRepository.delete(chatMember);
+//
+//        // 채팅방에 남은 멤버가 있는지 확인
+//        long remainingMembersCount = chatMemberRepository.countByChatRoom_ChatRoomId(chatRoomId);
+//
+//        // 마지막 멤버가 나갔다면 채팅방을 삭제
+//        if (remainingMembersCount == 0) {
+//            chatRoomRepository.delete(chatRoom);
+//        }
+//    }
 
 }

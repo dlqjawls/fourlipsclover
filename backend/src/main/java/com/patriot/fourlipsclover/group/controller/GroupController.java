@@ -142,4 +142,14 @@ public class GroupController {
         return ResponseEntity.noContent().build();
     }
 
+    // 특정 groupId에 속한 멤버 ID 조회 API
+    @GetMapping("/{groupId}/members")
+    public ResponseEntity<List<Long>> getMembersByGroupId(@PathVariable Integer groupId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Long loggedInMemberId = userDetails.getMember().getMemberId();
+
+        List<Long> memberIds = groupService.getMemberIdsByGroupId(groupId, loggedInMemberId);
+        return ResponseEntity.ok(memberIds);
+    }
 }
