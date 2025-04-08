@@ -89,4 +89,32 @@ public class SpendingAnalysisController {
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping("/group/category/{groupId}")
+    @Operation(
+            summary = "그룹 카테고리별 지출 분석",
+            description = "그룹의 카테고리별 지출 및 방문 데이터를 분석하여 반환합니다. 날짜 범위를 지정할 수 있습니다.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "분석 성공"),
+                    @ApiResponse(responseCode = "400", description = "잘못된 요청"),
+                    @ApiResponse(responseCode = "500", description = "서버 오류")
+            }
+    )
+    public ResponseEntity<Map<String, Object>> getGroupCategorySpending(
+            @Parameter(description = "그룹 ID") @PathVariable Long groupId,
+            @Parameter(description = "시작 날짜 (yyyy-MM-dd)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @Parameter(description = "종료 날짜 (yyyy-MM-dd)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        // LocalDate를 LocalDateTime으로 변환 (시작일은 00:00:00, 종료일은 23:59:59)
+        LocalDateTime startDateTime = startDate != null ?
+                LocalDateTime.of(startDate, LocalTime.MIN) : null;
+        LocalDateTime endDateTime = endDate != null ?
+                LocalDateTime.of(endDate, LocalTime.MAX) : null;
+
+        Map<String, Object> result = spendingAnalysisService.analyzeGroupSpendingByCategory(
+                groupId, startDateTime, endDateTime);
+        return ResponseEntity.ok(result);
+    }
+
 }
