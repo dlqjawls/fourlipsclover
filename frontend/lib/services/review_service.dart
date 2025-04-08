@@ -87,7 +87,7 @@ class ReviewService {
     required String kakaoPlaceId,
     required String content,
     required DateTime visitedAt,
-    File? imageFile,
+    List<File>? imageFiles, // 변경: File? -> List<File>?
     required String accessToken,
   }) async {
     final url = Uri.parse('$baseUrl$apiPrefix/reviews');
@@ -111,14 +111,17 @@ class ReviewService {
       filename: 'data.json',
     ));
 
-    if (imageFile != null) {
-      final mimeType = lookupMimeType(imageFile.path) ?? 'image/jpeg';
-      final mimeParts = mimeType.split('/');
-      request.files.add(await http.MultipartFile.fromPath(
-        'images',
-        imageFile.path,
-        contentType: MediaType(mimeParts[0], mimeParts[1]),
-      ));
+    // 변경: 여러 이미지 파일 처리
+    if (imageFiles != null && imageFiles.isNotEmpty) {
+      for (var imageFile in imageFiles) {
+        final mimeType = lookupMimeType(imageFile.path) ?? 'image/jpeg';
+        final mimeParts = mimeType.split('/');
+        request.files.add(await http.MultipartFile.fromPath(
+          'images', // 서버에서 여러 파일을 받는 필드명
+          imageFile.path,
+          contentType: MediaType(mimeParts[0], mimeParts[1]),
+        ));
+      }
     }
 
     final streamedResponse = await request.send();

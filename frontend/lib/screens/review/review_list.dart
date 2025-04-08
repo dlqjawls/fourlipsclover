@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:frontend/widgets/clover_loading_spinner.dart';
 import '../../config/theme.dart';
 import '../../models/review_model.dart';
-import '../review/review_detail.dart';
 import '../review/review_write.dart';
 import '../../services/review_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -11,7 +10,9 @@ import '../../providers/review_provider.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../providers/user_provider.dart';
-
+import 'package:frontend/utils/review_utils.dart';
+import 'package:frontend/screens/review/widgets/delete_confirmation_modal.dart';
+import '../review/widgets/review_options_modal.dart';
 
 class ReviewList extends StatefulWidget {
   final String restaurantId;
@@ -35,7 +36,6 @@ class _ReviewListState extends State<ReviewList> {
   @override
   void initState() {
     super.initState();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appProvider = Provider.of<AppProvider>(context, listen: false);
       final userProvider = Provider.of<UserProvider>(context, listen: false);
@@ -48,8 +48,6 @@ class _ReviewListState extends State<ReviewList> {
       _fetchReviews();
     });
   }
-
-
 
   void _fetchReviews() {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
@@ -65,12 +63,21 @@ class _ReviewListState extends State<ReviewList> {
     });
   }
 
-
   Future<void> _toggleLike(String reviewId, String likeStatus) async {
     final provider = Provider.of<ReviewProvider>(context, listen: false);
     final review = provider.getReview(reviewId);
 
-    if (review == null || review.memberId == memberId) return;
+    if (review == null) return;
+
+    if (review.memberId == memberId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("다른 이용자의 리뷰에 반응을 남겨주세요"),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
 
     try {
       await ReviewService.toggleLikeStatus(
@@ -88,40 +95,22 @@ class _ReviewListState extends State<ReviewList> {
 
 
   Future<void> _onReviewWritten() async {
-    final createdReview = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ReviewWriteScreen(kakaoPlaceId: widget.restaurantId),
-      ),
+    final createdReview = await showReviewBottomSheet(
+      context: context,
+      kakaoPlaceId: widget.restaurantId,
     );
 
-    if (createdReview != null && createdReview is Review) {
-      widget.onReviewUpdated(); // 레스토랑 대표 이미지 등 갱신
+    if (createdReview != null) {
+      widget.onReviewUpdated();
       _fetchReviews();
-      // 리뷰 상세로 바로 이동
-      final updated = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ReviewDetail(
-            review: createdReview,
-            kakaoPlaceId: widget.restaurantId,
-          ),
-        ),
-      );
-      if (updated == true) {
-        widget.onReviewUpdated();
-        _fetchReviews();
-      }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        /// ✅ 리뷰 제목 + 작성 버튼
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 2.0),
           child: Row(
@@ -136,7 +125,6 @@ class _ReviewListState extends State<ReviewList> {
           ),
         ),
 
-        /// ✅ 리뷰 리스트
         FutureBuilder<List<Review>>(
           future: reviewData,
           builder: (context, snapshot) {
@@ -160,99 +148,113 @@ class _ReviewListState extends State<ReviewList> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      InkWell(
-                        onTap: review.memberId != memberId
-                            ? null
-                            : () async {
-                          final updated = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ReviewDetail(
-                                review: review,
-                                kakaoPlaceId: widget.restaurantId,
-                              ),
-                            ),
-                          );
-
-                          if (updated == true) {
-                            widget.onReviewUpdated();
-                            _fetchReviews();
-                          }
-                        },
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 20,
-                                  backgroundImage: _buildProfileImageProvider(review.profileImageUrl),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(review.username, style: Theme.of(context).textTheme.bodyLarge),
-                                ),
-                                Text(
-                                  "${review.visitCount}번째 방문 | ${_formatDate(review.date)}",
-                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              review.content,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                            const SizedBox(height: 8),
-                            _buildReviewImage(review.imageUrl, index),
-                            const SizedBox(height: 8),
-                            Consumer<ReviewProvider>(
-                              builder: (context, provider, _) {
-                                final currentReview = provider.getReview(review.id);
-                                if (currentReview == null) return SizedBox.shrink();
-
-                                return Row(
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.thumb_up,
-                                        size: 18,
-                                        color: currentReview.isLiked ? AppColors.primary : AppColors.lightGray,
-                                      ),
-                                      onPressed: currentReview.memberId == memberId
-                                          ? null
-                                          : () => _toggleLike(currentReview.id, "LIKE"),
-                                    ),
-                                    Text('${currentReview.likes}', style: const TextStyle(fontSize: 12)),
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.thumb_down,
-                                        size: 18,
-                                        color: currentReview.isDisliked ? AppColors.primary : AppColors.lightGray,
-                                      ),
-                                      onPressed: currentReview.memberId == memberId
-                                          ? null
-                                          : () => _toggleLike(currentReview.id, "DISLIKE"),
-                                    ),
-                                    Text('${currentReview.dislikes}', style: const TextStyle(fontSize: 12)),
-                                  ],
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundImage: _buildProfileImageProvider(review.profileImageUrl),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(review.username, style: Theme.of(context).textTheme.bodyLarge),
+                          ),
+                          Text(
+                            "${review.visitCount}번째 방문 | ${_formatDate(review.date)}",
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          if (review.memberId == memberId)
+                            GestureDetector(
+                              onTapDown: (details) {
+                                final tapPosition = details.globalPosition;
+                                showReviewOptionsModal(
+                                  context: context,
+                                  position: tapPosition,
+                                  review: review,
+                                  kakaoPlaceId: widget.restaurantId,
+                                  onReviewUpdated: () {
+                                    widget.onReviewUpdated();
+                                    _fetchReviews();
+                                  },
                                 );
                               },
-                            ),
-                            if (index < reviews.length - 1)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Divider(
-                                  color: Colors.grey[300],
-                                  thickness: 0.7,
-                                  height: 16,
-                                ),
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 8.0),
+                                child: Icon(Icons.more_vert, size: 20, color: Colors.grey[600]),
                               ),
-                          ],
-                        ),
+                            ),
+                        ],
                       ),
+                      const SizedBox(height: 6),
+                      Text(
+                        review.content,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: 8),
+                      // 변경된 이미지 처리
+                      _buildReviewImage(review.imageUrls, index),
+                      const SizedBox(height: 8),
+                      Consumer<ReviewProvider>(
+                        builder: (context, provider, _) {
+                          final currentReview = provider.getReview(review.id);
+                          if (currentReview == null) return SizedBox.shrink();
+                          return Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  Icons.thumb_up,
+                                  size: 18,
+                                  color: currentReview.isLiked ? AppColors.primary : AppColors.lightGray,
+                                ),
+                                onPressed: () {
+                                  if (currentReview.memberId == memberId) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("다른 이용자의 리뷰에 반응을 남겨주세요."),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  } else {
+                                    _toggleLike(currentReview.id, "LIKE");
+                                  }
+                                },
+                              ),
+                              Text('${currentReview.likes}', style: const TextStyle(fontSize: 12)),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.thumb_down,
+                                  size: 18,
+                                  color: currentReview.isDisliked ? AppColors.primary : AppColors.lightGray,
+                                ),
+                                onPressed: () {
+                                  if (currentReview.memberId == memberId) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("다른 이용자의 리뷰에 반응을 남겨주세요."),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  } else {
+                                    _toggleLike(currentReview.id, "DISLIKE");
+                                  }
+                                },
+                              ),
+                              Text('${currentReview.dislikes}', style: const TextStyle(fontSize: 12)),
+                            ],
+                          );
+                        },
+                      ),
+                      if (index < reviews.length - 1)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Divider(
+                            color: Colors.grey[300],
+                            thickness: 0.7,
+                            height: 16,
+                          ),
+                        ),
                     ],
                   ),
                 );
@@ -263,11 +265,8 @@ class _ReviewListState extends State<ReviewList> {
       ],
     );
   }
-
-
   ImageProvider _buildProfileImageProvider(String? imageUrl) {
     final baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://your-api.com';
-
     if (imageUrl == null || imageUrl.isEmpty) {
       return const AssetImage('assets/default_profile.png');
     } else if (imageUrl.startsWith('http')) {
@@ -279,21 +278,59 @@ class _ReviewListState extends State<ReviewList> {
     }
   }
 
-  Widget _buildReviewImage(String? imageUrl, int index) {
-    if (imageUrl == null || imageUrl.isEmpty) {
-      return const SizedBox.shrink(); // 👉 이미지가 없으면 아무 것도 안 보임
+  Widget _buildReviewImage(List<String>? imageUrls, int index) {
+    if (imageUrls == null || imageUrls.isEmpty) {
+      return const SizedBox.shrink();
     }
 
-    return Container(
-      width: double.infinity,
-      height: 150,
-      decoration: BoxDecoration(
+    final aspectRatio = 4 / 3; // ✅ 세로가 더 넉넉한 비율로 수정 (예: 4:3)
+
+    return AspectRatio(
+      aspectRatio: aspectRatio,
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        image: DecorationImage(
-          image: imageUrl.startsWith("http")
-              ? NetworkImage(imageUrl)
-              : AssetImage(imageUrl) as ImageProvider,
+        child: imageUrls.length == 1
+            ? Image(
+          image: imageUrls.first.startsWith("http")
+              ? NetworkImage(imageUrls.first)
+              : AssetImage(imageUrls.first) as ImageProvider,
           fit: BoxFit.cover,
+        )
+            : PageView.builder(
+          itemCount: imageUrls.length,
+          itemBuilder: (context, pageIndex) {
+            return Stack(
+              children: [
+                Image(
+                  image: imageUrls[pageIndex].startsWith("http")
+                      ? NetworkImage(imageUrls[pageIndex])
+                      : AssetImage(imageUrls[pageIndex]) as ImageProvider,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                ),
+                Positioned(
+                  bottom: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      "${pageIndex + 1}/${imageUrls.length}",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

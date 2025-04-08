@@ -8,12 +8,39 @@ class ReviewProvider extends ChangeNotifier {
     final review = _reviews[reviewId];
     if (review != null) {
       if (likeStatus == 'LIKE') {
-        review.isLiked = !review.isLiked;
-        review.likes += review.isLiked ? 1 : -1;
-      } else {
-        review.isDisliked = !review.isDisliked;
-        review.dislikes += review.isDisliked ? 1 : -1;
+        if (!review.isLiked) {
+          // 좋아요를 누른 상태로 변경
+          review.isLiked = true;
+          review.likes += 1;
+
+          // 싫어요 상태였으면 해제
+          if (review.isDisliked) {
+            review.isDisliked = false;
+            review.dislikes = (review.dislikes > 0) ? review.dislikes - 1 : 0;
+          }
+        } else {
+          // 이미 눌려있으면 해제
+          review.isLiked = false;
+          review.likes = (review.likes > 0) ? review.likes - 1 : 0;
+        }
+      } else if (likeStatus == 'DISLIKE') {
+        if (!review.isDisliked) {
+          // 싫어요를 누른 상태로 변경
+          review.isDisliked = true;
+          review.dislikes += 1;
+
+          // 좋아요 상태였으면 해제
+          if (review.isLiked) {
+            review.isLiked = false;
+            review.likes = (review.likes > 0) ? review.likes - 1 : 0;
+          }
+        } else {
+          // 이미 눌려있으면 해제
+          review.isDisliked = false;
+          review.dislikes = (review.dislikes > 0) ? review.dislikes - 1 : 0;
+        }
       }
+
       notifyListeners();
     }
   }
