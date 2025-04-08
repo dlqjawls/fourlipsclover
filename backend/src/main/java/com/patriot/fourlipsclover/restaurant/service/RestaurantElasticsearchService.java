@@ -4,7 +4,6 @@ import static co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType.Be
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
-import co.elastic.clients.elasticsearch._types.LatLonGeoLocation;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
@@ -49,31 +48,30 @@ public class RestaurantElasticsearchService {
 		}
 	}
 
-	public List<RestaurantSearchResponse> searchRestaurantsByLocation(double lat, double lon, int distanceInMeters) {
+	public List<RestaurantSearchResponse> searchRestaurantsByLocation(double lat, double lon,
+			int distanceInMeters) {
 		try {
 			Query geoDistanceQuery = Query.of(q -> q
 					.geoDistance(g -> g
 							.field("location")           // RestaurantDocument의 location 필드
 							.distance(distanceInMeters + "m") // 예: "5km"
-							.location(loc -> loc.latlon(latlon -> latlon.lat(lat).lon(lon)))					)
+							.location(loc -> loc.latlon(latlon -> latlon.lat(lat).lon(lon))))
 			);
 			SearchResponse<RestaurantDocument> searchResponse =
 					elasticsearchClient.search(s -> s
 									.index("restaurants")   // 실제 인덱스명 (예: "restaurant")
 									.query(geoDistanceQuery)
-									.size(100),            // 예: 최대 100건
+									.size(20),            // 예: 최대 100건
 							RestaurantDocument.class
 					);
-
 
 			return searchResponse.hits().hits().stream()
 					.map(Hit::source)
 					.map(restaurantSearchMapper::toResponse)
 					.toList();
-		} catch (ElasticsearchException e){
+		} catch (ElasticsearchException e) {
 			System.out.println(e.response().error());
-		}
-		catch (IOException e) {
+		} catch (IOException e) {
 			throw new RuntimeException("위치 기반 식당 검색 중 오류가 발생했습니다.", e);
 		}
 		return null;
