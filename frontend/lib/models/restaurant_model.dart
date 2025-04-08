@@ -18,6 +18,9 @@ class RestaurantResponse {
   final List<String>? restaurantImages;
   final List<String>? menu;
   final List<Map<String, dynamic>>? tags;
+  final String? avgAmount;
+  final int? likeSentiment; 
+  final int? dislikeSentiment; 
   double? distance;
 
   RestaurantResponse({
@@ -37,7 +40,9 @@ class RestaurantResponse {
     this.distance,
     this.tags,
     this.menu,
-
+    this.avgAmount,        
+    this.likeSentiment,     
+    this.dislikeSentiment,  
   });
 
   factory RestaurantResponse.fromJson(Map<String, dynamic> json) {
@@ -61,6 +66,9 @@ class RestaurantResponse {
           ?.map((img) => img.toString())
           .toList(),
       tags: (json['tags'] as List<dynamic>?)?.cast<Map<String, dynamic>>(),
+      avgAmount: json['avgAmount'], 
+      likeSentiment: json['likeSentiment'], 
+      dislikeSentiment: json['dislikeSentiment'], 
     );
   }
 

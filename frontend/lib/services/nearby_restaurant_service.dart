@@ -37,11 +37,8 @@ class NearbyRestaurantService {
       final uri = Uri.parse(
         '$baseUrl/api/restaurant/nearby',
       ).replace(queryParameters: queryParams);
-      print('레스토랑 API 요청 URL: $uri');
 
       final response = await http.get(uri);
-      print('API 응답 코드: ${response.statusCode}');
-      print('API 응답 내용: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> responseData = json.decode(
