@@ -12,6 +12,7 @@ import com.patriot.fourlipsclover.plan.repository.PlanRepository;
 import com.patriot.fourlipsclover.settlement.dto.response.ExpenseResponse;
 import com.patriot.fourlipsclover.settlement.dto.response.SettlementRequestResponse;
 import com.patriot.fourlipsclover.settlement.dto.response.SettlementResponse;
+import com.patriot.fourlipsclover.settlement.dto.response.SettlementSituationResponse;
 import com.patriot.fourlipsclover.settlement.dto.response.SettlementTransactionResponse;
 import com.patriot.fourlipsclover.settlement.entity.Expense;
 import com.patriot.fourlipsclover.settlement.entity.ExpenseParticipant;
@@ -205,6 +206,17 @@ public class SettlementService {
 				expenseParticipantRepository.save(expenseParticipant);
 			}
 		}
+	}
+
+	@Transactional(readOnly = true)
+	public List<SettlementSituationResponse> settlementSituation(Integer planId) {
+		Settlement settlement = settlementRepository.findByPlan_PlanId(planId)
+				.orElseThrow(() -> new SettlementNotFoundException(planId));
+
+		List<SettlementTransaction> settlementTransactions = settlementTransactionRepository.findBySettlement(
+				settlement);
+		return settlementTransactionMapper.toSettlementResponses(
+				settlementTransactions);
 	}
 
 	private class MemberCost {
