@@ -84,6 +84,33 @@ class AppProvider with ChangeNotifier {
     }
   }
 
+  // 카카오 웹 로그인 (직접 호출용)
+  Future<void> kakaoWebLogin() async {
+    try {
+      debugPrint('앱 프로바이더에서 카카오 웹 로그인 시도');
+      final result = await _authService.kakaoWebLogin();
+
+      _jwtToken = result['jwtToken'];
+      _user = result['user'];
+      _isLoggedIn = true;
+
+      await _authService.saveLoginState(_isLoggedIn, _jwtToken);
+
+      // 로그인 성공 후 사용자 정보 가져오기
+      await _userService.getUserProfile();
+
+      notifyListeners();
+      debugPrint('앱 프로바이더에서 카카오 웹 로그인 성공');
+    } catch (error) {
+      debugPrint('앱 프로바이더에서 카카오 웹 로그인 실패: $error');
+      _isLoggedIn = false;
+      _user = null;
+      _jwtToken = null;
+      notifyListeners();
+      throw error;
+    }
+  }
+
   // 로그아웃
   Future<void> logout() async {
     try {
