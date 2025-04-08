@@ -1,5 +1,6 @@
 package com.patriot.fourlipsclover.restaurant.controller;
 
+import com.patriot.fourlipsclover.restaurant.dto.request.RestaurantTagSearchRequest;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewLikeCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
@@ -51,6 +52,19 @@ public class RestaurantController {
 			@Parameter(description = "검색 반경(미터)", required = true) @RequestParam Integer radius) {
 		List<RestaurantSearchResponse> response = restaurantElasticsearchService.searchRestaurantsByLocation(
 				latitude, longitude, radius);
+		return ResponseEntity.ok(response);
+	}
+
+	@GetMapping("/search-by-tags")
+	@Operation(
+			summary = "태그 및 검색어 기반 식당 검색",
+			description = "태그 ID 목록과 검색어를 조합하여 식당을 검색합니다."
+	)
+	public ResponseEntity<List<RestaurantSearchResponse>> searchByTagsAndQuery(
+			@Parameter(description = "태그 ID와 검색어 정보", required = true)
+			@RequestBody @Valid RestaurantTagSearchRequest request) {
+		List<RestaurantSearchResponse> response = restaurantElasticsearchService.searchByTagsAndQuery(
+				request);
 		return ResponseEntity.ok(response);
 	}
 
