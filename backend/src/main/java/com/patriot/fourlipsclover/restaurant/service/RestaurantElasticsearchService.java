@@ -6,6 +6,7 @@ import static co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType.Cr
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.FieldValueFactorModifier;
 import co.elastic.clients.elasticsearch._types.query_dsl.NestedQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
@@ -111,9 +112,41 @@ public class RestaurantElasticsearchService {
 					Query nestedQuery = NestedQuery.of(n -> n
 							.path("tags")
 							.query(q -> q
-									.match(m -> m
-											.field("tags.tagName")
-											.query(tag.getName())
+									.bool(b -> b
+											// 태그 이름 매칭
+											.must(m -> m
+													.match(mm -> mm
+															.field("tags.tagName")
+															.query(tag.getName())
+													)
+											)
+											// avgConfidence에 가중치 부여 (높을수록 점수 상승)
+											.should(s -> s
+													.functionScore(fs -> fs
+															.functions(f -> f
+																	.fieldValueFactor(fvf -> fvf
+																			.field("tags.avgConfidence")
+																			.factor(1.5)
+																			.modifier(
+																					FieldValueFactorModifier.Ln)
+																			.missing(0.1)
+																	)
+															)
+													)
+											)
+											// frequency에 가중치 부여 (사용 빈도가 높을수록 점수 상승)
+											.should(s -> s
+													.functionScore(fs -> fs
+															.functions(f -> f
+																	.fieldValueFactor(fvf -> fvf
+																			.field("tags.frequency")
+																			.factor(1.2)
+																			.modifier(FieldValueFactorModifier.Ln)
+																			.missing(1.0)
+																	)
+															)
+													)
+											)
 									)
 							)
 					)._toQuery();

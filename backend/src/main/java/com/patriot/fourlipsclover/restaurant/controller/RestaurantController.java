@@ -59,8 +59,10 @@ public class RestaurantController {
 			description = "태그 ID 목록과 검색어를 조합하여 식당을 검색합니다."
 	)
 	public ResponseEntity<List<RestaurantResponse>> searchByTagsAndQuery(
-			@RequestParam String query, @RequestParam(required = false) List<Long> tagIds
-	) {
+			@RequestParam(required = false) String query, @RequestParam(required = false) List<Long> tagIds	) {
+		if ((query == null || query.isBlank()) && (tagIds == null || tagIds.isEmpty())) {
+			throw new IllegalArgumentException("검색어 또는 태그 중 최소 하나는 제공해야 합니다.");
+		}
 		List<RestaurantResponse> response = restaurantElasticsearchService.searchByTagsAndQuery(
 				query, tagIds);
 		return ResponseEntity.ok(response);
