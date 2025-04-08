@@ -16,21 +16,30 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _clearPreviousSession();
+  }
+
+  Future<void> _clearPreviousSession() async {
+    try {
+      // 카카오 SDK 세션 정리
+      await UserApi.instance.logout();
+      debugPrint('이전 카카오 세션 정리 완료');
+    } catch (e) {
+      debugPrint('세션 정리 중 오류: $e');
+    }
+  }
+
   Future<void> _handleKakaoLogin(BuildContext context) async {
     try {
       debugPrint('카카오 로그인 시작');
       final appProvider = context.read<AppProvider>();
 
-      // 웹 로그인 바로 시도 (앱 로그인 건너뛰기)
-      try {
-        debugPrint('카카오 웹 로그인 직접 시도');
-        await appProvider.kakaoWebLogin();
-        debugPrint('카카오 웹 로그인 성공');
-      } catch (e) {
-        debugPrint('카카오 웹 로그인 실패: $e');
-        // 다른 오류는 그대로 전파
-        rethrow;
-      }
+      // 카카오 로그인 시도
+      await appProvider.kakaoLogin();
+      debugPrint('카카오 로그인 성공');
 
       // UserProvider에서 프로필 정보 설정
       final userProvider = context.read<UserProvider>();
@@ -69,9 +78,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/home');
       }
-    } catch (error, stackTrace) {
+    } catch (error) {
       debugPrint('로그인 오류: $error');
-      debugPrint('스택 트레이스: $stackTrace');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

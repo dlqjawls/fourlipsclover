@@ -129,9 +129,47 @@ class _UserScreenState extends State<UserScreen> {
                 Center(
                   child: TextButton(
                     onPressed: () async {
+                      // 로그아웃 확인 다이얼로그 표시
+                      final shouldLogout = await showDialog<bool>(
+                        context: context,
+                        builder:
+                            (context) => AlertDialog(
+                              title: const Text('로그아웃'),
+                              content: const Text('정말 로그아웃 하시겠습니까?'),
+                              actions: [
+                                TextButton(
+                                  onPressed:
+                                      () => Navigator.pop(context, false),
+                                  child: const Text('취소'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  child: const Text('로그아웃'),
+                                ),
+                              ],
+                            ),
+                      );
+
+                      if (shouldLogout != true) return;
+
                       try {
+                        // 로딩 인디케이터 표시
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder:
+                              (context) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                        );
+
                         await context.read<AppProvider>().logout();
+
                         if (!mounted) return;
+
+                        // 로딩 다이얼로그 닫기
+                        Navigator.pop(context);
+
                         Navigator.pushNamedAndRemoveUntil(
                           context,
                           '/login',
@@ -139,6 +177,10 @@ class _UserScreenState extends State<UserScreen> {
                         );
                       } catch (e) {
                         if (!mounted) return;
+
+                        // 로딩 다이얼로그 닫기
+                        Navigator.pop(context);
+
                         ScaffoldMessenger.of(
                           context,
                         ).showSnackBar(SnackBar(content: Text('로그아웃 실패: $e')));
