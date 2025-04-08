@@ -211,10 +211,10 @@ public class GroupService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GroupNotFoundException("그룹을 찾을 수 없습니다. id=" + groupId));
 
-        boolean isMember = groupMemberRepository.existsByGroup_GroupIdAndMember_MemberId(groupId, loggedInMemberId);
-        if (!isMember) {
-            throw new UnauthorizedAccessException("그룹에 속한 사용자만 접근할 수 있습니다.");
-        }
+//        boolean isMember = groupMemberRepository.existsByGroup_GroupIdAndMember_MemberId(groupId, loggedInMemberId);
+//        if (!isMember) {
+//            throw new UnauthorizedAccessException("그룹에 속한 사용자만 접근할 수 있습니다.");
+//        }
 
         List<GroupMember> groupMembers = groupMemberRepository.findByGroup_GroupId(groupId);
         List<Member> members = groupMembers.stream()
