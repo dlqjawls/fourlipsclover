@@ -3,6 +3,7 @@ package com.patriot.fourlipsclover.restaurant.service;
 import static co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType.BestFields;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.NestedQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
@@ -32,20 +33,46 @@ public class RestaurantElasticsearchService {
 	public List<RestaurantResponse> searchRestaurantsByLocation(double lat, double lon,
 			int distanceInMeters) {
 		try {
+			// 위치 기반 쿼리 생성
 			Query geoDistanceQuery = Query.of(q -> q
 					.geoDistance(g -> g
-							.field("location")           // RestaurantDocument의 location 필드
-							.distance(distanceInMeters + "m") // 예: "5km"
+							.field("location")
+							.distance(distanceInMeters + "m")
 							.location(loc -> loc.latlon(latlon -> latlon.lat(lat).lon(lon))))
 			);
+
+			Query finalQuery = Query.of(q -> q
+					.bool(b -> b
+							.must(geoDistanceQuery)
+							.mustNot(n -> n
+									.wildcard(w -> w
+											.field("category")
+											.wildcard("*술집*")
+									)
+							)
+							.mustNot(n -> n
+									.wildcard(w -> w
+											.field("category")
+											.wildcard("*간식*")
+									)
+							)
+					)
+			);
+
 			SearchResponse<RestaurantDocument> searchResponse =
 					elasticsearchClient.search(s -> s
-									.index("restaurants")   // 실제 인덱스명 (예: "restaurant")
-									.query(geoDistanceQuery)
-									.size(20),            // 예: 최대 100건
+									.index("restaurants")
+									.query(finalQuery)
+									.sort(sort -> sort
+											.geoDistance(gd -> gd
+													.field("location")
+													.location(loc -> loc.latlon(l -> l.lat(lat).lon(lon)))
+													.order(SortOrder.Asc)
+											)
+									)
+									.size(20),
 							RestaurantDocument.class
 					);
-
 			return searchResponse.hits().hits().stream()
 					.map(Hit::source)
 					.map(restaurantSearchMapper::toResponse)
