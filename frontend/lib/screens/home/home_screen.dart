@@ -1,6 +1,7 @@
 // lib/screens/home/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'widgets/logo_section.dart';
 import 'widgets/tagged_search_bar.dart';
 import 'widgets/hashtag_selector.dart';
@@ -9,6 +10,7 @@ import 'widgets/category_recommendations.dart';
 import 'widgets/search_mode_view.dart';
 import '../../providers/search_provider.dart';
 import '../search_results/search_results_screen.dart';
+import '../../config/theme.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -20,11 +22,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   final TextEditingController _searchController = TextEditingController();
-  // TaggedSearchBar에 접근하기 위한 GlobalKey 추가
   final GlobalKey<TaggedSearchBarState> _taggedSearchBarKey =
       GlobalKey<TaggedSearchBarState>();
 
-  // 상태 유지를 위한 오버라이드
+  // 새로 추가: 초대 토큰 변수
+  String? _pendingInvitationToken;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -33,14 +36,142 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // Provider 초기화 - 앱 시작 시 검색 기록 불러오기
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final searchProvider = Provider.of<SearchProvider>(
         context,
         listen: false,
       );
       searchProvider.initialize();
+
+      // 초대 토큰 확인
+      _checkPendingInvitation();
     });
+  }
+
+  // 새로운 메서드: 초대 토큰 확인 및 알림
+  Future<void> _checkPendingInvitation() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('pendingInvitationToken');
+
+    if (token != null && token.isNotEmpty) {
+      setState(() {
+        _pendingInvitationToken = token;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showInvitationNoticeDialog(token);
+      });
+    }
+  }
+
+  // 초대 알림 다이얼로그
+  void _showInvitationNoticeDialog(String token) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 외부 터치로 닫히지 않도록
+      builder:
+          (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            elevation: 10,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.2),
+                    blurRadius: 15,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    'assets/images/clover.png', // 초대 일러스트레이션
+                    height: 120,
+                    width: 120,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '새로운 그룹 초대',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '아직 처리하지 않은 그룹 초대가 있습니다.\n지금 확인하고 새로운 모험을 시작해보세요!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppColors.darkGray,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      OutlinedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppColors.lightGray),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          '나중에',
+                          style: TextStyle(color: AppColors.darkGray),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(context).pushNamed(
+                            '/group/invitation',
+                            arguments: {'token': token},
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          '초대 확인하기',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
   }
 
   @override
