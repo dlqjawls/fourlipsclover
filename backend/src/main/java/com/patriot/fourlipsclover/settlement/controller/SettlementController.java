@@ -82,4 +82,17 @@ public class SettlementController {
 		List<SettlementSituationResponse> response = settlementService.settlementSituation(planId);
 		return ResponseEntity.ok(response);
 	}
+
+	@PostMapping("/{planId}/settlement/transactions/{transactionId}/complete")
+	@Operation(summary = "정산 거래 완료", description = "특정 정산 거래를 완료 처리합니다")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "정산 거래 완료 성공"),
+			@ApiResponse(responseCode = "404", description = "거래 정보를 찾을 수 없음")
+	})
+	public ResponseEntity<String> completeTransaction(
+			@Parameter(description = "계획 ID", required = true) @PathVariable Integer planId,
+			@Parameter(description = "거래 ID", required = true) @PathVariable Long transactionId) {
+		String response = settlementService.completeTransaction(planId, transactionId);
+		return ResponseEntity.ok(response);
+	}
 }
