@@ -27,18 +27,32 @@ import 'providers/review_provider.dart';
 void main() async {
   // Flutter 엔진 초기화
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
+
+  // 오류 처리를 위한 핸들러 등록
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    print('FlutterError: ${details.exception}, ${details.stack}');
+  };
 
   try {
-    final kakaoAppKey = dotenv.env['KAKAO_NATIVE_APP_KEY'] ?? '';
-    KakaoSdk.init(nativeAppKey: kakaoAppKey);
-    print('카카오 SDK 초기화 성공: $kakaoAppKey');
-  } catch (e) {
-    print('카카오 SDK 초기화 실패: $e');
-  }
+    await dotenv.load(fileName: ".env");
 
-  await AppInitializer.initialize();
-  runApp(const MyApp());
+    try {
+      final kakaoAppKey = dotenv.env['KAKAO_NATIVE_APP_KEY'] ?? '';
+      KakaoSdk.init(nativeAppKey: kakaoAppKey);
+      print('카카오 SDK 초기화 성공: $kakaoAppKey');
+    } catch (e) {
+      print('카카오 SDK 초기화 실패: $e');
+    }
+
+    await AppInitializer.initialize();
+    runApp(const MyApp());
+  } catch (e, stackTrace) {
+    print('앱 초기화 중 오류 발생: $e');
+    print('스택 트레이스: $stackTrace');
+    // 오류가 발생해도 앱 실행 시도
+    runApp(const MyApp());
+  }
 }
 
 class MyApp extends StatefulWidget {
