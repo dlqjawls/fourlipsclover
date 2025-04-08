@@ -11,6 +11,7 @@ import com.patriot.fourlipsclover.exception.UserNotFoundException;
 import com.patriot.fourlipsclover.image.service.ReviewImageService;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberJpaRepository;
+import com.patriot.fourlipsclover.payment.entity.DataSource;
 import com.patriot.fourlipsclover.payment.entity.VisitPayment;
 import com.patriot.fourlipsclover.payment.repository.VisitPaymentRepository;
 import com.patriot.fourlipsclover.restaurant.dto.kafka.RestaurantKafkaDto;
@@ -95,6 +96,19 @@ public class RestaurantService {
 
 		reviewRepository.save(review);
 		CompletableFuture.runAsync(() -> tagService.generateTag(review));
+
+		// 결제 정보 저장
+		VisitPayment visitPayment = VisitPayment.builder()
+				.restaurantId(restaurant)
+				.userId(reviewer.getMemberId())
+				.amount(reviewCreate.getAmount())
+				.visitedPersonnel(reviewCreate.getVisitedPersonnel())
+				.paidAt(reviewCreate.getPaidAt() != null ? reviewCreate.getPaidAt() : LocalDateTime.now())
+				.dataSource(DataSource.member)
+				.createdAt(LocalDateTime.now())
+				.build();
+
+		visitPaymentRepository.save(visitPayment);
 
 		String reviewTextSentiment = analyzeSentiment(review);
 		List<String> imageUrls = reviewImageService.uploadFiles(review, images);
@@ -442,27 +456,34 @@ public class RestaurantService {
 				restaurantId);
 
 		if (payments.isEmpty()) {
-			return "{\"avg\": \"정보 없음\"}";
+			return "{\"avg\": \"정보 없음\", \"avgSection\": \"정보 없음\"}";
 		}
 
 		Map<String, Integer> avgAmountInfo = new LinkedHashMap<>();
+		int totalPerPersonAmount = 0;
+		int validPaymentCount = 0;
 
-		// 1인당 평균 금액 계산 (결제 건수 기준)
+		// 1인당 평균 금액 계산 및 범위별 분포 집계
 		for (VisitPayment payment : payments) {
 			if (payment.getVisitedPersonnel() <= 0) {
 				continue;
 			}
 
 			Integer perPersonAmount = payment.getAmount() / payment.getVisitedPersonnel();
-			String range = calculatePriceRange(perPersonAmount);
+			totalPerPersonAmount += perPersonAmount;
+			validPaymentCount++;
 
+			String range = calculatePriceRange(perPersonAmount);
 			// 결제 건수를 기준으로 +1씩 증가
 			avgAmountInfo.merge(range, 1, Integer::sum);
 		}
 
-		if (avgAmountInfo.isEmpty()) {
-			return "{\"avg\": \"정보 없음\"}";
+		if (avgAmountInfo.isEmpty() || validPaymentCount == 0) {
+			return "{\"avg\": \"정보 없음\", \"avgSection\": \"정보 없음\"}";
 		}
+
+		// 정확한 평균 금액 계산
+		int exactAvg = totalPerPersonAmount / validPaymentCount;
 
 		// 가장 많은 분포의 범위 찾기
 		String avgPriceRange = avgAmountInfo.entrySet().stream()
@@ -471,7 +492,8 @@ public class RestaurantService {
 				.orElse("정보 없음");
 
 		Map<String, Object> result = new LinkedHashMap<>();
-		result.put("avg", avgPriceRange);
+		result.put("avg", exactAvg);
+		result.put("avgSection", avgPriceRange);
 
 		// 0이 아닌 값만 결과에 포함
 		avgAmountInfo.forEach((key, value) -> {
@@ -485,7 +507,7 @@ public class RestaurantService {
 			return new ObjectMapper().writeValueAsString(result);
 		} catch (Exception e) {
 			log.error("Error converting avg amount to JSON", e);
-			return "{\"avg\": \"정보 없음\"}";
+			return "{\"avg\": \"정보 없음\", \"avgSection\": \"정보 없음\"}";
 		}
 	}
 
