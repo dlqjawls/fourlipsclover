@@ -41,23 +41,29 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
         _buildImageLayout(widget.imageUrl, filteredImages),
 
         /// ✅ 태그
-        /// ✅ 태그
         if (tags.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Wrap(
-              spacing: 8.0,
-              runSpacing: 1.0,
+              spacing: 8,
+              runSpacing: 8,
               children: tags.map<Widget>((tag) {
                 final tagName = tag['tagName']?.toString().replaceAll(' ', '') ?? '';
-                return Chip(
-                  label: Text(
-                    '#$tagName',
-                    style: const TextStyle(fontSize: 12, color: AppColors.primaryDark),
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
-                  backgroundColor: AppColors.primary.withOpacity(0.15),
-                  shape: const StadiumBorder(),
-                  side: BorderSide.none,
+                  child: Text(
+                    '#$tagName',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF4A4A4A),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 );
               }).toList(),
             ),
