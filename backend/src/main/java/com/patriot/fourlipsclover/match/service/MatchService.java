@@ -1,5 +1,9 @@
 package com.patriot.fourlipsclover.match.service;
 
+import com.patriot.fourlipsclover.chat.entity.ChatMember;
+import com.patriot.fourlipsclover.chat.entity.ChatRoom;
+import com.patriot.fourlipsclover.chat.repository.ChatMemberRepository;
+import com.patriot.fourlipsclover.chat.repository.ChatRoomRepository;
 import com.patriot.fourlipsclover.exception.*;
 import com.patriot.fourlipsclover.group.entity.Group;
 import com.patriot.fourlipsclover.group.repository.GroupRepository;
@@ -57,6 +61,8 @@ public class MatchService {
     private final TagRepository tagRepository;
     private final MatchMapper matchMapper;
     private final RegionRepository regionRepository;
+    private final ChatMemberRepository chatMemberRepository;
+    private final ChatRoomRepository chatRoomRepository;
 
     public void validateMatchRequest(MatchCreateRequest request, long memberId) {
         boolean isMember = memberRepository.existsById(memberId);
@@ -169,7 +175,31 @@ public class MatchService {
             matchTagRepository.save(newMatchTag);
         }
 
+        // 채팅방 생성 및 매칭 요청자, 가이드 추가
+        ChatRoom chatRoom = new ChatRoom();
+        chatRoom.setName("Match Chat: " + match.getMatchId());
+        chatRoom.setMatch(match); // Match와 연결
+        chatRoom.setCreatedAt(LocalDateTime.now());
+        chatRoomRepository.save(chatRoom); // 채팅방 저장
+
+        // 매칭 요청자와 가이드를 채팅방 멤버로 추가
+        addMemberToChatRoom(chatRoom, currentMemberId); // 매칭 요청자 추가
+        addMemberToChatRoom(chatRoom, request.getGuide().getMemberId()); // 가이드 추가
+
         return match; // 생성된 Match 객체 반환
+    }
+
+    // 채팅방에 멤버 추가하는 메서드
+    private void addMemberToChatRoom(ChatRoom chatRoom, Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberNotFoundException("멤버를 찾을 수 없습니다: " + memberId));
+
+        // 채팅방에 멤버 추가
+        ChatMember chatMember = new ChatMember();
+        chatMember.setChatRoom(chatRoom);
+        chatMember.setMember(member);
+        chatMember.setJoinedAt(LocalDateTime.now());
+        chatMemberRepository.save(chatMember); // 채팅방에 멤버 저장
     }
 
     // 신청자 - 매칭 신청 내역 조회(현지인 수락 상태 상관없이 전체 신청 목록 조회)

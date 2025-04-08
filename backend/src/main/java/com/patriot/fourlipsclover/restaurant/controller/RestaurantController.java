@@ -39,36 +39,31 @@ public class RestaurantController {
 	private final RestaurantService restaurantService;
 	private final RestaurantElasticsearchService restaurantElasticsearchService;
 
-	/**
-	 * 레스토랑 검색 API 엔드포인트
-	 *
-	 * @param query 검색어 (예: "장덕동 고깃집")
-	 * @return 검색된 레스토랑 목록
-	 */
-	@Operation(summary = "식당 검색", description = "검색어를 이용하여 식당을 검색합니다.")
-	@GetMapping("/search")
-	public ResponseEntity<List<RestaurantResponse>> searchRestaurants(
-			@Parameter(description = "검색어 (예: \"장덕동 고깃집\")", required = true) @RequestParam String query) {
-		List<RestaurantResponse> results = restaurantElasticsearchService.searchRestaurants(
-				query);
-		return ResponseEntity.ok(results);
+	@GetMapping("/nearby")
+	@Operation(
+			summary = "인근 식당 검색",
+			description = "위도/경도 기반으로 주변 식당을 검색합니다."
+	)
+	public ResponseEntity<List<RestaurantResponse>> locationSearch(
+			@Parameter(description = "위도 값", required = true) @RequestParam Double latitude,
+			@Parameter(description = "경도 값", required = true) @RequestParam Double longitude,
+			@Parameter(description = "검색 반경(미터)", required = true) @RequestParam Integer radius) {
+		List<RestaurantResponse> response = restaurantElasticsearchService.searchRestaurantsByLocation(
+				latitude, longitude, radius);
+		return ResponseEntity.ok(response);
 	}
 
-	@Operation(summary = "주변 식당 검색", description = "위도/경도 기반으로 주변 식당을 검색합니다.")
-	@GetMapping("/nearby")
-	public ResponseEntity<List<RestaurantResponse>> findNearbyRestaurants(
-			@Parameter(description = "위도 값") @RequestParam(required = true) Double latitude,
-			@Parameter(description = "경도 값") @RequestParam(required = true) Double longitude,
-			@Parameter(description = "검색 반경(미터)") @RequestParam(defaultValue = "1000") Integer radius) {
-
-		if (latitude == null || longitude == null) {
-			throw new IllegalArgumentException("위도와 경도는 필수 입력값입니다");
-		}
-
-		List<RestaurantResponse> nearbyRestaurants =
-				restaurantService.findNearbyRestaurants(latitude, longitude, radius);
-
-		return ResponseEntity.ok(nearbyRestaurants);
+	@GetMapping("/search")
+	@Operation(
+			summary = "태그 및 검색어 기반 식당 검색",
+			description = "태그 ID 목록과 검색어를 조합하여 식당을 검색합니다."
+	)
+	public ResponseEntity<List<RestaurantResponse>> searchByTagsAndQuery(
+			@RequestParam String query, @RequestParam(required = false) List<Long> tagIds
+	) {
+		List<RestaurantResponse> response = restaurantElasticsearchService.searchByTagsAndQuery(
+				query, tagIds);
+		return ResponseEntity.ok(response);
 	}
 
 	@Operation(summary = "식당 상세 조회", description = "카카오 Place ID를 이용하여 식당 정보를 조회합니다.")
@@ -78,8 +73,8 @@ public class RestaurantController {
 		if (kakaoPlaceId == null || kakaoPlaceId.isBlank()) {
 			throw new IllegalArgumentException("kakaoPlaceId는 비어있을 수 없습니다");
 		}
-
-		RestaurantResponse response = restaurantService.findRestaurantByKakaoPlaceId(kakaoPlaceId);
+		RestaurantResponse response = restaurantElasticsearchService.findRestaurantByKakaoPlaceId(
+				kakaoPlaceId);
 		return ResponseEntity.ok(response);
 	}
 

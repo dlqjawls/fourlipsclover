@@ -8,11 +8,18 @@ import com.patriot.fourlipsclover.locals.entity.LocalCertification;
 import com.patriot.fourlipsclover.locals.repository.LocalCertificationRepository;
 import com.patriot.fourlipsclover.locals.repository.LocalsElasticsearchRepository;
 import com.patriot.fourlipsclover.member.entity.MemberReviewTag;
+import com.patriot.fourlipsclover.payment.entity.VisitPayment;
+import com.patriot.fourlipsclover.payment.repository.VisitPaymentRepository;
 import com.patriot.fourlipsclover.restaurant.document.RestaurantDocument;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
+import com.patriot.fourlipsclover.restaurant.entity.RestaurantImage;
 import com.patriot.fourlipsclover.restaurant.entity.RestaurantTag;
 import com.patriot.fourlipsclover.restaurant.entity.Review;
+import com.patriot.fourlipsclover.restaurant.entity.SentimentStatus;
+import com.patriot.fourlipsclover.restaurant.repository.RestaurantImageRepository;
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
+import com.patriot.fourlipsclover.restaurant.repository.ReviewSentimentRepository;
+import com.patriot.fourlipsclover.restaurant.service.RestaurantService;
 import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
 import com.patriot.fourlipsclover.tag.dto.response.TagInfo;
 import com.patriot.fourlipsclover.tag.dto.response.TagListResponse;
@@ -22,7 +29,9 @@ import com.patriot.fourlipsclover.tag.repository.MemberReviewTagRepository;
 import com.patriot.fourlipsclover.tag.repository.RestaurantTagRepository;
 import com.patriot.fourlipsclover.tag.repository.TagRepository;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -47,6 +56,10 @@ public class TagService {
 	private final LocalsElasticsearchRepository localsElasticsearchRepository;
 	private final LocalCertificationRepository localCertificationRepository;
 	private final RestaurantJpaRepository restaurantJpaRepository;
+	private final ReviewSentimentRepository reviewSentimentRepository;
+	private final RestaurantImageRepository restaurantImageRepository;
+	private final VisitPaymentRepository visitPaymentRepository;
+
 	@Value("${model.server.uri}")
 	private String MODEL_SERVER_URI;
 
@@ -103,8 +116,6 @@ public class TagService {
 
 
 		}
-//		CompletableFuture.runAsync(() -> updateElasticsearchTags(review.getMember().getMemberId()));
-
 		updateElasticsearchTags(review.getMember().getMemberId());
 
 	}
@@ -198,14 +209,32 @@ public class TagService {
 							.build())
 					.collect(Collectors.toList());
 
+			int likeSentimentCount = reviewSentimentRepository.countByReview_RestaurantAndSentimentStatus(restaurant,
+					SentimentStatus.POSITIVE);
+			int dislikeSentimentCount = reviewSentimentRepository.countByReview_RestaurantAndSentimentStatus(restaurant,
+					SentimentStatus.NEGATIVE);
+
+			// 식당 이미지 조회 및 설정
+			List<String> restaurantImages = restaurantImageRepository.findByRestaurant(restaurant).stream().map(
+					RestaurantImage::getUrl).toList();
+
+
+			// 가격 정보 실시간 계산
+			String avgAmountJson = calculateAvgAmountJson(restaurant.getRestaurantId());
 			RestaurantDocument restaurantDocument = RestaurantDocument.builder()
 					.id(restaurant.getKakaoPlaceId())
+					.restaurantId(restaurant.getRestaurantId())
+					.openingHours(restaurant.getOpeningHours())
 					.kakaoPlaceId(restaurant.getKakaoPlaceId())
 					.name(restaurant.getPlaceName())
 					.address(restaurant.getAddressName())
 					.category(restaurant.getCategory())
+					.likeSentiment(likeSentimentCount)
+					.dislikeSentiment(dislikeSentimentCount)
 					.location(new GeoPoint(restaurant.getY(), restaurant.getX()))
 					.tags(tagDataList)
+					.restaurantImages(restaurantImages)
+					.avgAmount(avgAmountJson)
 					.build();
 
 			try {
@@ -221,5 +250,67 @@ public class TagService {
 		}
 
 		return count;
+	}
+
+	private String calculateAvgAmountJson(Integer restaurantId) {
+		List<VisitPayment> payments = visitPaymentRepository.findByRestaurantId_RestaurantId(restaurantId);
+
+		if (payments.isEmpty()) {
+			return "{\"avg\": \"정보 없음\"}";
+		}
+
+		Map<String, Integer> avgAmountInfo = new LinkedHashMap<>();
+
+		// 1인당 평균 금액 계산 (결제 건수 기준)
+		for (VisitPayment payment : payments) {
+			if (payment.getVisitedPersonnel() <= 0) continue;
+
+			Integer perPersonAmount = payment.getAmount() / payment.getVisitedPersonnel();
+			String range = calculatePriceRange(perPersonAmount);
+
+			// 결제 건수를 기준으로 +1씩 증가
+			avgAmountInfo.merge(range, 1, Integer::sum);
+		}
+
+		if (avgAmountInfo.isEmpty()) {
+			return "{\"avg\": \"정보 없음\"}";
+		}
+
+		// 가장 많은 분포의 범위 찾기
+		String avgPriceRange = avgAmountInfo.entrySet().stream()
+				.max(Comparator.comparing(Map.Entry::getValue))
+				.map(Map.Entry::getKey)
+				.orElse("정보 없음");
+
+		Map<String, Object> result = new LinkedHashMap<>();
+		result.put("avg", avgPriceRange);
+
+		// 0이 아닌 값만 결과에 포함
+		avgAmountInfo.forEach((key, value) -> {
+			if (value > 0) {
+				result.put(key, value);
+			}
+		});
+
+		try {
+			// JSON 문자열로 변환
+			return new ObjectMapper().writeValueAsString(result);
+		} catch (Exception e) {
+			return "{\"avg\": \"정보 없음\"}";
+		}
+	}
+
+	private String calculatePriceRange(Integer amount) {
+		if (amount <= 10000) return "1 ~ 10000";
+		if (amount <= 20000) return "10000 ~ 20000";
+		if (amount <= 30000) return "20000 ~ 30000";
+		if (amount <= 40000) return "30000 ~ 40000";
+		if (amount <= 50000) return "40000 ~ 50000";
+		if (amount <= 60000) return "50000 ~ 60000";
+		if (amount <= 70000) return "60000 ~ 70000";
+		if (amount <= 80000) return "70000 ~ 80000";
+		if (amount <= 90000) return "80000 ~ 90000";
+		if (amount <= 100000) return "90000 ~ 100000";
+		return "100000 ~";
 	}
 }

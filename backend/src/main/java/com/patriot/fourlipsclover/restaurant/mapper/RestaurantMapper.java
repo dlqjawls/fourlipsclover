@@ -3,35 +3,31 @@ package com.patriot.fourlipsclover.restaurant.mapper;
 import com.patriot.fourlipsclover.restaurant.document.RestaurantDocument;
 import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantImageResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
-import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
-
+import com.patriot.fourlipsclover.restaurant.entity.RestaurantImage;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import com.patriot.fourlipsclover.restaurant.entity.RestaurantImage;
 import org.springframework.stereotype.Component;
 
 @Component
 public class RestaurantMapper {
 
-	public RestaurantResponse toDto(Restaurant restaurant) {
-		return RestaurantResponse.builder()
-				.restaurantId(restaurant.getRestaurantId())
-				.kakaoPlaceId(restaurant.getKakaoPlaceId())
-				.placeName(restaurant.getPlaceName())
-				.addressName(restaurant.getAddressName())
-				.roadAddressName(restaurant.getRoadAddressName())
-				.category(restaurant.getCategory())
-				.categoryName(restaurant.getCategoryName())
-				.phone(restaurant.getPhone())
-				.placeUrl(restaurant.getPlaceUrl())
-				.x(restaurant.getX())
-				.y(restaurant.getY())
-				.openingHours(restaurant.getOpeningHours())
-				.avgAmount(restaurant.getAvgAmount())
-				.build();
-	}
+//	public RestaurantResponse toDto(Restaurant restaurant) {
+//		return RestaurantResponse.builder()
+//				.restaurantId(restaurant.getRestaurantId())
+//				.kakaoPlaceId(restaurant.getKakaoPlaceId())
+//				.placeName(restaurant.getPlaceName())
+//				.addressName(restaurant.getAddressName())
+//				.roadAddressName(restaurant.getRoadAddressName())
+//				.category(restaurant.getCategory())
+//				.categoryName(restaurant.getCategoryName())
+//				.phone(restaurant.getPhone())
+//				.placeUrl(restaurant.getPlaceUrl())
+//				.x(restaurant.getX())
+//				.y(restaurant.getY())
+//				.openingHours(restaurant.getOpeningHours())
+//				.build();
+//	}
 
 	public List<RestaurantResponse> documentToDto(List<RestaurantDocument> restaurantDocuments) {
 		return restaurantDocuments.stream()

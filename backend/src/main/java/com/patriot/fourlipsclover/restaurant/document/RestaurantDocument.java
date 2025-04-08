@@ -13,7 +13,7 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 import org.springframework.data.elasticsearch.annotations.GeoPointField;
 import org.springframework.data.elasticsearch.core.geo.GeoPoint;
 
-@Document(indexName = "restaurants")
+@Document(indexName = "restaurant")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -22,11 +22,22 @@ public class RestaurantDocument {
 
 	@Id
 	private String id;
-	@Field(type = FieldType.Text, analyzer = "korean")
+
+	@Field(type = FieldType.Text)
+	private String openingHours;
+
+	@Field(type = FieldType.Nested)
+	private List<String> restaurantImages;
+
+	@Field(type = FieldType.Text)
+	private String avgAmount;
+
+
+	@Field(type = FieldType.Text)
 	private String name;
-	@Field(type = FieldType.Text, analyzer = "korean")
+	@Field(type = FieldType.Text, analyzer = "nori")
 	private String address;
-	@Field(type = FieldType.Text, analyzer = "korean")
+	@Field(type = FieldType.Text, analyzer = "nori")
 	private String category;
 	@Field(type = FieldType.Nested)
 	private List<TagData> tags;
@@ -36,9 +47,13 @@ public class RestaurantDocument {
 	@Field(type = FieldType.Keyword)
 	private String kakaoPlaceId;
 
-	@Field(type = FieldType.Keyword)
+	@Field(type = FieldType.Integer)
 	private Integer restaurantId;
 
+	@Field(type = FieldType.Integer)
+	private Integer likeSentiment;
+	@Field(type = FieldType.Integer)
+	private Integer dislikeSentiment;
 	@Data
 	@NoArgsConstructor
 	@AllArgsConstructor

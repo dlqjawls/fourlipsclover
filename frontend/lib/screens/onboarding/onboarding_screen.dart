@@ -33,7 +33,10 @@ class OnboardingScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.asset('assets/images/그룹.png', fit: BoxFit.contain),
+              child: Image.asset(
+                'assets/images/onboard_group.png',
+                fit: BoxFit.contain,
+              ),
             ),
           ),
           decoration: PageDecoration(
@@ -63,7 +66,10 @@ class OnboardingScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.asset('assets/images/매칭.png', fit: BoxFit.contain),
+              child: Image.asset(
+                'assets/images/onboard_matching.png',
+                fit: BoxFit.contain,
+              ),
             ),
           ),
           decoration: PageDecoration(
@@ -93,7 +99,10 @@ class OnboardingScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.asset('assets/images/지도.png', fit: BoxFit.contain),
+              child: Image.asset(
+                'assets/images/onboard_map.png',
+                fit: BoxFit.contain,
+              ),
             ),
           ),
           decoration: PageDecoration(

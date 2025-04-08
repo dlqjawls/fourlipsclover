@@ -4,6 +4,7 @@ import com.patriot.fourlipsclover.exception.PlanNotFoundException;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.payment.entity.PaymentApproval;
 import com.patriot.fourlipsclover.payment.repository.PaymentApprovalRepository;
+import com.patriot.fourlipsclover.payment.service.PaymentService;
 import com.patriot.fourlipsclover.plan.entity.Plan;
 import com.patriot.fourlipsclover.plan.entity.PlanMember;
 import com.patriot.fourlipsclover.plan.repository.PlanMemberRepository;
@@ -11,6 +12,7 @@ import com.patriot.fourlipsclover.plan.repository.PlanRepository;
 import com.patriot.fourlipsclover.settlement.dto.response.ExpenseResponse;
 import com.patriot.fourlipsclover.settlement.dto.response.SettlementRequestResponse;
 import com.patriot.fourlipsclover.settlement.dto.response.SettlementResponse;
+import com.patriot.fourlipsclover.settlement.dto.response.SettlementSituationResponse;
 import com.patriot.fourlipsclover.settlement.dto.response.SettlementTransactionResponse;
 import com.patriot.fourlipsclover.settlement.entity.Expense;
 import com.patriot.fourlipsclover.settlement.entity.ExpenseParticipant;
@@ -53,6 +55,7 @@ public class SettlementService {
 	private final ExpenseMapper expenseMapper;
 	private final SettlementTransactionRepository settlementTransactionRepository;
 	private final SettlementTransactionMapper settlementTransactionMapper;
+	private final PaymentService paymentService;
 
 	@Transactional
 	public void create(Integer planId) {
@@ -154,6 +157,10 @@ public class SettlementService {
 		response.setTreasurer(
 				settlementTransactionMapper.toTreasureResponse(settlement.getTreasurer()));
 		settlement.setSettlementStatus(SettlementStatus.IN_PROGRESS);
+
+		// VisitPayment 데이터 생성
+		paymentService.createVisitPaymentsFromSettlement(settlement.getSettlementId());
+
 		return response;
 	}
 
@@ -199,6 +206,17 @@ public class SettlementService {
 				expenseParticipantRepository.save(expenseParticipant);
 			}
 		}
+	}
+
+	@Transactional(readOnly = true)
+	public List<SettlementSituationResponse> settlementSituation(Integer planId) {
+		Settlement settlement = settlementRepository.findByPlan_PlanId(planId)
+				.orElseThrow(() -> new SettlementNotFoundException(planId));
+
+		List<SettlementTransaction> settlementTransactions = settlementTransactionRepository.findBySettlement(
+				settlement);
+		return settlementTransactionMapper.toSettlementResponses(
+				settlementTransactions);
 	}
 
 	private class MemberCost {

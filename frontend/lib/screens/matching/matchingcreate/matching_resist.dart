@@ -75,7 +75,6 @@ class _MatchingResistScreenState extends State<MatchingResistScreen> {
 
   /// TableCalendar를 활용한 범위 선택 다이얼로그 (StatefulBuilder 사용)
   Future<void> _showRangeCalendarDialog(BuildContext context) async {
-    // 다이얼로그 열릴 때 기존 선택값 유지
     DateTime? rangeStart = _startDate;
     DateTime? rangeEnd = _endDate;
     await showDialog(
@@ -133,6 +132,30 @@ class _MatchingResistScreenState extends State<MatchingResistScreen> {
                       color: AppColors.darkGray,
                     ),
                   ),
+                  daysOfWeekStyle: DaysOfWeekStyle(
+                    weekdayStyle: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: AppColors.darkGray,
+                    ),
+                    weekendStyle: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.red,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: AppColors.lightGray.withOpacity(0.3),
+                          width: 1.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                  calendarFormat: CalendarFormat.month,
+                  rowHeight: 48,
+                  daysOfWeekHeight: 32,
                   calendarStyle: CalendarStyle(
                     // 오늘 날짜는 부드러운 테두리와 색상으로 표시
                     todayDecoration: BoxDecoration(
@@ -178,7 +201,6 @@ class _MatchingResistScreenState extends State<MatchingResistScreen> {
     );
   }
 
-  // 센스있는 날짜 범위 선택 카드 위젯 (여행 일정)
   Widget _buildStyledDateRangeDisplay() {
     return InkWell(
       onTap: () => _showRangeCalendarDialog(context),

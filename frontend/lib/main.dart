@@ -27,18 +27,32 @@ import 'providers/review_provider.dart';
 void main() async {
   // Flutter 엔진 초기화
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
+
+  // 오류 처리를 위한 핸들러 등록
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    print('FlutterError: ${details.exception}, ${details.stack}');
+  };
 
   try {
-    final kakaoAppKey = dotenv.env['KAKAO_NATIVE_APP_KEY'] ?? '';
-    KakaoSdk.init(nativeAppKey: kakaoAppKey);
-    print('카카오 SDK 초기화 성공: $kakaoAppKey');
-  } catch (e) {
-    print('카카오 SDK 초기화 실패: $e');
-  }
+    await dotenv.load(fileName: ".env");
 
-  await AppInitializer.initialize();
-  runApp(const MyApp());
+    try {
+      final kakaoAppKey = dotenv.env['KAKAO_NATIVE_APP_KEY'] ?? '';
+      KakaoSdk.init(nativeAppKey: kakaoAppKey);
+      print('카카오 SDK 초기화 성공: $kakaoAppKey');
+    } catch (e) {
+      print('카카오 SDK 초기화 실패: $e');
+    }
+
+    await AppInitializer.initialize();
+    runApp(const MyApp());
+  } catch (e, stackTrace) {
+    print('앱 초기화 중 오류 발생: $e');
+    print('스택 트레이스: $stackTrace');
+    // 오류가 발생해도 앱 실행 시도
+    runApp(const MyApp());
+  }
 }
 
 class MyApp extends StatefulWidget {
@@ -50,14 +64,14 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-  
+
   bool _showOnboarding = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    
+
     // 딥링크 서비스 초기화를 위한 딜레이 추가
     WidgetsBinding.instance.addPostFrameCallback((_) {
       print('딥링크 서비스 초기화 시작');
@@ -68,7 +82,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       } else {
         print('딥링크 서비스 초기화 실패: 컨텍스트가 없음');
       }
-      
+
       _checkOnboarding();
     });
   }
@@ -92,13 +106,18 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // 앱이 백그라운드에서 돌아올 때 로그인 상태 확인
-      final appProvider = Provider.of<AppProvider>(context, listen: false);
-      appProvider.initializeApp();
-      
-      // 앱이 재개될 때 딥링크 서비스 확인
-      if (_navigatorKey.currentContext != null) {
-        DeepLinkService().initDeepLinks(_navigatorKey.currentContext!);
+      // 앱이 백그라운드에서 돌아올 때 안전하게 Provider에 접근
+      final context = _navigatorKey.currentContext;
+      if (context != null) {
+        try {
+          final appProvider = Provider.of<AppProvider>(context, listen: false);
+          appProvider.initializeApp();
+        } catch (e) {
+          print('앱 프로바이더 접근 오류: $e');
+        }
+
+        // 앱이 재개될 때 딥링크 서비스 확인
+        DeepLinkService().initDeepLinks(context);
       }
     }
   }
@@ -109,19 +128,22 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       providers: [
         ChangeNotifierProvider(create: (_) => UserProvider()),
         Provider(
-          create: (context) => UserService(userProvider: context.read<UserProvider>()),
+          create:
+              (context) =>
+                  UserService(userProvider: context.read<UserProvider>()),
         ),
         ChangeNotifierProvider(
-          create: (context) => AppProvider(
-            userProvider: Provider.of<UserProvider>(context, listen: false),
-          ),
+          create:
+              (context) => AppProvider(
+                userProvider: Provider.of<UserProvider>(context, listen: false),
+              ),
         ),
         ChangeNotifierProvider(create: (_) => SearchProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => GroupProvider()),
         ChangeNotifierProvider(create: (_) => PlanProvider()),
-        ChangeNotifierProvider(create: (_) => NoticeProvider()), 
-        ChangeNotifierProvider(create: (_) => SettlementProvider()), 
+        ChangeNotifierProvider(create: (_) => NoticeProvider()),
+        ChangeNotifierProvider(create: (_) => SettlementProvider()),
         ChangeNotifierProvider(create: (context) => MapProvider()),
         ChangeNotifierProvider(create: (_) => MatchingProvider()),
         ChangeNotifierProvider(create: (_) => ReviewProvider()),
@@ -143,11 +165,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 _checkPendingInvitation(context);
               }
             });
-            
+
             // 온보딩 화면과 로그인 화면 중 선택
-            return _showOnboarding 
-              ? const OnboardingScreen() 
-              : const LoginScreen();
+            return _showOnboarding
+                ? const OnboardingScreen()
+                : const LoginScreen();
           },
         ),
         routes: AppRoutes.routes,
@@ -164,31 +186,37 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       ),
     );
   }
-  
-  // 저장된 초대 토큰 확인
-  Future<void> _checkPendingInvitation(BuildContext context) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('pendingInvitationToken');
-      print('저장된 초대 토큰 확인: $token');
+
+ // 저장된 초대 토큰 확인
+Future<void> _checkPendingInvitation(BuildContext context) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('pendingInvitationToken');
+    print('저장된 초대 토큰 확인: $token');
+
+    if (token != null && token.isNotEmpty) {
+      // 사용자 로그인 상태 확인
+ final appProvider = Provider.of<AppProvider>(context, listen: false);
+  final isLoggedIn = appProvider.isLoggedIn;
       
-      if (token != null && token.isNotEmpty) {
-        // 토큰 사용 후 삭제
+      if (isLoggedIn) {
+        // 로그인 상태인 경우에만 토큰 삭제 및 초대 화면으로 이동
         await prefs.remove('pendingInvitationToken');
-        
+
         // 조금 지연 후 초대 화면으로 이동 (로그인 화면 로딩 후)
         Future.delayed(const Duration(seconds: 1), () {
           if (context.mounted) {
             print('초대 화면으로 이동: $token');
             Navigator.of(context).pushNamed(
-              '/group/invitation',
+              '/group/invitation', 
               arguments: {'token': token}
             );
           }
         });
       }
-    } catch (e) {
-      print('초대 토큰 확인 중 오류: $e');
     }
+  } catch (e) {
+    print('초대 토큰 확인 중 오류: $e');
   }
+}
 }

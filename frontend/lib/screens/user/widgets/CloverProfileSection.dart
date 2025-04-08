@@ -5,6 +5,8 @@ import '../../../../config/theme.dart';
 import '../../../../screens/user/user_authorization.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../models/user_model.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../../../services/user_service.dart';
 
 class CloverProfileSection extends StatefulWidget {
   final UserProfile profile;
@@ -51,35 +53,70 @@ class _CloverProfileSectionState extends State<CloverProfileSection> {
                   shape: BoxShape.circle,
                   color: AppColors.lightGray,
                 ),
-                child: ClipOval(
-                  child: Image.network(
-                    widget.profile.profileUrl ?? '',
-                    width: 180,
-                    height: 180,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Image.asset(
-                        'assets/images/logo.png',
-                        width: 180,
-                        height: 180,
-                        fit: BoxFit.contain,
-                      );
-                    },
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) {
-                        return child;
+                child: InkWell(
+                  onTap: () async {
+                    final ImagePicker picker = ImagePicker();
+                    final XFile? image = await picker.pickImage(
+                      source: ImageSource.gallery,
+                      maxWidth: 800,
+                      maxHeight: 800,
+                      imageQuality: 90,
+                    );
+
+                    if (image != null && mounted) {
+                      try {
+                        final userService = Provider.of<UserService>(
+                          context,
+                          listen: false,
+                        );
+                        await userService.uploadProfileImage(
+                          widget.profile.memberId.toString(),
+                          image.path,
+                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('프로필 사진이 업데이트되었습니다.')),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('프로필 사진 업데이트 실패: $e')),
+                          );
+                        }
                       }
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value:
-                              loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
-                          color: AppColors.primary,
-                        ),
-                      );
-                    },
+                    }
+                  },
+                  child: ClipOval(
+                    child: Image.network(
+                      widget.profile.profileUrl ?? '',
+                      width: 180,
+                      height: 180,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Image.asset(
+                          'assets/images/logo.png',
+                          width: 180,
+                          height: 180,
+                          fit: BoxFit.contain,
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) {
+                          return child;
+                        }
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value:
+                                loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                            color: AppColors.primary,
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
