@@ -173,29 +173,36 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     );
   }
 
-  // 저장된 초대 토큰 확인
-  Future<void> _checkPendingInvitation(BuildContext context) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('pendingInvitationToken');
-      print('저장된 초대 토큰 확인: $token');
+ // 저장된 초대 토큰 확인
+Future<void> _checkPendingInvitation(BuildContext context) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('pendingInvitationToken');
+    print('저장된 초대 토큰 확인: $token');
 
-      if (token != null && token.isNotEmpty) {
-        // 토큰 사용 후 삭제
+    if (token != null && token.isNotEmpty) {
+      // 사용자 로그인 상태 확인
+ final appProvider = Provider.of<AppProvider>(context, listen: false);
+  final isLoggedIn = appProvider.isLoggedIn;
+      
+      if (isLoggedIn) {
+        // 로그인 상태인 경우에만 토큰 삭제 및 초대 화면으로 이동
         await prefs.remove('pendingInvitationToken');
 
         // 조금 지연 후 초대 화면으로 이동 (로그인 화면 로딩 후)
         Future.delayed(const Duration(seconds: 1), () {
           if (context.mounted) {
             print('초대 화면으로 이동: $token');
-            Navigator.of(
-              context,
-            ).pushNamed('/group/invitation', arguments: {'token': token});
+            Navigator.of(context).pushNamed(
+              '/group/invitation', 
+              arguments: {'token': token}
+            );
           }
         });
       }
-    } catch (e) {
-      print('초대 토큰 확인 중 오류: $e');
     }
+  } catch (e) {
+    print('초대 토큰 확인 중 오류: $e');
   }
+}
 }

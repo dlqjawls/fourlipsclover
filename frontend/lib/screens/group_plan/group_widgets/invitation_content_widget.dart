@@ -33,7 +33,7 @@ class _InvitationContentWidgetState extends State<InvitationContentWidget>
     super.initState();
 
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
@@ -221,8 +221,8 @@ class _InvitationContentWidgetState extends State<InvitationContentWidget>
               ),
               child: Image.asset(
                 'assets/images/logo.png',
-                width: 28,
-                height: 28,
+                width: 40,
+                height: 40,
                 color: AppColors.primary,
               ),
             ),
