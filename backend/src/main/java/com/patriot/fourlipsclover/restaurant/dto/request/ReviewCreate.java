@@ -17,4 +17,8 @@ public class ReviewCreate {
     private String kakaoPlaceId;
     private String content;
     private LocalDateTime visitedAt;
+
+    private Integer amount;
+    private Integer visitedPersonnel;
+    private LocalDateTime paidAt;
 }
