@@ -1,11 +1,13 @@
 package com.patriot.fourlipsclover.restaurant.service;
 
 import static co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType.BestFields;
+import static co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType.CrossFields;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.NestedQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
@@ -70,7 +72,7 @@ public class RestaurantElasticsearchService {
 													.order(SortOrder.Asc)
 											)
 									)
-									.size(20),
+									.size(100),
 							RestaurantDocument.class
 					);
 			return searchResponse.hits().hits().stream()
@@ -92,6 +94,11 @@ public class RestaurantElasticsearchService {
 								.query(query.trim())
 								.fields(List.of("name^3", "address^2", "category"))
 								.type(BestFields)
+								.operator(Operator.Or)
+								.minimumShouldMatch("70%")
+								.fuzziness("AUTO")
+								.prefixLength(2)
+								.tieBreaker(0.3)
 						)
 				);
 			}
@@ -124,7 +131,7 @@ public class RestaurantElasticsearchService {
 			SearchRequest searchRequest = SearchRequest.of(s -> s
 					.index("restaurants")
 					.query(q -> q.bool(boolQueryBuilder.build()))
-					.size(20)
+					.size(100)
 			);
 
 			SearchResponse<RestaurantDocument> response =
