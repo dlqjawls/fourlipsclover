@@ -153,7 +153,7 @@ class _ReviewListState extends State<ReviewList> {
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0, vertical: 8.0),
+                      horizontal: 16.0, vertical: 12.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -193,25 +193,29 @@ class _ReviewListState extends State<ReviewList> {
                                   },
                                 );
                               },
+                              behavior: HitTestBehavior.translucent, // 중요: 패딩도 터치로 인식되게
                               child: Padding(
-                                padding: const EdgeInsets.only(left: 8.0),
-                                child: Icon(Icons.more_vert, size: 20,
-                                    color: Colors.grey[600]),
+                                padding: const EdgeInsets.all(12), // 터치 범위 확대
+                                child: Icon(
+                                  Icons.more_vert,
+                                  size: 20,
+                                  color: Colors.grey[600],
+                                ),
                               ),
                             ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 12),
                       Text(
                         review.content,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 14),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 16),
                       // 변경된 이미지 처리
                       _buildReviewImage(review),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       Consumer<ReviewProvider>(
                         builder: (context, provider, _) {
                           final currentReview = provider.getReview(review.id);
@@ -321,7 +325,7 @@ class _ReviewListState extends State<ReviewList> {
       child: AspectRatio(
         aspectRatio: aspectRatio,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(16),
           child: imageUrls.length == 1
               ? Image(
             image: imageUrls.first.startsWith("http")
