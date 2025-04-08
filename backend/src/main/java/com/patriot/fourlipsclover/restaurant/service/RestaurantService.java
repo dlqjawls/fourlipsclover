@@ -11,6 +11,7 @@ import com.patriot.fourlipsclover.exception.UserNotFoundException;
 import com.patriot.fourlipsclover.image.service.ReviewImageService;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberJpaRepository;
+import com.patriot.fourlipsclover.payment.entity.DataSource;
 import com.patriot.fourlipsclover.payment.entity.VisitPayment;
 import com.patriot.fourlipsclover.payment.repository.VisitPaymentRepository;
 import com.patriot.fourlipsclover.restaurant.dto.kafka.RestaurantKafkaDto;
@@ -95,6 +96,19 @@ public class RestaurantService {
 
 		reviewRepository.save(review);
 		CompletableFuture.runAsync(() -> tagService.generateTag(review));
+
+		// 결제 정보 저장
+		VisitPayment visitPayment = VisitPayment.builder()
+				.restaurantId(restaurant)
+				.userId(reviewer.getMemberId())
+				.amount(reviewCreate.getAmount())
+				.visitedPersonnel(reviewCreate.getVisitedPersonnel())
+				.paidAt(reviewCreate.getPaidAt() != null ? reviewCreate.getPaidAt() : LocalDateTime.now())
+				.dataSource(DataSource.member)
+				.createdAt(LocalDateTime.now())
+				.build();
+
+		visitPaymentRepository.save(visitPayment);
 
 		String reviewTextSentiment = analyzeSentiment(review);
 		List<String> imageUrls = reviewImageService.uploadFiles(review, images);
