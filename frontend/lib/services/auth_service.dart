@@ -11,13 +11,45 @@ class AuthService {
   // 카카오 로그인 처리
   Future<Map<String, dynamic>> kakaoLogin() async {
     try {
-      OAuthToken? token = await _getKakaoToken();
+      OAuthToken? token;
+      bool isInstalled = await isKakaoTalkInstalled();
+
+      try {
+        if (isInstalled) {
+          debugPrint('카카오톡 앱으로 로그인 시도');
+          token = await UserApi.instance.loginWithKakaoTalk();
+          debugPrint('카카오톡 앱 로그인 성공');
+        } else {
+          debugPrint('카카오톡 앱이 설치되어 있지 않아 웹 로그인 시도');
+          token = await UserApi.instance.loginWithKakaoAccount();
+          debugPrint('카카오 웹 로그인 성공');
+        }
+      } catch (error) {
+        debugPrint('카카오톡 로그인 실패: $error');
+        // 앱 로그인 실패 시 계정 로그인으로 시도
+        if (error.toString().contains('NotSupportError') ||
+            error.toString().contains(
+              'KakaoTalk is installed but not connected',
+            )) {
+          debugPrint('카카오톡 로그인 실패로 인해 웹 로그인 시도');
+          token = await UserApi.instance.loginWithKakaoAccount();
+          debugPrint('카카오 웹 로그인 성공');
+        } else {
+          rethrow;
+        }
+      }
+
       if (token == null) {
         throw Exception('카카오 로그인 실패: 토큰을 가져오지 못했습니다.');
       }
 
-      final loginResult = await _processServerLogin(token.accessToken);
+      debugPrint('카카오 사용자 정보 요청 시작');
       final user = await UserApi.instance.me();
+      debugPrint('카카오 사용자 정보 요청 성공');
+
+      debugPrint('서버 로그인 처리 시작');
+      final loginResult = await _processServerLogin(token.accessToken);
+      debugPrint('서버 로그인 처리 성공');
 
       // 로그인 성공 시 토큰 저장
       final jwtToken = loginResult['jwtToken'];
@@ -34,7 +66,50 @@ class AuthService {
       return {'jwtToken': jwtToken, 'user': user};
     } catch (error) {
       debugPrint('로그인 오류 발생: $error');
-      throw error;
+      rethrow;
+    }
+  }
+
+  // 카카오 계정으로 웹 로그인 (직접 호출 가능한 메서드 추가)
+  Future<Map<String, dynamic>> kakaoWebLogin() async {
+    OAuthToken? token;
+    try {
+      debugPrint('카카오 웹 로그인 직접 시도 - 계정으로 로그인 시작');
+
+      try {
+        token = await UserApi.instance.loginWithKakaoAccount();
+      } catch (e) {
+        debugPrint('loginWithKakaoAccount 첫 번째 시도 실패: $e');
+        // 첫 번째 시도가 실패하면 약간의 지연 후 다시 시도
+        await Future.delayed(const Duration(milliseconds: 500));
+        token = await UserApi.instance.loginWithKakaoAccount();
+      }
+
+      debugPrint('카카오 웹 로그인 성공');
+
+      if (token == null) {
+        throw Exception('카카오 웹 로그인 실패: 토큰을 가져오지 못했습니다.');
+      }
+
+      debugPrint('카카오 사용자 정보 요청 시작');
+      final user = await UserApi.instance.me();
+      debugPrint('카카오 사용자 정보 요청 성공');
+
+      debugPrint('서버 로그인 처리 시작');
+      final loginResult = await _processServerLogin(token.accessToken);
+      debugPrint('서버 로그인 처리 성공');
+
+      // 로그인 성공 시 토큰 저장
+      final jwtToken = loginResult['jwtToken'];
+      if (jwtToken == null) {
+        throw Exception('서버 응답에 JWT 토큰이 없습니다.');
+      }
+      await saveLoginState(true, jwtToken);
+
+      return {'jwtToken': jwtToken, 'user': user};
+    } catch (error) {
+      debugPrint('카카오 웹 로그인 오류 발생: $error');
+      rethrow;
     }
   }
 

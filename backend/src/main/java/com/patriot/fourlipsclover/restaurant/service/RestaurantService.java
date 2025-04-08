@@ -162,9 +162,8 @@ public class RestaurantService {
 
 	private Member loadCurrentMember() {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (authentication == null || !authentication.isAuthenticated() ||
-				!(authentication.getPrincipal() instanceof CustomUserDetails)) {
-			return null;
+		if (authentication == null || !authentication.isAuthenticated()) {
+			throw new UnauthorizedAccessException("인증되지 않은 사용자입니다.");
 		}
 		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 		return userDetails.getMember();
@@ -271,16 +270,19 @@ public class RestaurantService {
 		restaurantResponse.setTags(restaurantTagResponses);
 
 		// 식당 이미지 조회 및 설정
-		List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(
-				restaurant);
-		restaurantResponse.setRestaurantImages(
-				restaurantMapper.toRestaurantImageDtoList(restaurantImages));
+		List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(restaurant);
+		restaurantResponse.setRestaurantImages(restaurantMapper.toRestaurantImageDtoList(restaurantImages));
+
+		// 가격 정보 실시간 계산
+		String avgAmountJson = calculateAvgAmountJson(restaurant.getRestaurantId());
+		restaurantResponse.setAvgAmount(avgAmountJson);
+
 		return restaurantResponse;
 	}
 
 	@Transactional(readOnly = true)
 	public List<RestaurantResponse> findNearbyRestaurants(Double latitude, Double longitude,
-			Integer radius) {
+														  Integer radius) {
 		List<RestaurantResponse> response = new ArrayList<>();
 		List<Restaurant> nearbyRestaurants = restaurantRepository.findNearbyRestaurants(
 				latitude, longitude, radius);
@@ -289,15 +291,17 @@ public class RestaurantService {
 			RestaurantResponse restaurantResponse = restaurantMapper.toDto(data);
 
 			// 식당 이미지 조회 및 설정
-			List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(
-					data);
-			restaurantResponse.setRestaurantImages(
-					restaurantMapper.toRestaurantImageDtoList(restaurantImages));
+			List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(data);
+			restaurantResponse.setRestaurantImages(restaurantMapper.toRestaurantImageDtoList(restaurantImages));
 
 			// 태그 설정
 			List<RestaurantTagResponse> tags = tagService.findRestaurantTagByRestaurantId(
 					data.getKakaoPlaceId());
 			restaurantResponse.setTags(tags);
+
+			// 가격 정보 실시간 계산
+			String avgAmountJson = calculateAvgAmountJson(data.getRestaurantId());
+			restaurantResponse.setAvgAmount(avgAmountJson);
 
 			response.add(restaurantResponse);
 		}
@@ -436,35 +440,35 @@ public class RestaurantService {
 		});
 	}
 
-	@Transactional
-	public void updateRestaurantAvgAmount(Integer restaurantId) {
-		Restaurant restaurant = restaurantRepository.findById(restaurantId)
-				.orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
-
-		List<VisitPayment> payments = visitPaymentRepository.findByRestaurantId_RestaurantId(
-				restaurantId);
+	private String calculateAvgAmountJson(Integer restaurantId) {
+		List<VisitPayment> payments = visitPaymentRepository.findByRestaurantId_RestaurantId(restaurantId);
 
 		if (payments.isEmpty()) {
-			log.info("No payment data for restaurant ID: {}", restaurantId);
-			return;
+			return "{\"avg\": \"정보 없음\"}";
 		}
 
 		Map<String, Integer> avgAmountInfo = new LinkedHashMap<>();
 
-		// 1인당 평균 금액 계산
+		// 1인당 평균 금액 계산 (결제 건수 기준)
 		for (VisitPayment payment : payments) {
+			if (payment.getVisitedPersonnel() <= 0) continue;
+
 			Integer perPersonAmount = payment.getAmount() / payment.getVisitedPersonnel();
 			String range = calculatePriceRange(perPersonAmount);
 
-			// 해당 가격 범위의 인원 추가
+			// 결제 건수를 기준으로 +1씩 증가
 			avgAmountInfo.merge(range, 1, Integer::sum);
+		}
+
+		if (avgAmountInfo.isEmpty()) {
+			return "{\"avg\": \"정보 없음\"}";
 		}
 
 		// 가장 많은 분포의 범위 찾기
 		String avgPriceRange = avgAmountInfo.entrySet().stream()
 				.max(Comparator.comparing(Map.Entry::getValue))
 				.map(Map.Entry::getKey)
-				.orElse("1 ~ 10000");
+				.orElse("정보 없음");
 
 		Map<String, Object> result = new LinkedHashMap<>();
 		result.put("avg", avgPriceRange);
@@ -477,46 +481,25 @@ public class RestaurantService {
 		});
 
 		try {
-			// JSON 문자열로 변환하여 저장
-			restaurant.setAvgAmount(new ObjectMapper().writeValueAsString(result));
-			restaurantRepository.save(restaurant);
-			log.info("Updated average amount for restaurant {}: {}", restaurantId, avgPriceRange);
+			// JSON 문자열로 변환
+			return new ObjectMapper().writeValueAsString(result);
 		} catch (Exception e) {
-			log.error("Error updating restaurant avg amount", e);
+			log.error("Error converting avg amount to JSON", e);
+			return "{\"avg\": \"정보 없음\"}";
 		}
 	}
 
 	private String calculatePriceRange(Integer amount) {
-		if (amount <= 10000) {
-			return "1 ~ 10000";
-		}
-		if (amount <= 20000) {
-			return "10000 ~ 20000";
-		}
-		if (amount <= 30000) {
-			return "20000 ~ 30000";
-		}
-		if (amount <= 40000) {
-			return "30000 ~ 40000";
-		}
-		if (amount <= 50000) {
-			return "40000 ~ 50000";
-		}
-		if (amount <= 60000) {
-			return "50000 ~ 60000";
-		}
-		if (amount <= 70000) {
-			return "60000 ~ 70000";
-		}
-		if (amount <= 80000) {
-			return "70000 ~ 80000";
-		}
-		if (amount <= 90000) {
-			return "80000 ~ 90000";
-		}
-		if (amount <= 100000) {
-			return "90000 ~ 100000";
-		}
+		if (amount <= 10000) return "1 ~ 10000";
+		if (amount <= 20000) return "10000 ~ 20000";
+		if (amount <= 30000) return "20000 ~ 30000";
+		if (amount <= 40000) return "30000 ~ 40000";
+		if (amount <= 50000) return "40000 ~ 50000";
+		if (amount <= 60000) return "50000 ~ 60000";
+		if (amount <= 70000) return "60000 ~ 70000";
+		if (amount <= 80000) return "70000 ~ 80000";
+		if (amount <= 90000) return "80000 ~ 90000";
+		if (amount <= 100000) return "90000 ~ 100000";
 		return "100000 ~";
 	}
 }
