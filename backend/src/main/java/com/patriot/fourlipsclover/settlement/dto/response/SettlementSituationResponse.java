@@ -1,7 +1,8 @@
 package com.patriot.fourlipsclover.settlement.dto.response;
 
-import com.patriot.fourlipsclover.settlement.entity.SettlementTransaction.TransactionStatus;
+import com.patriot.fourlipsclover.settlement.entity.Settlement.SettlementStatus;
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,16 +12,21 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SettlementSituationResponse {
 
-	private Long settlementTransactionId;
+	private Integer settlementId;
 
+	private String planName;
 
-	private SettlementMemberResponse payee;
+	private Integer planId;
 
-	private SettlementMemberResponse payer;
+	private String treasurerName;
 
-	private TransactionStatus transactionStatus;
+	private Long treasurerId;
 
-	private LocalDateTime createdAt;
+	private SettlementStatus settlementStatus;
 
-	private LocalDateTime sentAt;
+	private LocalDateTime startDate;
+
+	private LocalDateTime endDate;
+
+	private List<SettlementTransactionResponse> settlementTransactionResponses;
 }

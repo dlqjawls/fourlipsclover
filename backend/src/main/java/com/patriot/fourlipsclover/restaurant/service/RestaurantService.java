@@ -18,14 +18,12 @@ import com.patriot.fourlipsclover.restaurant.dto.request.LikeStatus;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewLikeCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
-import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewSentimentResponse;
 import com.patriot.fourlipsclover.restaurant.entity.City;
 import com.patriot.fourlipsclover.restaurant.entity.FoodCategory;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
-import com.patriot.fourlipsclover.restaurant.entity.RestaurantImage;
 import com.patriot.fourlipsclover.restaurant.entity.Review;
 import com.patriot.fourlipsclover.restaurant.entity.ReviewLike;
 import com.patriot.fourlipsclover.restaurant.entity.ReviewLikePK;
@@ -40,10 +38,8 @@ import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewLikeJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewSentimentRepository;
-import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
 import com.patriot.fourlipsclover.tag.service.TagService;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -54,7 +50,6 @@ import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.elasticsearch.ResourceNotFoundException;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -255,58 +250,60 @@ public class RestaurantService {
 		return new ReviewDeleteResponse("리뷰를 삭제하였습니다.", reviewId);
 	}
 
-	@Transactional(readOnly = true)
-	public RestaurantResponse findRestaurantByKakaoPlaceId(String kakaoPlaceId) {
-		if (Objects.isNull(kakaoPlaceId) || kakaoPlaceId.isBlank()) {
-			throw new IllegalArgumentException("올바른 kakaoPlaceId 값을 입력하세요.");
-		}
-		Restaurant restaurant = restaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
-				.orElseThrow(() -> new InvalidDataException("존재 하지 않는 식당입니다."));
-
-		RestaurantResponse restaurantResponse = restaurantMapper.toDto(restaurant);
-
-		List<RestaurantTagResponse> restaurantTagResponses = tagService.findRestaurantTagByRestaurantId(
-				kakaoPlaceId);
-		restaurantResponse.setTags(restaurantTagResponses);
-
-		// 식당 이미지 조회 및 설정
-		List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(restaurant);
-		restaurantResponse.setRestaurantImages(restaurantMapper.toRestaurantImageDtoList(restaurantImages));
-
-		// 가격 정보 실시간 계산
-		String avgAmountJson = calculateAvgAmountJson(restaurant.getRestaurantId());
-		restaurantResponse.setAvgAmount(avgAmountJson);
-
-		return restaurantResponse;
-	}
-
-	@Transactional(readOnly = true)
-	public List<RestaurantResponse> findNearbyRestaurants(Double latitude, Double longitude,
-														  Integer radius) {
-		List<RestaurantResponse> response = new ArrayList<>();
-		List<Restaurant> nearbyRestaurants = restaurantRepository.findNearbyRestaurants(
-				latitude, longitude, radius);
-
-		for (Restaurant data : nearbyRestaurants) {
-			RestaurantResponse restaurantResponse = restaurantMapper.toDto(data);
-
-			// 식당 이미지 조회 및 설정
-			List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(data);
-			restaurantResponse.setRestaurantImages(restaurantMapper.toRestaurantImageDtoList(restaurantImages));
-
-			// 태그 설정
-			List<RestaurantTagResponse> tags = tagService.findRestaurantTagByRestaurantId(
-					data.getKakaoPlaceId());
-			restaurantResponse.setTags(tags);
-
-			// 가격 정보 실시간 계산
-			String avgAmountJson = calculateAvgAmountJson(data.getRestaurantId());
-			restaurantResponse.setAvgAmount(avgAmountJson);
-
-			response.add(restaurantResponse);
-		}
-		return response;
-	}
+//	@Transactional(readOnly = true)
+//	public RestaurantResponse findRestaurantByKakaoPlaceId(String kakaoPlaceId) {
+//		if (Objects.isNull(kakaoPlaceId) || kakaoPlaceId.isBlank()) {
+//			throw new IllegalArgumentException("올바른 kakaoPlaceId 값을 입력하세요.");
+//		}
+//		Restaurant restaurant = restaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
+//				.orElseThrow(() -> new InvalidDataException("존재 하지 않는 식당입니다."));
+//
+//		RestaurantResponse restaurantResponse = restaurantMapper.toDto(restaurant);
+//
+//		List<RestaurantTagResponse> restaurantTagResponses = tagService.findRestaurantTagByRestaurantId(
+//				kakaoPlaceId);
+//		restaurantResponse.setTags(restaurantTagResponses);
+//
+//		// 식당 이미지 조회 및 설정
+//		List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(restaurant);
+//		restaurantResponse.setRestaurantImages(restaurantMapper.toRestaurantImageDtoList(restaurantImages));
+//
+//		// 가격 정보 실시간 계산
+//		String avgAmountJson = calculateAvgAmountJson(restaurant.getRestaurantId());
+//		restaurantResponse.setAvgAmount(avgAmountJson);
+//
+//		return restaurantResponse;
+//	}
+//
+//	@Transactional(readOnly = true)
+//	public List<RestaurantResponse> findNearbyRestaurants(Double latitude, Double longitude,
+//			Integer radius) {
+//		List<RestaurantResponse> response = new ArrayList<>();
+//		List<Restaurant> nearbyRestaurants = restaurantRepository.findNearbyRestaurants(
+//				latitude, longitude, radius);
+//
+//		for (Restaurant data : nearbyRestaurants) {
+//			RestaurantResponse restaurantResponse = restaurantMapper.toDto(data);
+//
+//			// 식당 이미지 조회 및 설정
+//			List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(
+//					data);
+//			restaurantResponse.setRestaurantImages(
+//					restaurantMapper.toRestaurantImageDtoList(restaurantImages));
+//
+//			// 태그 설정
+//			List<RestaurantTagResponse> tags = tagService.findRestaurantTagByRestaurantId(
+//					data.getKakaoPlaceId());
+//			restaurantResponse.setTags(tags);
+//
+//			// 가격 정보 실시간 계산
+//			String avgAmountJson = calculateAvgAmountJson(data.getRestaurantId());
+//			restaurantResponse.setAvgAmount(avgAmountJson);
+//
+//			response.add(restaurantResponse);
+//		}
+//		return response;
+//	}
 
 	@Transactional
 	public String like(Integer reviewId, ReviewLikeCreate request) {
@@ -441,7 +438,8 @@ public class RestaurantService {
 	}
 
 	private String calculateAvgAmountJson(Integer restaurantId) {
-		List<VisitPayment> payments = visitPaymentRepository.findByRestaurantId_RestaurantId(restaurantId);
+		List<VisitPayment> payments = visitPaymentRepository.findByRestaurantId_RestaurantId(
+				restaurantId);
 
 		if (payments.isEmpty()) {
 			return "{\"avg\": \"정보 없음\"}";
@@ -451,7 +449,9 @@ public class RestaurantService {
 
 		// 1인당 평균 금액 계산 (결제 건수 기준)
 		for (VisitPayment payment : payments) {
-			if (payment.getVisitedPersonnel() <= 0) continue;
+			if (payment.getVisitedPersonnel() <= 0) {
+				continue;
+			}
 
 			Integer perPersonAmount = payment.getAmount() / payment.getVisitedPersonnel();
 			String range = calculatePriceRange(perPersonAmount);
@@ -490,16 +490,36 @@ public class RestaurantService {
 	}
 
 	private String calculatePriceRange(Integer amount) {
-		if (amount <= 10000) return "1 ~ 10000";
-		if (amount <= 20000) return "10000 ~ 20000";
-		if (amount <= 30000) return "20000 ~ 30000";
-		if (amount <= 40000) return "30000 ~ 40000";
-		if (amount <= 50000) return "40000 ~ 50000";
-		if (amount <= 60000) return "50000 ~ 60000";
-		if (amount <= 70000) return "60000 ~ 70000";
-		if (amount <= 80000) return "70000 ~ 80000";
-		if (amount <= 90000) return "80000 ~ 90000";
-		if (amount <= 100000) return "90000 ~ 100000";
+		if (amount <= 10000) {
+			return "1 ~ 10000";
+		}
+		if (amount <= 20000) {
+			return "10000 ~ 20000";
+		}
+		if (amount <= 30000) {
+			return "20000 ~ 30000";
+		}
+		if (amount <= 40000) {
+			return "30000 ~ 40000";
+		}
+		if (amount <= 50000) {
+			return "40000 ~ 50000";
+		}
+		if (amount <= 60000) {
+			return "50000 ~ 60000";
+		}
+		if (amount <= 70000) {
+			return "60000 ~ 70000";
+		}
+		if (amount <= 80000) {
+			return "70000 ~ 80000";
+		}
+		if (amount <= 90000) {
+			return "80000 ~ 90000";
+		}
+		if (amount <= 100000) {
+			return "90000 ~ 100000";
+		}
 		return "100000 ~";
 	}
 }
