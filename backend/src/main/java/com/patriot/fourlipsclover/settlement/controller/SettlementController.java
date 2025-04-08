@@ -58,7 +58,13 @@ public class SettlementController {
 	}
 
 	@PostMapping("/{planId}/settlement/request")
+	@Operation(summary = "정산 요청", description = "특정 계획에 대한 정산을 요청합니다")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "정산 요청 성공"),
+			@ApiResponse(responseCode = "404", description = "계획 또는 정산 정보를 찾을 수 없음")
+	})
 	public ResponseEntity<SettlementRequestResponse> settlementRequest(
+			@Parameter(description = "계획 ID", required = true)
 			@PathVariable Integer planId) {
 		SettlementRequestResponse response = settlementService.request(planId);
 		return ResponseEntity.ok(response);
