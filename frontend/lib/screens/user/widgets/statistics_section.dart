@@ -93,13 +93,13 @@ class StatisticsSection extends StatelessWidget {
             profile.reviewCount.toString(),
             Icons.rate_review,
           ),
-          _buildStatItem('그룹', profile.groupCount.toString(), Icons.group),
           _buildStatItem(
             '지역 랭크',
             profile.localRank.toString(),
             Icons.place,
             isRank: true,
           ),
+          _buildStatItem('그룹', profile.groupCount.toString(), Icons.group),
         ],
       ),
     );

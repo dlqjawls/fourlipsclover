@@ -20,8 +20,17 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       debugPrint('카카오 로그인 시작');
       final appProvider = context.read<AppProvider>();
-      await appProvider.kakaoLogin();
-      debugPrint('카카오 로그인 성공');
+
+      // 웹 로그인 바로 시도 (앱 로그인 건너뛰기)
+      try {
+        debugPrint('카카오 웹 로그인 직접 시도');
+        await appProvider.kakaoWebLogin();
+        debugPrint('카카오 웹 로그인 성공');
+      } catch (e) {
+        debugPrint('카카오 웹 로그인 실패: $e');
+        // 다른 오류는 그대로 전파
+        rethrow;
+      }
 
       // UserProvider에서 프로필 정보 설정
       final userProvider = context.read<UserProvider>();
