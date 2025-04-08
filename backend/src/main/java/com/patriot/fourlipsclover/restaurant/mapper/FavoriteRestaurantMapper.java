@@ -19,5 +19,4 @@ public interface FavoriteRestaurantMapper {
 	@Mapping(source = "member.profileUrl", target = "profileUrl")
 	FavoriteRestaurantResponse toDto(FavoriteRestaurant favoriteRestaurant);
 
-	RestaurantResponse toRestaurantDto(Restaurant restaurant);
 }

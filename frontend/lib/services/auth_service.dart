@@ -11,13 +11,33 @@ class AuthService {
   // 카카오 로그인 처리
   Future<Map<String, dynamic>> kakaoLogin() async {
     try {
-      OAuthToken? token = await _getKakaoToken();
+      OAuthToken? token;
+      bool isInstalled = await isKakaoTalkInstalled();
+
+      try {
+        if (isInstalled) {
+          token = await UserApi.instance.loginWithKakaoTalk();
+        } else {
+          token = await UserApi.instance.loginWithKakaoAccount();
+        }
+      } catch (error) {
+        debugPrint('카카오톡 로그인 실패: $error');
+        // 앱 로그인 실패 시 계정 로그인으로 한 번만 시도
+        if (error.toString().contains(
+          'KakaoTalk is installed but not connected',
+        )) {
+          token = await UserApi.instance.loginWithKakaoAccount();
+        } else {
+          rethrow;
+        }
+      }
+
       if (token == null) {
         throw Exception('카카오 로그인 실패: 토큰을 가져오지 못했습니다.');
       }
 
-      final loginResult = await _processServerLogin(token.accessToken);
       final user = await UserApi.instance.me();
+      final loginResult = await _processServerLogin(token.accessToken);
 
       // 로그인 성공 시 토큰 저장
       final jwtToken = loginResult['jwtToken'];
@@ -34,7 +54,7 @@ class AuthService {
       return {'jwtToken': jwtToken, 'user': user};
     } catch (error) {
       debugPrint('로그인 오류 발생: $error');
-      throw error;
+      rethrow;
     }
   }
 

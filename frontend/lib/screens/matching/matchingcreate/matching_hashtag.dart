@@ -139,7 +139,7 @@ class _MatchingCreateHashtagScreenState
                   '최대 3개 선택 가능 (선택됨: ${selectedHashtags.length})',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: AppColors.mediumGray,
+                    color: AppColors.darkGray,
                   ),
                 ),
               ),
@@ -337,7 +337,7 @@ class _MatchingCreateHashtagScreenState
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: AppColors.mediumGray,
+                          color: AppColors.darkGray,
                         ),
                       ),
                     ),

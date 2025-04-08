@@ -5,7 +5,7 @@ import 'package:frontend/screens/home/home_screen.dart';
 import 'package:frontend/screens/auth/login_screen.dart';
 import 'package:frontend/screens/common/base_screen.dart';
 import 'package:frontend/screens/user/user_screen.dart';
-import 'package:frontend/screens/user/user_edit.dart';
+
 import 'package:frontend/screens/user/user_profile.dart';
 // import 'package:frontend/screens/user/my_consumption_pattern_screen.dart'; // MyConsumptionPatternScreen import 추가
 import 'package:frontend/screens/group_plan/group_detail_screen.dart';
@@ -25,10 +25,7 @@ class AppRoutes {
     '/login': (context) => const LoginScreen(),
     '/user': (context) => const UserScreen(),
     '/home': (context) => const BaseScreen(),
-    '/user_edit': (context) {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      return UserEditScreen(profile: userProvider.userProfile!);
-    },
+   
     '/user_profile': (context) => const MyConsumptionPatternScreen(),
 
     '/kakaopay_test': (context) => KakaoPayScreen(),

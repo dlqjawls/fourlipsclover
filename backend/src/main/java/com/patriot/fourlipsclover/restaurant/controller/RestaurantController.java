@@ -5,6 +5,7 @@ import com.patriot.fourlipsclover.restaurant.dto.request.ReviewLikeCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
 import com.patriot.fourlipsclover.restaurant.dto.response.ApiResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
+import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantSearchResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewDeleteResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.service.RestaurantElasticsearchService;
@@ -39,6 +40,20 @@ public class RestaurantController {
 	private final RestaurantService restaurantService;
 	private final RestaurantElasticsearchService restaurantElasticsearchService;
 
+	@GetMapping("/nearby")
+	@Operation(
+			summary = "인근 식당 검색",
+			description = "위도/경도 기반으로 주변 식당을 검색합니다."
+	)
+	public ResponseEntity<List<RestaurantSearchResponse>> locationSearch(
+			@Parameter(description = "위도 값", required = true) @RequestParam Double latitude,
+			@Parameter(description = "경도 값", required = true) @RequestParam Double longitude,
+			@Parameter(description = "검색 반경(미터)", required = true) @RequestParam Integer radius) {
+		List<RestaurantSearchResponse> response = restaurantElasticsearchService.searchRestaurantsByLocation(
+				latitude, longitude, radius);
+		return ResponseEntity.ok(response);
+	}
+
 	/**
 	 * 레스토랑 검색 API 엔드포인트
 	 *
@@ -54,22 +69,22 @@ public class RestaurantController {
 		return ResponseEntity.ok(results);
 	}
 
-	@Operation(summary = "주변 식당 검색", description = "위도/경도 기반으로 주변 식당을 검색합니다.")
-	@GetMapping("/nearby")
-	public ResponseEntity<List<RestaurantResponse>> findNearbyRestaurants(
-			@Parameter(description = "위도 값") @RequestParam(required = true) Double latitude,
-			@Parameter(description = "경도 값") @RequestParam(required = true) Double longitude,
-			@Parameter(description = "검색 반경(미터)") @RequestParam(defaultValue = "1000") Integer radius) {
-
-		if (latitude == null || longitude == null) {
-			throw new IllegalArgumentException("위도와 경도는 필수 입력값입니다");
-		}
-
-		List<RestaurantResponse> nearbyRestaurants =
-				restaurantService.findNearbyRestaurants(latitude, longitude, radius);
-
-		return ResponseEntity.ok(nearbyRestaurants);
-	}
+//	@Operation(summary = "주변 식당 검색", description = "위도/경도 기반으로 주변 식당을 검색합니다.")
+//	@GetMapping("/nearby")
+//	public ResponseEntity<List<RestaurantResponse>> findNearbyRestaurants(
+//			@Parameter(description = "위도 값") @RequestParam(required = true) Double latitude,
+//			@Parameter(description = "경도 값") @RequestParam(required = true) Double longitude,
+//			@Parameter(description = "검색 반경(미터)") @RequestParam(defaultValue = "1000") Integer radius) {
+//
+//		if (latitude == null || longitude == null) {
+//			throw new IllegalArgumentException("위도와 경도는 필수 입력값입니다");
+//		}
+//
+//		List<RestaurantResponse> nearbyRestaurants =
+//				restaurantService.findNearbyRestaurants(latitude, longitude, radius);
+//
+//		return ResponseEntity.ok(nearbyRestaurants);
+//	}
 
 	@Operation(summary = "식당 상세 조회", description = "카카오 Place ID를 이용하여 식당 정보를 조회합니다.")
 	@GetMapping("/{kakaoPlaceId}/search")
