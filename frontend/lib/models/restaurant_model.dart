@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'dart:convert';
 
 /// 레스토랑 정보 모델
 class RestaurantResponse {
@@ -54,10 +55,10 @@ class RestaurantResponse {
       y: json['y'],
       menu: (json['menu'] as List?)?.map((item) => item.toString()).toList(),
       openingHours: json['openingHours'] != null
-          ? Map<String, String>.from(json['openingHours'])
+          ? Map<String, String>.from(jsonDecode(json['openingHours']))
           : null,
       restaurantImages: (json['restaurantImages'] as List<dynamic>?)
-          ?.map((img) => img['url'].toString())
+          ?.map((img) => img.toString())
           .toList(),
       tags: (json['tags'] as List<dynamic>?)?.cast<Map<String, dynamic>>(),
     );
