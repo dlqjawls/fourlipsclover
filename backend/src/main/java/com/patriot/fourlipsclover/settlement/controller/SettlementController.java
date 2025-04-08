@@ -2,12 +2,14 @@ package com.patriot.fourlipsclover.settlement.controller;
 
 import com.patriot.fourlipsclover.settlement.dto.response.SettlementRequestResponse;
 import com.patriot.fourlipsclover.settlement.dto.response.SettlementResponse;
+import com.patriot.fourlipsclover.settlement.dto.response.SettlementSituationResponse;
 import com.patriot.fourlipsclover.settlement.service.SettlementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import java.net.URI;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -59,6 +61,19 @@ public class SettlementController {
 	public ResponseEntity<SettlementRequestResponse> settlementRequest(
 			@PathVariable Integer planId) {
 		SettlementRequestResponse response = settlementService.request(planId);
+		return ResponseEntity.ok(response);
+	}
+
+	@GetMapping("/{planId}/settlement/situation")
+	@Operation(summary = "정산 현황 조회", description = "특정 계획에 대한 정산 현황을 조회합니다")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "정산 현황 조회 성공"),
+			@ApiResponse(responseCode = "404", description = "계획 또는 정산 정보를 찾을 수 없음")
+	})
+	public ResponseEntity<List<SettlementSituationResponse>> settlementSituation(
+			@Parameter(description = "계획 ID", required = true)
+			@PathVariable Integer planId) {
+		List<SettlementSituationResponse> response = settlementService.settlementSituation(planId);
 		return ResponseEntity.ok(response);
 	}
 }

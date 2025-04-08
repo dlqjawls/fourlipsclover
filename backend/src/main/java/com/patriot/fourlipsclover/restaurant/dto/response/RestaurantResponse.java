@@ -1,7 +1,5 @@
 package com.patriot.fourlipsclover.restaurant.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonRawValue;
-import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,24 +12,30 @@ import lombok.NoArgsConstructor;
 @Builder
 public class RestaurantResponse {
 
-	private Integer restaurantId;
-	private String kakaoPlaceId;
+	private String id;
+	private String openingHours;
+	private List<String> restaurantImages;
+	private String avgAmount;
 	private String placeName;
 	private String addressName;
-	private String roadAddressName;
 	private String category;
-	private String categoryName;
-	private String phone;
-	private String placeUrl;
+	private List<TagData> tags;
 	private Double x;
 	private Double y;
+	private String kakaoPlaceId;
+	private Integer restaurantId;
+	private Integer likeSentiment;
+	private Integer dislikeSentiment;
 
-	private List<RestaurantTagResponse> tags;
+	@Data
+	@NoArgsConstructor
+	@AllArgsConstructor
+	@Builder
+	public static class TagData {
 
-	@JsonRawValue
-	private String openingHours;
-	private List<RestaurantImageResponse> restaurantImages;
-
-	@JsonRawValue
-	private String avgAmount;
+		private String tagName;
+		private String category;
+		private int frequency;
+		private float avgConfidence;
+	}
 }

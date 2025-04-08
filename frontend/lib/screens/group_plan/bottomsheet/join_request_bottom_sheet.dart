@@ -26,21 +26,18 @@ class _JoinRequestBottomSheetState extends State<JoinRequestBottomSheet> {
   bool _isLoading = false;
 
   @override
-Widget build(BuildContext context) {
-  // 대기 중인 요청만 필터링 (대소문자 무시 및 다양한 표현 허용)
-  final pendingRequests = widget.requests.where((req) {
-    final status = req.status.toUpperCase();
-    return status == 'PENDING';
-  }).toList();
-  
-  // 디버깅 로그 추가
-  debugPrint('요청 총 개수: ${widget.requests.length}');
-  debugPrint('필터링된 대기 중 요청 개수: ${pendingRequests.length}');
-  
-  // 각 요청의 상태 로깅
-  for (var req in widget.requests) {
-    debugPrint('요청 ID: ${req.id}, 상태: "${req.status}"');
-  }
+  Widget build(BuildContext context) {
+    // 대기 중인 요청만 필터링 (대소문자 무시 및 다양한 표현 허용)
+    final pendingRequests =
+        widget.requests.where((req) {
+          final status = req.status.toUpperCase();
+          return status == 'PENDING';
+        }).toList();
+
+    // 각 요청의 상태 로깅
+    for (var req in widget.requests) {
+      debugPrint('요청 ID: ${req.id}, 상태: "${req.status}"');
+    }
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
@@ -94,7 +91,7 @@ Widget build(BuildContext context) {
                       Text(
                         '가입 요청 관리',
                         style: TextStyle(
-                          fontFamily: 'Anemone',
+                          fontFamily: 'Anemone_air',
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primaryDark,
@@ -127,23 +124,6 @@ Widget build(BuildContext context) {
                           return _buildRequestItem(pendingRequests[index]);
                         },
                       ),
-            ),
-
-            // 닫기 버튼
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.verylightGray,
-                  foregroundColor: AppColors.darkGray,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text(
-                  '닫기',
-                  style: TextStyle(fontFamily: 'Anemone_air', fontSize: 16),
-                ),
-              ),
             ),
           ],
         ),
@@ -227,11 +207,11 @@ Widget build(BuildContext context) {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                OutlinedButton(
+                ElevatedButton(
                   onPressed: () => _respondToRequest(request, false),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.background,
+                    foregroundColor: Colors.red, // 텍스트 색상 빨간색으로 설정
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
@@ -243,7 +223,7 @@ Widget build(BuildContext context) {
                 ElevatedButton(
                   onPressed: () => _respondToRequest(request, true),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.background,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,

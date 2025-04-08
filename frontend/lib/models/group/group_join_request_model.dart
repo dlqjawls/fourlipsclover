@@ -24,31 +24,40 @@ class GroupJoinRequest {
   });
 
   factory GroupJoinRequest.fromJson(Map<String, dynamic> json) {
-    // 상태 값 처리
-    String statusValue = 'PENDING'; // 기본값
+    // 데이터 구조 로깅
 
-    // json['status']가 존재하면 사용
-    if (json['status'] != null) {
-      statusValue = json['status'];
+    try {
+      return GroupJoinRequest(
+        id: json['id'] ?? 0,
+        groupId: json['group'] != null ? json['group']['groupId'] ?? 0 : 0,
+        memberId: json['member'] != null ? json['member']['memberId'] ?? 0 : 0,
+        member:
+            json['member'] != null
+                ? Member.fromJson(json['member'])
+                : Member(memberId: 0, email: '', nickname: '알 수 없음'),
+        status: json['status'] ?? 'PENDING',
+        requestedAt: DateTime.parse(
+          json['requestedAt'] ?? DateTime.now().toIso8601String(),
+        ),
+        adminComment: json['adminComment'],
+        updatedAt:
+            json['updatedAt'] != null
+                ? DateTime.parse(json['updatedAt'])
+                : null,
+        token: json['token'] ?? '',
+      );
+    } catch (e) {
+      // 파싱 오류 시 기본 객체 반환
+      return GroupJoinRequest(
+        id: 0,
+        groupId: 0,
+        memberId: 0,
+        member: Member(memberId: 0, email: '', nickname: '알 수 없음'),
+        status: 'PENDING',
+        requestedAt: DateTime.now(),
+        token: '',
+      );
     }
-
-    return GroupJoinRequest(
-      id: json['id'],
-      groupId: json['group'] != null ? json['group']['id'] : 0,
-      memberId: json['member'] != null ? json['member']['memberId'] : 0,
-      member:
-          json['member'] != null
-              ? Member.fromJson(json['member'])
-              : Member(memberId: 0, email: '', nickname: '알 수 없음'),
-      status: statusValue,
-      requestedAt: DateTime.parse(
-        json['requestedAt'] ?? DateTime.now().toIso8601String(),
-      ),
-      adminComment: json['adminComment'],
-      updatedAt:
-          json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
-      token: json['token'] ?? '',
-    );
   }
 
   Map<String, dynamic> toJson() {
