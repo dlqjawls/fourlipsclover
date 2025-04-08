@@ -13,6 +13,7 @@ import '../../providers/user_provider.dart';
 import 'package:frontend/utils/review_utils.dart';
 import 'package:frontend/screens/review/widgets/delete_confirmation_modal.dart';
 import '../review/widgets/review_options_modal.dart';
+import 'review_photo_gallery.dart';
 
 class ReviewList extends StatefulWidget {
   final String restaurantId;
@@ -115,10 +116,14 @@ class _ReviewListState extends State<ReviewList> {
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 2.0),
           child: Row(
             children: [
-              Text("리뷰", style: Theme.of(context).textTheme.titleMedium),
+              Text("리뷰", style: Theme
+                  .of(context)
+                  .textTheme
+                  .titleMedium),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.add, size: 24, color: AppColors.darkGray),
+                icon: const Icon(
+                    Icons.add, size: 24, color: AppColors.darkGray),
                 onPressed: _onReviewWritten,
               ),
             ],
@@ -139,12 +144,16 @@ class _ReviewListState extends State<ReviewList> {
             final reviews = snapshot.data!;
 
             return Column(
-              children: reviews.asMap().entries.map<Widget>((entry) {
+              children: reviews
+                  .asMap()
+                  .entries
+                  .map<Widget>((entry) {
                 final index = entry.key;
                 final review = entry.value;
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 8.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -153,15 +162,21 @@ class _ReviewListState extends State<ReviewList> {
                         children: [
                           CircleAvatar(
                             radius: 20,
-                            backgroundImage: _buildProfileImageProvider(review.profileImageUrl),
+                            backgroundImage: _buildProfileImageProvider(
+                                review.profileImageUrl),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text(review.username, style: Theme.of(context).textTheme.bodyLarge),
+                            child: Text(review.username, style: Theme
+                                .of(context)
+                                .textTheme
+                                .bodyLarge),
                           ),
                           Text(
-                            "${review.visitCount}번째 방문 | ${_formatDate(review.date)}",
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            "${review.visitCount}번째 방문 | ${_formatDate(
+                                review.date)}",
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey),
                           ),
                           if (review.memberId == memberId)
                             GestureDetector(
@@ -180,7 +195,8 @@ class _ReviewListState extends State<ReviewList> {
                               },
                               child: Padding(
                                 padding: const EdgeInsets.only(left: 8.0),
-                                child: Icon(Icons.more_vert, size: 20, color: Colors.grey[600]),
+                                child: Icon(Icons.more_vert, size: 20,
+                                    color: Colors.grey[600]),
                               ),
                             ),
                         ],
@@ -194,7 +210,7 @@ class _ReviewListState extends State<ReviewList> {
                       ),
                       const SizedBox(height: 8),
                       // 변경된 이미지 처리
-                      _buildReviewImage(review.imageUrls, index),
+                      _buildReviewImage(review),
                       const SizedBox(height: 8),
                       Consumer<ReviewProvider>(
                         builder: (context, provider, _) {
@@ -206,7 +222,8 @@ class _ReviewListState extends State<ReviewList> {
                                 icon: Icon(
                                   Icons.thumb_up,
                                   size: 18,
-                                  color: currentReview.isLiked ? AppColors.primary : AppColors.lightGray,
+                                  color: currentReview.isLiked ? AppColors
+                                      .primary : AppColors.lightGray,
                                 ),
                                 onPressed: () {
                                   if (currentReview.memberId == memberId) {
@@ -221,12 +238,14 @@ class _ReviewListState extends State<ReviewList> {
                                   }
                                 },
                               ),
-                              Text('${currentReview.likes}', style: const TextStyle(fontSize: 12)),
+                              Text('${currentReview.likes}',
+                                  style: const TextStyle(fontSize: 12)),
                               IconButton(
                                 icon: Icon(
                                   Icons.thumb_down,
                                   size: 18,
-                                  color: currentReview.isDisliked ? AppColors.primary : AppColors.lightGray,
+                                  color: currentReview.isDisliked ? AppColors
+                                      .primary : AppColors.lightGray,
                                 ),
                                 onPressed: () {
                                   if (currentReview.memberId == memberId) {
@@ -241,7 +260,8 @@ class _ReviewListState extends State<ReviewList> {
                                   }
                                 },
                               ),
-                              Text('${currentReview.dislikes}', style: const TextStyle(fontSize: 12)),
+                              Text('${currentReview.dislikes}',
+                                  style: const TextStyle(fontSize: 12)),
                             ],
                           );
                         },
@@ -265,6 +285,7 @@ class _ReviewListState extends State<ReviewList> {
       ],
     );
   }
+
   ImageProvider _buildProfileImageProvider(String? imageUrl) {
     final baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://your-api.com';
     if (imageUrl == null || imageUrl.isEmpty) {
@@ -278,65 +299,76 @@ class _ReviewListState extends State<ReviewList> {
     }
   }
 
-  Widget _buildReviewImage(List<String>? imageUrls, int index) {
+  Widget _buildReviewImage(Review review) {
+    final imageUrls = review.imageUrls;
     if (imageUrls == null || imageUrls.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    final aspectRatio = 4 / 3; // ✅ 세로가 더 넉넉한 비율로 수정 (예: 4:3)
+    final aspectRatio = 4 / 3;
 
-    return AspectRatio(
-      aspectRatio: aspectRatio,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: imageUrls.length == 1
-            ? Image(
-          image: imageUrls.first.startsWith("http")
-              ? NetworkImage(imageUrls.first)
-              : AssetImage(imageUrls.first) as ImageProvider,
-          fit: BoxFit.cover,
-        )
-            : PageView.builder(
-          itemCount: imageUrls.length,
-          itemBuilder: (context, pageIndex) {
-            return Stack(
-              children: [
-                Image(
-                  image: imageUrls[pageIndex].startsWith("http")
-                      ? NetworkImage(imageUrls[pageIndex])
-                      : AssetImage(imageUrls[pageIndex]) as ImageProvider,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                ),
-                Positioned(
-                  bottom: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      "${pageIndex + 1}/${imageUrls.length}",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ReviewPhotoGallery(
+              review: review,
+              initialIndex: 0,
+            ),
+          ),
+        );
+      },
+      child: AspectRatio(
+        aspectRatio: aspectRatio,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: imageUrls.length == 1
+              ? Image(
+            image: imageUrls.first.startsWith("http")
+                ? NetworkImage(imageUrls.first)
+                : AssetImage(imageUrls.first) as ImageProvider,
+            fit: BoxFit.cover,
+          )
+              : Stack(
+            children: [
+              PageView.builder(
+                itemCount: imageUrls.length,
+                itemBuilder: (context, pageIndex) {
+                  return Image(
+                    image: imageUrls[pageIndex].startsWith("http")
+                        ? NetworkImage(imageUrls[pageIndex])
+                        : AssetImage(imageUrls[pageIndex]) as ImageProvider,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                  );
+                },
+              ),
+              Positioned(
+                bottom: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    "1/${imageUrls.length}",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-              ],
-            );
-          },
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
-
-
   String _formatDate(DateTime date) {
     return "${date.month}.${date.day}";
   }
