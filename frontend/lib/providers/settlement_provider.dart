@@ -3,8 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/settlement/settlement_model.dart';
 import '../models/settlement/settlement_request_model.dart';
+import '../models/settlement/settlement_situation_model.dart';
+import '../models/settlement/settlement_transaction_response.dart';
 import '../models/settlement/update_participant_model.dart';
 import '../services/api/settlement_api.dart';
+import '../models/settlement/transaction_types.dart';
 
 class SettlementProvider with ChangeNotifier {
   final SettlementApi _settlementApi = SettlementApi();
@@ -160,10 +163,88 @@ class SettlementProvider with ChangeNotifier {
     switch (status) {
       case SettlementStatus.PENDING:
         return '진행 중';
+      case SettlementStatus.IN_PROGRESS:
+        return '정산 요청됨';
       case SettlementStatus.COMPLETED:
         return '완료됨';
-      case SettlementStatus.CANCELLED:
+      case SettlementStatus.CANCELED:
         return '취소됨';
+      default:
+        return '알 수 없음';
+    }
+  }
+
+  // 정산 상황 캐시
+  Map<int, List<SettlementSituationResponse>> _settlementSituationCache = {};
+
+  // 정산 상황 Getter
+  List<SettlementSituationResponse>? getSettlementSituationForPlan(
+    int planId,
+  ) => _settlementSituationCache[planId];
+
+  // 정산 상황 조회
+  Future<List<SettlementSituationResponse>?> fetchSettlementSituation(
+    int planId,
+  ) async {
+    setLoading(true);
+    try {
+      final situations = await _settlementApi.getSettlementSituation(planId);
+
+      // 캐시 업데이트
+      _settlementSituationCache[planId] = situations;
+      _error = null;
+      notifyListeners();
+      return situations;
+    } catch (e) {
+      _error = '정산 현황을 불러오는데 실패했습니다: $e';
+      debugPrint(_error);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // 정산 거래 완료 처리
+  Future<bool> completeTransaction(int planId, int transactionId) async {
+    setLoading(true);
+    try {
+      final result = await _settlementApi.completeTransaction(
+        planId,
+        transactionId,
+      );
+
+      // 정산 상황 다시 로드
+      await fetchSettlementSituation(planId);
+
+      // 결과가 COMPLETED면 정산이 완료된 것이므로 결제 상세 정보도 갱신
+      if (result == "COMPLETED") {
+        await fetchSettlementDetail(planId);
+      }
+
+      _error = null;
+      return true;
+    } catch (e) {
+      _error = '정산 거래 완료 처리에 실패했습니다: $e';
+      debugPrint(_error);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // 정산 상태 텍스트 가져오기
+  String getTransactionStatusText(TransactionStatus status) {
+    switch (status) {
+      case TransactionStatus.PENDING:
+        return '대기 중';
+      case TransactionStatus.COMPLETED:
+        return '완료됨';
+      case TransactionStatus.FAILED:
+        return '실패함';
+      case TransactionStatus.CANCELED:
+        return '취소됨';
+      default:
+        return '알 수 없음';
     }
   }
 }
