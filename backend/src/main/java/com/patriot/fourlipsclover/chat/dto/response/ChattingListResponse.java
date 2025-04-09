@@ -15,4 +15,8 @@ public class ChattingListResponse {
     private String name;
     private int participantNum;
 
+    // 해당 채팅이 소속된 matchId, groupId
+    private Integer matchId;
+    private Integer groupId;
+
 }
