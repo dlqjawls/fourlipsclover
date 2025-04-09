@@ -41,8 +41,8 @@ public class ChatMessage {
     @Column(name = "message_type", nullable = false)
     private MessageType messageType;
 
-    // 이미지 URL 목록
-    @ElementCollection
+    // 이미지 URL 목록을 즉시 로딩하도록 EAGER 설정
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "chat_message_images", joinColumns = @JoinColumn(name = "message_id"))
     @Column(name = "image_url")
     private List<String> imageUrls;
