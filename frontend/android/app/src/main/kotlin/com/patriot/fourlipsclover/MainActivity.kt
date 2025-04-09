@@ -40,7 +40,8 @@ class MainActivity : FlutterActivity() {
         // 메서드 채널 설정
         try {
             Log.d("KakaoMap", "메서드 채널 설정 시도: $CHANNEL")
-            MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+            val methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger , CHANNEL)
+            methodChannel.setMethodCallHandler { call, result ->
                 Log.d("KakaoMap", "메서드 호출: ${call.method}")
                 when (call.method) {
                     // 지도 초기화
@@ -240,6 +241,10 @@ class MainActivity : FlutterActivity() {
                     }
                 }
             }
+
+            //KakaoMapPlugin에 메서드 채널 전달
+            kakaoMapPlugin.setMethodChannel(methodChannel)
+
             Log.d("KakaoMap", "메서드 채널 설정 성공")
         } catch (e: Exception) {
             Log.e("KakaoMap", "메서드 채널 설정 실패: ${e.message}")
