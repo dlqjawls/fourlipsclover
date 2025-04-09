@@ -19,8 +19,9 @@ class RestaurantResponse {
   final List<String>? menu;
   final List<Map<String, dynamic>>? tags;
   final Map<String, dynamic>? avgAmount;
-  final int? likeSentiment; 
-  final int? dislikeSentiment; 
+  final int? likeSentiment;
+  final int? dislikeSentiment;
+  final double? score;
   double? distance;
 
   RestaurantResponse({
@@ -40,9 +41,10 @@ class RestaurantResponse {
     this.distance,
     this.tags,
     this.avgAmount,
-    this.menu,   
-    this.likeSentiment,     
-    this.dislikeSentiment,  
+    this.menu,
+    this.likeSentiment,
+    this.dislikeSentiment,
+    this.score,
   });
 
   factory RestaurantResponse.fromJson(Map<String, dynamic> json) {
@@ -59,18 +61,22 @@ class RestaurantResponse {
       x: json['x'],
       y: json['y'],
       menu: (json['menu'] as List?)?.map((item) => item.toString()).toList(),
-      openingHours: json['openingHours'] != null
-          ? Map<String, String>.from(jsonDecode(json['openingHours']))
-          : null,
-      restaurantImages: (json['restaurantImages'] as List<dynamic>?)
-          ?.map((img) => img.toString())
-          .toList(),
+      openingHours:
+          json['openingHours'] != null
+              ? Map<String, String>.from(jsonDecode(json['openingHours']))
+              : null,
+      restaurantImages:
+          (json['restaurantImages'] as List<dynamic>?)
+              ?.map((img) => img.toString())
+              .toList(),
       tags: (json['tags'] as List<dynamic>?)?.cast<Map<String, dynamic>>(),
-      avgAmount: json['avgAmount'] != null
-          ? Map<String, dynamic>.from(jsonDecode(json['avgAmount']))
-          : null,
-      likeSentiment: json['likeSentiment'], 
-      dislikeSentiment: json['dislikeSentiment'], 
+      avgAmount:
+          json['avgAmount'] != null
+              ? Map<String, dynamic>.from(jsonDecode(json['avgAmount']))
+              : null,
+      likeSentiment: json['likeSentiment'],
+      dislikeSentiment: json['dislikeSentiment'],
+      score: json['score'],
     );
   }
 
@@ -93,6 +99,7 @@ class RestaurantResponse {
       'tags': tags,
       'avgAmount': avgAmount,
       'menu': menu,
+      'score': score,
     };
   }
 }
@@ -185,28 +192,26 @@ class ReviewResponse {
     required this.dislikedCount,
     this.userLiked,
     this.userDisliked,
-
   });
 
   factory ReviewResponse.fromJson(Map<String, dynamic> json) {
     return ReviewResponse(
       reviewId: json['reviewId'],
-      reviewer: json['reviewer'] != null
-          ? ReviewMemberResponse.fromJson(json['reviewer'])
-          : null,
-      restaurant: json['restaurant'] != null
-          ? ReviewRestaurantResponse.fromJson(json['restaurant'])
-          : null,
+      reviewer:
+          json['reviewer'] != null
+              ? ReviewMemberResponse.fromJson(json['reviewer'])
+              : null,
+      restaurant:
+          json['restaurant'] != null
+              ? ReviewRestaurantResponse.fromJson(json['restaurant'])
+              : null,
       content: json['content'],
-      visitedAt: json['visitedAt'] != null
-          ? DateTime.parse(json['visitedAt'])
-          : null,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : null,
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
-          : null,
+      visitedAt:
+          json['visitedAt'] != null ? DateTime.parse(json['visitedAt']) : null,
+      createdAt:
+          json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
+      updatedAt:
+          json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
       reviewImageUrls: List<String>.from(json['reviewImageUrls'] ?? []),
       likedCount: json['likedCount'] ?? 0,
       dislikedCount: json['dislikedCount'] ?? 0,
@@ -218,7 +223,9 @@ class ReviewResponse {
   String get formattedVisitedAt =>
       visitedAt == null ? '' : DateFormat('yyyy.MM.dd').format(visitedAt!);
   String get formattedCreatedAt =>
-      createdAt == null ? '' : DateFormat('yyyy.MM.dd HH:mm').format(createdAt!);
+      createdAt == null
+          ? ''
+          : DateFormat('yyyy.MM.dd HH:mm').format(createdAt!);
 }
 
 /// 리뷰 생성 요청 모델
@@ -250,16 +257,10 @@ class ReviewUpdate {
   final String content;
   final DateTime visitedAt;
 
-  ReviewUpdate({
-    required this.content,
-    required this.visitedAt,
-  });
+  ReviewUpdate({required this.content, required this.visitedAt});
 
   Map<String, dynamic> toJson() {
-    return {
-      'content': content,
-      'visitedAt': visitedAt.toIso8601String(),
-    };
+    return {'content': content, 'visitedAt': visitedAt.toIso8601String()};
   }
 }
 
@@ -268,10 +269,7 @@ class ReviewDeleteResponse {
   final String message;
   final int? reviewId;
 
-  ReviewDeleteResponse({
-    required this.message,
-    this.reviewId,
-  });
+  ReviewDeleteResponse({required this.message, this.reviewId});
 
   factory ReviewDeleteResponse.fromJson(Map<String, dynamic> json) {
     return ReviewDeleteResponse(
