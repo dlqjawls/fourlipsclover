@@ -72,4 +72,6 @@ public class ReviewMapper {
 				.reviewImageUrls(imageUrls)
 				.build();
 	}
+
+
 }
