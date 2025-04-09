@@ -171,10 +171,10 @@ public class PlanService {
         Plan plan = planRepository.findById(planId)
                 .orElseThrow(() -> new PlanNotFoundException("계획을 찾을 수 없습니다. id=" + planId));
 
-        boolean isMember = planMemberRepository.existsByPlan_PlanIdAndMember_MemberId(planId, currentMemberId);
-        if (!isMember) {
-            throw new NotGroupMemberException("계획에 참여한 회원만 일정을 추가할 수 있습니다.");
-        }
+//        boolean isMember = planMemberRepository.existsByPlan_PlanIdAndMember_MemberId(planId, currentMemberId);
+//        if (!isMember) {
+//            throw new NotGroupMemberException("계획에 참여한 회원만 일정을 추가할 수 있습니다.");
+//        }
 
         Restaurant restaurant = restaurantJpaRepository.findByRestaurantId(request.getRestaurantId());
 
@@ -194,11 +194,11 @@ public class PlanService {
         Plan plan = planRepository.findById(planId)
                 .orElseThrow(() -> new PlanNotFoundException("계획을 찾을 수 없습니다. id=" + planId));
 
-        boolean isGroupMember = groupMemberRepository.existsByGroup_GroupIdAndMember_MemberId(
-                plan.getGroup().getGroupId(), currentMemberId);
-        if (!isGroupMember) {
-            throw new NotGroupMemberException("그룹에 소속된 회원만 일정을 조회할 수 있습니다.");
-        }
+//        boolean isGroupMember = groupMemberRepository.existsByGroup_GroupIdAndMember_MemberId(
+//                plan.getGroup().getGroupId(), currentMemberId);
+//        if (!isGroupMember) {
+//            throw new NotGroupMemberException("그룹에 소속된 회원만 일정을 조회할 수 있습니다.");
+//        }
 
         List<PlanSchedule> schedules = planScheduleRepository.findByPlan(plan);
 
@@ -217,13 +217,14 @@ public class PlanService {
         PlanSchedule schedule = planScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new PlanNotFoundException("일정을 찾을 수 없습니다. id=" + scheduleId));
 
-        Plan plan = schedule.getPlan();
-        boolean isGroupMember = groupMemberRepository.existsByGroup_GroupIdAndMember_MemberId(
-                plan.getGroup().getGroupId(), currentMemberId);
-        if (!isGroupMember) {
-            throw new NotGroupMemberException("그룹에 소속된 회원만 일정을 조회할 수 있습니다.");
-        }
+//        boolean isGroupMember = groupMemberRepository.existsByGroup_GroupIdAndMember_MemberId(
+//                plan.getGroup().getGroupId(), currentMemberId);
+//        if (!isGroupMember) {
+//            throw new NotGroupMemberException("그룹에 소속된 회원만 일정을 조회할 수 있습니다.");
+//        }
 
+        Plan plan = schedule.getPlan();
+        
         PlanScheduleDetailResponse response = new PlanScheduleDetailResponse();
         response.setPlanId(plan.getPlanId());
         response.setPlanScheduleId(scheduleId);
@@ -240,11 +241,11 @@ public class PlanService {
         PlanSchedule schedule = planScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new PlanNotFoundException("일정을 찾을 수 없습니다. id=" + scheduleId));
 
-        Plan plan = schedule.getPlan();
-        boolean isMember = planMemberRepository.existsByPlan_PlanIdAndMember_MemberId(plan.getPlanId(), currentMemberId);
-        if (!isMember) {
-            throw new NotGroupMemberException("계획에 참여한 회원만 일정을 수정할 수 있습니다.");
-        }
+//        Plan plan = schedule.getPlan();
+//        boolean isMember = planMemberRepository.existsByPlan_PlanIdAndMember_MemberId(plan.getPlanId(), currentMemberId);
+//        if (!isMember) {
+//            throw new NotGroupMemberException("계획에 참여한 회원만 일정을 수정할 수 있습니다.");
+//        }
 
         boolean isRestaurant = restaurantJpaRepository.existsByRestaurantId(request.getRestaurantId());
         if (!isRestaurant) {
@@ -272,11 +273,11 @@ public class PlanService {
         PlanSchedule schedule = planScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new PlanNotFoundException("일정을 찾을 수 없습니다. id=" + scheduleId));
 
-        Plan plan = schedule.getPlan();
-        boolean isMember = planMemberRepository.existsByPlan_PlanIdAndMember_MemberId(plan.getPlanId(), currentMemberId);
-        if (!isMember) {
-            throw new NotPlanMemberException("계획에 참여한 회원만 일정을 삭제할 수 있습니다.");
-        }
+//        Plan plan = schedule.getPlan();
+//        boolean isMember = planMemberRepository.existsByPlan_PlanIdAndMember_MemberId(plan.getPlanId(), currentMemberId);
+//        if (!isMember) {
+//            throw new NotPlanMemberException("계획에 참여한 회원만 일정을 삭제할 수 있습니다.");
+//        }
 
         planScheduleRepository.delete(schedule);
     }
