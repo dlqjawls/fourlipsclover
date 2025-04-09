@@ -1,11 +1,13 @@
 package com.patriot.fourlipsclover.restaurant.dto.response;
 
+import com.patriot.fourlipsclover.locals.dto.response.LocalCertificationResponse;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.cglib.core.Local;
 
 @Builder
 @NoArgsConstructor
@@ -36,4 +38,6 @@ public class ReviewResponse {
 	private boolean userLiked;
 
 	private boolean userDisliked;
+
+	private LocalCertificationResponse localCertificationResponse;
 }

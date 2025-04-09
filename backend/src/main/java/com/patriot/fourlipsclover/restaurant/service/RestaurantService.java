@@ -9,6 +9,8 @@ import com.patriot.fourlipsclover.exception.ReviewNotFoundException;
 import com.patriot.fourlipsclover.exception.UnauthorizedAccessException;
 import com.patriot.fourlipsclover.exception.UserNotFoundException;
 import com.patriot.fourlipsclover.image.service.ReviewImageService;
+import com.patriot.fourlipsclover.locals.mapper.LocalCertificationMapper;
+import com.patriot.fourlipsclover.locals.repository.LocalCertificationRepository;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberJpaRepository;
 import com.patriot.fourlipsclover.payment.entity.DataSource;
@@ -75,6 +77,8 @@ public class RestaurantService {
 	private final WebClient webClient;
 	private final ReviewSentimentRepository reviewSentimentRepository;
 	private final VisitPaymentRepository visitPaymentRepository;
+	private final LocalCertificationRepository localCertificationRepository;
+	private final LocalCertificationMapper localCertificationMapper;
 	@Value("${model.server.uri}")
 	private String MODEL_SERVER_URI;
 
@@ -100,7 +104,8 @@ public class RestaurantService {
 				.userId(reviewer.getMemberId())
 				.amount(reviewCreate.getAmount())
 				.visitedPersonnel(reviewCreate.getVisitedPersonnel())
-				.paidAt(reviewCreate.getPaidAt() != null ? reviewCreate.getPaidAt() : LocalDateTime.now())
+				.paidAt(reviewCreate.getPaidAt() != null ? reviewCreate.getPaidAt()
+						: LocalDateTime.now())
 				.dataSource(DataSource.member)
 				.createdAt(LocalDateTime.now())
 				.build();
@@ -110,6 +115,9 @@ public class RestaurantService {
 		String reviewTextSentiment = analyzeSentiment(review);
 		List<String> imageUrls = reviewImageService.uploadFiles(review, images);
 		ReviewResponse response = reviewMapper.toReviewImageDto(review, imageUrls);
+		localCertificationRepository.findByMember(reviewer).ifPresent(lc -> {
+			response.setLocalCertificationResponse(localCertificationMapper.toDto(lc));
+		});
 		response.setLikedCount(0);
 		response.setDislikedCount(0);
 		return response;
@@ -143,6 +151,7 @@ public class RestaurantService {
 	public ReviewResponse findById(Integer reviewId) {
 		Review review = reviewRepository.findById(reviewId)
 				.orElseThrow(() -> new ReviewNotFoundException(reviewId));
+		Member reviewer = review.getMember();
 		List<String> imageUrls = reviewImageService.getImageUrlsByReviewId(reviewId);
 		ReviewResponse response = reviewMapper.toReviewImageDto(review, imageUrls);
 		Long likedCount = reviewLikeJpaRepository.countByIdReviewIdAndLikeStatus(reviewId,
@@ -163,13 +172,17 @@ public class RestaurantService {
 			response.setUserLiked(false);
 			response.setUserDisliked(false);
 		}
+		localCertificationRepository.findByMember(reviewer).ifPresent(lc -> {
+			response.setLocalCertificationResponse(localCertificationMapper.toDto(lc));
+		});
 		return response;
 	}
 
 	private Member loadCurrentMember() {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (authentication == null || !authentication.isAuthenticated()) {
-			throw new UnauthorizedAccessException("인증되지 않은 사용자입니다.");
+		if (authentication == null || !authentication.isAuthenticated() ||
+				"anonymousUser".equals(authentication.getPrincipal())) {
+			return null;
 		}
 		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 		return userDetails.getMember();
@@ -186,6 +199,7 @@ public class RestaurantService {
 				.map(review -> {
 					Integer reviewId = review.getReviewId();
 					List<String> imageUrls = reviewImageService.getImageUrlsByReviewId(reviewId);
+					Member reviewer = review.getMember();
 					ReviewResponse response = reviewMapper.toReviewImageDto(review, imageUrls);
 
 					Long likedCount = reviewLikeJpaRepository.countByIdReviewIdAndLikeStatus(
@@ -206,6 +220,9 @@ public class RestaurantService {
 						response.setUserLiked(false);
 						response.setUserDisliked(false);
 					}
+					localCertificationRepository.findByMember(reviewer).ifPresent(lc -> {
+						response.setLocalCertificationResponse(localCertificationMapper.toDto(lc));
+					});
 					return response;
 				})
 				.toList();
@@ -261,60 +278,6 @@ public class RestaurantService {
 		return new ReviewDeleteResponse("리뷰를 삭제하였습니다.", reviewId);
 	}
 
-//	@Transactional(readOnly = true)
-//	public RestaurantResponse findRestaurantByKakaoPlaceId(String kakaoPlaceId) {
-//		if (Objects.isNull(kakaoPlaceId) || kakaoPlaceId.isBlank()) {
-//			throw new IllegalArgumentException("올바른 kakaoPlaceId 값을 입력하세요.");
-//		}
-//		Restaurant restaurant = restaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
-//				.orElseThrow(() -> new InvalidDataException("존재 하지 않는 식당입니다."));
-//
-//		RestaurantResponse restaurantResponse = restaurantMapper.toDto(restaurant);
-//
-//		List<RestaurantTagResponse> restaurantTagResponses = tagService.findRestaurantTagByRestaurantId(
-//				kakaoPlaceId);
-//		restaurantResponse.setTags(restaurantTagResponses);
-//
-//		// 식당 이미지 조회 및 설정
-//		List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(restaurant);
-//		restaurantResponse.setRestaurantImages(restaurantMapper.toRestaurantImageDtoList(restaurantImages));
-//
-//		// 가격 정보 실시간 계산
-//		String avgAmountJson = calculateAvgAmountJson(restaurant.getRestaurantId());
-//		restaurantResponse.setAvgAmount(avgAmountJson);
-//
-//		return restaurantResponse;
-//	}
-//
-//	@Transactional(readOnly = true)
-//	public List<RestaurantResponse> findNearbyRestaurants(Double latitude, Double longitude,
-//			Integer radius) {
-//		List<RestaurantResponse> response = new ArrayList<>();
-//		List<Restaurant> nearbyRestaurants = restaurantRepository.findNearbyRestaurants(
-//				latitude, longitude, radius);
-//
-//		for (Restaurant data : nearbyRestaurants) {
-//			RestaurantResponse restaurantResponse = restaurantMapper.toDto(data);
-//
-//			// 식당 이미지 조회 및 설정
-//			List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(
-//					data);
-//			restaurantResponse.setRestaurantImages(
-//					restaurantMapper.toRestaurantImageDtoList(restaurantImages));
-//
-//			// 태그 설정
-//			List<RestaurantTagResponse> tags = tagService.findRestaurantTagByRestaurantId(
-//					data.getKakaoPlaceId());
-//			restaurantResponse.setTags(tags);
-//
-//			// 가격 정보 실시간 계산
-//			String avgAmountJson = calculateAvgAmountJson(data.getRestaurantId());
-//			restaurantResponse.setAvgAmount(avgAmountJson);
-//
-//			response.add(restaurantResponse);
-//		}
-//		return response;
-//	}
 
 	@Transactional
 	public String like(Integer reviewId, ReviewLikeCreate request) {
