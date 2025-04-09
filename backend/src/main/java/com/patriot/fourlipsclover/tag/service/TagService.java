@@ -11,6 +11,7 @@ import com.patriot.fourlipsclover.member.entity.MemberReviewTag;
 import com.patriot.fourlipsclover.payment.entity.VisitPayment;
 import com.patriot.fourlipsclover.payment.repository.VisitPaymentRepository;
 import com.patriot.fourlipsclover.restaurant.document.RestaurantDocument;
+import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantRankingResponse;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
 import com.patriot.fourlipsclover.restaurant.entity.RestaurantImage;
 import com.patriot.fourlipsclover.restaurant.entity.RestaurantTag;
@@ -19,6 +20,7 @@ import com.patriot.fourlipsclover.restaurant.entity.SentimentStatus;
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantImageRepository;
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewSentimentRepository;
+import com.patriot.fourlipsclover.restaurant.service.RestaurantRankingService;
 import com.patriot.fourlipsclover.restaurant.service.RestaurantService;
 import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
 import com.patriot.fourlipsclover.tag.dto.response.TagInfo;
@@ -59,6 +61,7 @@ public class TagService {
 	private final ReviewSentimentRepository reviewSentimentRepository;
 	private final RestaurantImageRepository restaurantImageRepository;
 	private final VisitPaymentRepository visitPaymentRepository;
+	private final RestaurantRankingService restaurantRankingService;
 
 	@Value("${model.server.uri}")
 	private String MODEL_SERVER_URI;
@@ -197,6 +200,16 @@ public class TagService {
 		List<Restaurant> restaurants = restaurantJpaRepository.findAll();
 		int count = 0;
 
+		// 모든 식당의 랭킹 정보 가져오기 (점수만 사용)
+		List<RestaurantRankingResponse> rankings = restaurantRankingService.calculateRankings();
+
+		// 식당 ID를 키로 한 맵 생성하여 빠른 검색 가능하게 함
+		Map<Integer, Double> scoreMap = rankings.stream()
+				.collect(Collectors.toMap(
+						RestaurantRankingResponse::getRestaurantId,
+						RestaurantRankingResponse::getScore
+				));
+
 		for (Restaurant restaurant : restaurants) {
 			List<RestaurantTag> tags = restaurantTagRepository.findByRestaurant(restaurant);
 
@@ -218,9 +231,12 @@ public class TagService {
 			List<String> restaurantImages = restaurantImageRepository.findByRestaurant(restaurant).stream().map(
 					RestaurantImage::getUrl).toList();
 
-
 			// 가격 정보 실시간 계산
 			String avgAmountJson = calculateAvgAmountJson(restaurant.getRestaurantId());
+
+			// 랭킹 점수 조회
+			Double score = scoreMap.get(restaurant.getRestaurantId());
+
 			RestaurantDocument restaurantDocument = RestaurantDocument.builder()
 					.id(restaurant.getKakaoPlaceId())
 					.restaurantId(restaurant.getRestaurantId())
@@ -234,7 +250,9 @@ public class TagService {
 					.location(new GeoPoint(restaurant.getY(), restaurant.getX()))
 					.tags(tagDataList)
 					.restaurantImages(restaurantImages)
+					.phone(restaurant.getPhone())
 					.avgAmount(avgAmountJson)
+					.score(score)
 					.build();
 
 			try {
@@ -256,7 +274,7 @@ public class TagService {
 		List<VisitPayment> payments = visitPaymentRepository.findByRestaurantId_RestaurantId(restaurantId);
 
 		if (payments.isEmpty()) {
-			return "{\"avg\": \"정보 없음\"}";
+			return null;
 		}
 
 		Map<String, Integer> avgAmountInfo = new LinkedHashMap<>();
@@ -273,7 +291,7 @@ public class TagService {
 		}
 
 		if (avgAmountInfo.isEmpty()) {
-			return "{\"avg\": \"정보 없음\"}";
+			return null;
 		}
 
 		// 가장 많은 분포의 범위 찾기
@@ -296,7 +314,7 @@ public class TagService {
 			// JSON 문자열로 변환
 			return new ObjectMapper().writeValueAsString(result);
 		} catch (Exception e) {
-			return "{\"avg\": \"정보 없음\"}";
+			return null;
 		}
 	}
 

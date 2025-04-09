@@ -31,8 +31,8 @@ public class RestaurantDocument {
 
 	@Field(type = FieldType.Text)
 	private String avgAmount;
-
-
+	@Field(type = FieldType.Keyword)
+	private String phone;
 	@Field(type = FieldType.Text)
 	private String name;
 	@Field(type = FieldType.Text, analyzer = "nori")
@@ -43,6 +43,9 @@ public class RestaurantDocument {
 	private List<TagData> tags;
 	@GeoPointField
 	private GeoPoint location;
+
+	@Field(type = FieldType.Double)
+	private Double score;
 
 	@Field(type = FieldType.Keyword)
 	private String kakaoPlaceId;
