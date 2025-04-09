@@ -4,6 +4,7 @@ import com.patriot.fourlipsclover.chat.entity.MessageType;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Getter
@@ -20,8 +21,7 @@ public class ChatMessageResponse {
     private String profileUrl;
     private String messageContent;
     private MessageType messageType;
+    private List<String> imageUrls;  // 이미지 메시지의 경우 이미지 URL 목록
     private LocalDateTime createdAt;
 
-    public ChatMessageResponse(Long messageId, Long memberId, String nickname, String messageContent, MessageType messageType, LocalDateTime createdAt) {
-    }
 }
