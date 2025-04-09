@@ -15,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.async.DeferredResult;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -59,12 +60,21 @@ public class ChatController {
         return ResponseEntity.ok(chatRoomResponse);
     }
 
-    // 메세지 보내기
+    // 텍스트 메세지 전송
     @PostMapping("/send/{chatRoomId}")
     public ResponseEntity<ChatMessageResponse> sendMessage(@PathVariable Integer chatRoomId,
                                                            @RequestBody ChatMessageRequest request) {
         ChatMessageResponse message = chatService.sendMessage(chatRoomId, request.getSenderId(), request.getMessageContent());
         return ResponseEntity.ok(message);
+    }
+
+    // 이미지 메시지 전송
+    @PostMapping("/send/{chatRoomId}/images")
+    public ChatMessageResponse sendImageMessage(@PathVariable Integer chatRoomId,
+                                                @RequestParam String messageContent,
+                                                @RequestParam List<MultipartFile> images) throws Exception {
+        long currentMemberId = getCurrentMemberId();
+        return chatService.sendImageMessage(chatRoomId, currentMemberId, messageContent, images);
     }
 
     // 롱풀링 방식으로 채팅 메시지 가져오기
@@ -102,6 +112,13 @@ public class ChatController {
 
         deferredResult.onTimeout(() -> deferredResult.setResult(ResponseEntity.ok(new ArrayList<>())));
         return deferredResult;
+    }
+
+    @DeleteMapping("/{chatRoomId}/leave")
+    public ResponseEntity<Void> leaveChatRoom(@PathVariable Integer chatRoomId) {
+        long currentMemberId = getCurrentMemberId();  // 현재 로그인된 사용자 ID
+        chatService.leaveChatRoom(chatRoomId, currentMemberId);  // 채팅방 나가기
+        return ResponseEntity.ok().build();
     }
 
 }

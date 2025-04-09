@@ -19,6 +19,8 @@ class RestaurantResponse {
   final List<String>? menu;
   final List<Map<String, dynamic>>? tags;
   final Map<String, dynamic>? avgAmount;
+  final int? likeSentiment; 
+  final int? dislikeSentiment; 
   double? distance;
 
   RestaurantResponse({
@@ -38,8 +40,9 @@ class RestaurantResponse {
     this.distance,
     this.tags,
     this.avgAmount,
-    this.menu,
-
+    this.menu,   
+    this.likeSentiment,     
+    this.dislikeSentiment,  
   });
 
   factory RestaurantResponse.fromJson(Map<String, dynamic> json) {
@@ -66,6 +69,8 @@ class RestaurantResponse {
       avgAmount: json['avgAmount'] != null
           ? Map<String, dynamic>.from(jsonDecode(json['avgAmount']))
           : null,
+      likeSentiment: json['likeSentiment'], 
+      dislikeSentiment: json['dislikeSentiment'], 
     );
   }
 

@@ -6,6 +6,7 @@ import '../ai/ai_plan.dart';
 import '../user/user_screen.dart';
 import '../group_plan/group_screen.dart';
 import '../matching/matching.dart';
+import '../chat/chat_list_screen.dart';
 
 class BaseScreen extends StatefulWidget {
   const BaseScreen({Key? key}) : super(key: key);
@@ -17,7 +18,7 @@ class BaseScreen extends StatefulWidget {
 class _BaseScreenState extends State<BaseScreen> {
   int _selectedIndex = 2;
   String restaurantId = "1808376805";
-  
+
   // 페이지 상태 저장을 위한 PageStorageBucket 추가
   final PageStorageBucket _bucket = PageStorageBucket();
 
@@ -26,7 +27,7 @@ class _BaseScreenState extends State<BaseScreen> {
     const PageStorageKey('groupScreen'),
     const PageStorageKey('matchingScreen'),
     const PageStorageKey('homeScreen'),
-    const PageStorageKey('aiPlanScreen'),
+    const PageStorageKey('chatScreen'),
     const PageStorageKey('userScreen'),
   ];
 
@@ -40,7 +41,7 @@ class _BaseScreenState extends State<BaseScreen> {
       GroupScreen(key: _screenKeys[0]),
       MatchingScreen(key: _screenKeys[1]),
       HomeScreen(key: _screenKeys[2]),
-      AIPlanScreen(key: _screenKeys[3]),
+      ChatListScreen(key: _screenKeys[3]),
       UserScreen(key: _screenKeys[4]),
     ]);
   }
@@ -56,10 +57,7 @@ class _BaseScreenState extends State<BaseScreen> {
     return Scaffold(
       body: PageStorage(
         bucket: _bucket,
-        child: IndexedStack(
-          index: _selectedIndex, 
-          children: _screens,
-        ),
+        child: IndexedStack(index: _selectedIndex, children: _screens),
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _selectedIndex,

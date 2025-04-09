@@ -5,9 +5,11 @@ class BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
 
-  const BottomNavBar(
-      {Key? key, required this.currentIndex, required this.onTap})
-      : super(key: key);
+  const BottomNavBar({
+    Key? key,
+    required this.currentIndex,
+    required this.onTap,
+  }) : super(key: key);
 
   @override
   @override
@@ -15,30 +17,32 @@ class BottomNavBar extends StatelessWidget {
     return Stack(
       children: [
         if (currentIndex == 2)
-          Positioned.fill(
-            child: CustomPaint(
-              painter: RoundedBorderPainter(),
-            ),
-          ),
-        SafeArea( // ✅ SafeArea 열고
+          Positioned.fill(child: CustomPaint(painter: RoundedBorderPainter())),
+        SafeArea(
+          // ✅ SafeArea 열고
           top: false,
           child: Container(
             height: 75,
             decoration: BoxDecoration(
               color: Colors.white,
-              border: currentIndex == 2
-                  ? null
-                  : const Border(
-                top: BorderSide(color: Color(0xFFF3F3F3), width: 0.5),
-              ),
+              border:
+                  currentIndex == 2
+                      ? null
+                      : const Border(
+                        top: BorderSide(color: Color(0xFFF3F3F3), width: 0.5),
+                      ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround, // 여긴 유지해도 됨
               children: [
                 Flexible(child: _buildNavItem(0, 'assets/icons/group', '그룹')),
-                Flexible(child: _buildNavItem(1, 'assets/icons/matching', '매칭')),
-                Flexible(child: _buildAiItem(2, 'assets/icons/recommendation', '맛집')),
-                Flexible(child: _buildNavItem(3, 'assets/icons/daily_log', '스토리')),
+                Flexible(
+                  child: _buildNavItem(1, 'assets/icons/matching', '매칭'),
+                ),
+                Flexible(
+                  child: _buildAiItem(2, 'assets/icons/recommendation', '맛집'),
+                ),
+                Flexible(child: _buildNavItem(3, 'assets/icons/chat', '채팅')),
                 Flexible(child: _buildNavItem(4, 'assets/icons/mypage', '마이')),
               ],
             ),
@@ -81,10 +85,7 @@ class BottomNavBar extends StatelessWidget {
               child: Text(
                 label,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: AppColors.darkGray,
-                ),
+                style: const TextStyle(fontSize: 10, color: AppColors.darkGray),
               ),
             ),
             const SizedBox(height: 16),
@@ -94,10 +95,8 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 
-
-
   // AI 추천 버튼 (맛집 버튼)
-// ✅ 교체: 자연스러운 효과 적용된 AI 추천 버튼
+  // ✅ 교체: 자연스러운 효과 적용된 AI 추천 버튼
   Widget _buildAiItem(int index, String assetPath, String label) {
     return GestureDetector(
       onTap: () => onTap(index),
@@ -121,17 +120,18 @@ class BottomNavBar extends StatelessWidget {
                   transitionBuilder: (child, animation) {
                     return ScaleTransition(scale: animation, child: child);
                   },
-                  child: currentIndex == index
-                      ? Container(
-                    key: const ValueKey('green'),
-                    width: 50,
-                    height: 50,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                  )
-                      : const SizedBox.shrink(key: ValueKey('none')),
+                  child:
+                      currentIndex == index
+                          ? Container(
+                            key: const ValueKey('green'),
+                            width: 50,
+                            height: 50,
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          )
+                          : const SizedBox.shrink(key: ValueKey('none')),
                 ),
               ),
 
@@ -147,21 +147,22 @@ class BottomNavBar extends StatelessWidget {
                   transitionBuilder: (child, animation) {
                     return ScaleTransition(scale: animation, child: child);
                   },
-                  child: currentIndex == index
-                      ? Image.asset(
-                    '${assetPath}_selected.png',
-                    key: const ValueKey('selected'),
-                    width: 24,
-                    height: 24,
-                    color: Colors.black,
-                  )
-                      : Image.asset(
-                    '${assetPath}_unselected.png',
-                    key: const ValueKey('unselected'),
-                    width: 24,
-                    height: 24,
-                    color: AppColors.darkGray,
-                  ),
+                  child:
+                      currentIndex == index
+                          ? Image.asset(
+                            '${assetPath}_selected.png',
+                            key: const ValueKey('selected'),
+                            width: 24,
+                            height: 24,
+                            color: Colors.black,
+                          )
+                          : Image.asset(
+                            '${assetPath}_unselected.png',
+                            key: const ValueKey('unselected'),
+                            width: 24,
+                            height: 24,
+                            color: AppColors.darkGray,
+                          ),
                 ),
               ),
 
@@ -171,10 +172,7 @@ class BottomNavBar extends StatelessWidget {
                   top: 29,
                   child: Text(
                     label,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: AppColors.darkGray,
-                    ),
+                    style: TextStyle(fontSize: 10, color: AppColors.darkGray),
                   ),
                 ),
             ],
@@ -189,14 +187,16 @@ class BottomNavBar extends StatelessWidget {
 class RoundedBorderPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
+    final paint =
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.fill;
 
-    final borderPaint = Paint()
-      ..color = Color(0xFFF3F3F3)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
+    final borderPaint =
+        Paint()
+          ..color = Color(0xFFF3F3F3)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2;
 
     final path = Path();
     final double width = size.width;

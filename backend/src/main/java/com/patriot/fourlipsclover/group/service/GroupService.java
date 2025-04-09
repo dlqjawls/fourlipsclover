@@ -308,4 +308,22 @@ public class GroupService {
         }
     }
 
+    // groupId로 특정 그룹에 속한 멤버들의 ID를 반환
+    public List<Long> getMemberIdsByGroupId(Integer groupId, Long loggedInMemberId) {
+        List<GroupMember> groupMembers = groupMemberRepository.findByGroup_GroupId(groupId);
+
+
+        // 로그인한 사용자가 속한 그룹에 존재하지 않으면 예외 처리
+        boolean isMemberOfGroup = groupMembers.stream()
+                .anyMatch(groupMember -> groupMember.getId().getMemberId().equals(loggedInMemberId));
+        if (!isMemberOfGroup) {
+            throw new MemberNotFoundException("로그인한 사용자가 해당 그룹에 속하지 않습니다.");
+        }
+
+        // 멤버들의 memberId만 반환
+        return groupMembers.stream()
+                .map(groupMember -> groupMember.getId().getMemberId())
+                .collect(Collectors.toList());
+    }
+
 }
