@@ -1,6 +1,7 @@
 package com.patriot.fourlipsclover.match.service;
 
 import com.patriot.fourlipsclover.chat.entity.ChatMember;
+import com.patriot.fourlipsclover.chat.entity.ChatMemberId;
 import com.patriot.fourlipsclover.chat.entity.ChatRoom;
 import com.patriot.fourlipsclover.chat.repository.ChatMemberRepository;
 import com.patriot.fourlipsclover.chat.repository.ChatRoomRepository;
@@ -328,9 +329,18 @@ public class MatchService {
         match.setUpdatedAt(LocalDateTime.now());
         matchRepository.save(match);
 
+        // 채팅방이 이미 존재하는지 확인
+        ChatRoom existingChatRoom = chatRoomRepository.findByMatch_MatchId(matchId);
+        if (existingChatRoom != null) {
+            // 이미 존재하는 채팅방이 있으면 그 채팅방을 사용
+            addMemberToChatRoom(existingChatRoom, match.getMemberId()); // 신청자 추가
+            addMemberToChatRoom(existingChatRoom, currentMemberId); // 현지인 추가
+            return buildLocalsConfirmResponse(match, matchId);
+        }
+
         // 채팅방 생성
         ChatRoom chatRoom = new ChatRoom();
-        chatRoom.setName("Match Chat: " + match.getMatchId());
+        chatRoom.setName(match.getRegion().getName() + "로 떠나요");
         chatRoom.setMatch(match);  // Match와 연결
         chatRoom.setCreatedAt(LocalDateTime.now());
         chatRoomRepository.save(chatRoom); // 채팅방 저장
@@ -339,7 +349,33 @@ public class MatchService {
         addMemberToChatRoom(chatRoom, match.getMemberId()); // 매칭 신청자 추가
         addMemberToChatRoom(chatRoom, currentMemberId); // 현지인 가이드 추가
 
-        // MatchDetailResponse DTO 생성 및 매핑
+        return buildLocalsConfirmResponse(match, matchId);
+    }
+
+    // 채팅방 멤버 추가 메서드
+    private void addMemberToChatRoom(ChatRoom chatRoom, Long memberId) {
+        // 1. 멤버를 조회합니다.
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberNotFoundException("멤버를 찾을 수 없습니다: " + memberId));
+
+        // 2. ChatMemberId를 생성하여 복합키를 설정합니다.
+        ChatMemberId chatMemberId = new ChatMemberId();
+        chatMemberId.setChatRoomId(chatRoom.getChatRoomId()); // 채팅방 ID 설정
+        chatMemberId.setMemberId(member.getMemberId()); // 멤버 ID 설정
+
+        // 3. ChatMember 객체를 생성하여 채팅방에 멤버를 추가합니다.
+        ChatMember chatMember = new ChatMember();
+        chatMember.setId(chatMemberId); // 복합키 설정
+        chatMember.setChatRoom(chatRoom); // 채팅방 설정
+        chatMember.setMember(member); // 멤버 설정
+        chatMember.setJoinedAt(LocalDateTime.now()); // 입장 시간 설정
+
+        // 4. ChatMember 객체를 DB에 저장합니다.
+        chatMemberRepository.save(chatMember);
+    }
+
+    // LocalsConfirmResponse 객체를 생성하는 메서드
+    private LocalsConfirmResponse buildLocalsConfirmResponse(Match match, int matchId) {
         LocalsConfirmResponse response = new LocalsConfirmResponse();
         response.setRegionName(match.getRegion().getName());
         response.setMatchCreatorId(match.getMemberId());
@@ -358,19 +394,6 @@ public class MatchService {
         }
 
         return response;
-    }
-
-    // 채팅방 멤버 추가 메서드
-    private void addMemberToChatRoom(ChatRoom chatRoom, Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new MemberNotFoundException("멤버를 찾을 수 없습니다: " + memberId));
-
-        // 채팅방에 멤버 추가
-        ChatMember chatMember = new ChatMember();
-        chatMember.setChatRoom(chatRoom);
-        chatMember.setMember(member);
-        chatMember.setJoinedAt(LocalDateTime.now());
-        chatMemberRepository.save(chatMember); // 채팅방에 멤버 저장
     }
 
     // 현지인 - CONFIRMED 상태인 매칭 목록 조회
@@ -418,7 +441,7 @@ public class MatchService {
         // LocalsProposal 엔티티 생성 및 값 설정
         LocalsProposal localsProposal = new LocalsProposal();
         localsProposal.setMatch(match);
-        localsProposal.setRestaurantList(restaurants);
+        localsProposal.setRestaurantList(restaurants); // Restaurant 객체 리스트 설정
         localsProposal.setRecommendMenu(request.getRecommendMenu());
         localsProposal.setDescription(request.getDescription());
 
@@ -434,7 +457,7 @@ public class MatchService {
         return new LocalsProposalResponse(
                 savedProposal.getProposalId(),
                 savedProposal.getMatch().getMatchId(),
-                restaurantIds,
+                restaurantIds, // Integer 리스트 반환
                 savedProposal.getRecommendMenu(),
                 savedProposal.getDescription()
         );

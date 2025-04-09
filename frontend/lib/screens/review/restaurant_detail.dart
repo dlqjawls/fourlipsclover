@@ -157,7 +157,9 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 const SizedBox(width: 20),
               ],
             ),
-            body: snapshot.hasError || snapshot.data == null
+            body: snapshot.connectionState == ConnectionState.waiting
+                ? const Center(child: CloverLoadingSpinner())
+                : snapshot.hasError || snapshot.data == null
                 ? const Center(
               child: Padding(
                 padding: EdgeInsets.all(20.0),

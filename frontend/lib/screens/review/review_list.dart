@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/widgets/clover_loading_spinner.dart';
 import '../../config/theme.dart';
 import '../../models/review_model.dart';
 import '../review/review_write.dart';
@@ -30,25 +29,33 @@ class ReviewList extends StatefulWidget {
 }
 
 class _ReviewListState extends State<ReviewList> {
-  late Future<List<Review>> reviewData;
+  Future<List<Review>>? reviewData;
   String? accessToken;
   int memberId = 0;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final appProvider = Provider.of<AppProvider>(context, listen: false);
       final userProvider = Provider.of<UserProvider>(context, listen: false);
 
-      setState(() {
-        accessToken = appProvider.jwtToken;
-        memberId = userProvider.userProfile?.memberId ?? 0;
-      });
+      accessToken = appProvider.jwtToken;
+      memberId = userProvider.userProfile?.memberId ?? 0;
 
-      _fetchReviews();
+      setState(() {
+        reviewData = ReviewService.fetchReviews(
+          widget.restaurantId,
+          accessToken: accessToken,
+        ).then((reviews) {
+          reviews.sort((a, b) => b.date.compareTo(a.date));
+          Provider.of<ReviewProvider>(context, listen: false).setReviews(reviews);
+          return reviews;
+        });
+      });
     });
   }
+
 
   void _fetchReviews() {
     final appProvider = Provider.of<AppProvider>(context, listen: false);
@@ -130,11 +137,13 @@ class _ReviewListState extends State<ReviewList> {
           ),
         ),
 
-        FutureBuilder<List<Review>>(
+            reviewData == null
+            ? const SizedBox.shrink() // 또는 Container()도 OK
+        : FutureBuilder<List<Review>>(
           future: reviewData,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CloverLoadingSpinner());
+              return const SizedBox.shrink();
             } else if (snapshot.hasError) {
               return Center(child: Text("에러 발생: ${snapshot.error}"));
             } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
