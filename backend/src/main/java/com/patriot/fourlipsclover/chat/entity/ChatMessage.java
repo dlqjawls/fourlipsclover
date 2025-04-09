@@ -6,6 +6,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Getter
@@ -39,6 +40,12 @@ public class ChatMessage {
     @Enumerated(EnumType.STRING)
     @Column(name = "message_type", nullable = false)
     private MessageType messageType;
+
+    // 이미지 URL 목록을 즉시 로딩하도록 EAGER 설정
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "chat_message_images", joinColumns = @JoinColumn(name = "message_id"))
+    @Column(name = "image_url")
+    private List<String> imageUrls;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

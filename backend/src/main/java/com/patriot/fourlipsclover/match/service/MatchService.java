@@ -1,6 +1,7 @@
 package com.patriot.fourlipsclover.match.service;
 
 import com.patriot.fourlipsclover.chat.entity.ChatMember;
+import com.patriot.fourlipsclover.chat.entity.ChatMemberId;
 import com.patriot.fourlipsclover.chat.entity.ChatRoom;
 import com.patriot.fourlipsclover.chat.repository.ChatMemberRepository;
 import com.patriot.fourlipsclover.chat.repository.ChatRoomRepository;
@@ -175,31 +176,7 @@ public class MatchService {
             matchTagRepository.save(newMatchTag);
         }
 
-        // 채팅방 생성 및 매칭 요청자, 가이드 추가
-        ChatRoom chatRoom = new ChatRoom();
-        chatRoom.setName("Match Chat: " + match.getMatchId());
-        chatRoom.setMatch(match); // Match와 연결
-        chatRoom.setCreatedAt(LocalDateTime.now());
-        chatRoomRepository.save(chatRoom); // 채팅방 저장
-
-        // 매칭 요청자와 가이드를 채팅방 멤버로 추가
-        addMemberToChatRoom(chatRoom, currentMemberId); // 매칭 요청자 추가
-        addMemberToChatRoom(chatRoom, request.getGuide().getMemberId()); // 가이드 추가
-
         return match; // 생성된 Match 객체 반환
-    }
-
-    // 채팅방에 멤버 추가하는 메서드
-    private void addMemberToChatRoom(ChatRoom chatRoom, Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new MemberNotFoundException("멤버를 찾을 수 없습니다: " + memberId));
-
-        // 채팅방에 멤버 추가
-        ChatMember chatMember = new ChatMember();
-        chatMember.setChatRoom(chatRoom);
-        chatMember.setMember(member);
-        chatMember.setJoinedAt(LocalDateTime.now());
-        chatMemberRepository.save(chatMember); // 채팅방에 멤버 저장
     }
 
     // 신청자 - 매칭 신청 내역 조회(현지인 수락 상태 상관없이 전체 신청 목록 조회)
@@ -347,15 +324,63 @@ public class MatchService {
             throw new MatchBusinessException("이미 처리된 매칭입니다.");
         }
 
+        // 매칭 상태를 CONFIRMED로 변경
         match.setStatus(ApprovalStatus.CONFIRMED);
         match.setUpdatedAt(LocalDateTime.now());
         matchRepository.save(match);
 
-        // MatchDetailResponse DTO 생성 및 매핑
+        // 채팅방이 이미 존재하는지 확인
+        ChatRoom existingChatRoom = chatRoomRepository.findByMatch_MatchId(matchId);
+        if (existingChatRoom != null) {
+            // 이미 존재하는 채팅방이 있으면 그 채팅방을 사용
+            addMemberToChatRoom(existingChatRoom, match.getMemberId()); // 신청자 추가
+            addMemberToChatRoom(existingChatRoom, currentMemberId); // 현지인 추가
+            return buildLocalsConfirmResponse(match, matchId);
+        }
+
+        // 채팅방 생성
+        ChatRoom chatRoom = new ChatRoom();
+        chatRoom.setName(match.getRegion().getName() + "로 떠나요");
+        chatRoom.setMatch(match);  // Match와 연결
+        chatRoom.setCreatedAt(LocalDateTime.now());
+        chatRoomRepository.save(chatRoom); // 채팅방 저장
+
+        // 매칭 신청자와 가이드를 채팅방 멤버로 추가
+        addMemberToChatRoom(chatRoom, match.getMemberId()); // 매칭 신청자 추가
+        addMemberToChatRoom(chatRoom, currentMemberId); // 현지인 가이드 추가
+
+        return buildLocalsConfirmResponse(match, matchId);
+    }
+
+    // 채팅방 멤버 추가 메서드
+    private void addMemberToChatRoom(ChatRoom chatRoom, Long memberId) {
+        // 1. 멤버를 조회합니다.
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberNotFoundException("멤버를 찾을 수 없습니다: " + memberId));
+
+        // 2. ChatMemberId를 생성하여 복합키를 설정합니다.
+        ChatMemberId chatMemberId = new ChatMemberId();
+        chatMemberId.setChatRoomId(chatRoom.getChatRoomId()); // 채팅방 ID 설정
+        chatMemberId.setMemberId(member.getMemberId()); // 멤버 ID 설정
+
+        // 3. ChatMember 객체를 생성하여 채팅방에 멤버를 추가합니다.
+        ChatMember chatMember = new ChatMember();
+        chatMember.setId(chatMemberId); // 복합키 설정
+        chatMember.setChatRoom(chatRoom); // 채팅방 설정
+        chatMember.setMember(member); // 멤버 설정
+        chatMember.setJoinedAt(LocalDateTime.now()); // 입장 시간 설정
+
+        // 4. ChatMember 객체를 DB에 저장합니다.
+        chatMemberRepository.save(chatMember);
+    }
+
+    // LocalsConfirmResponse 객체를 생성하는 메서드
+    private LocalsConfirmResponse buildLocalsConfirmResponse(Match match, int matchId) {
         LocalsConfirmResponse response = new LocalsConfirmResponse();
-        response.setRegionName(match.getRegion().getName());           // Region 엔티티의 이름 (getName() 메서드)
+        response.setRegionName(match.getRegion().getName());
         response.setMatchCreatorId(match.getMemberId());
-        response.setStatus(match.getStatus().name());                    // 상태를 문자열로 반환
+        response.setStatus(match.getStatus().name());
+        response.setMatchId(matchId);
 
         // GuideRequestForm 정보 매핑 (null 체크)
         if (match.getGuideRequestForm() != null) {
@@ -405,8 +430,6 @@ public class MatchService {
         if (match.getStatus() != ApprovalStatus.CONFIRMED) {
             throw new MatchBusinessException("CONFIRMED 상태의 매칭만 기획서를 작성할 수 있습니다.");
         }
-
-        // 이미 기획서가 작성된 매칭인지 확인
         localsProposalRepository.findByMatch_MatchId(request.getMatchId())
                 .ifPresent(existing -> {
                     throw new MatchBusinessException("이미 기획서가 작성되었습니다.");
@@ -418,7 +441,7 @@ public class MatchService {
         // LocalsProposal 엔티티 생성 및 값 설정
         LocalsProposal localsProposal = new LocalsProposal();
         localsProposal.setMatch(match);
-        localsProposal.setRestaurantList(restaurants);
+        localsProposal.setRestaurantList(restaurants); // Restaurant 객체 리스트 설정
         localsProposal.setRecommendMenu(request.getRecommendMenu());
         localsProposal.setDescription(request.getDescription());
 
@@ -434,7 +457,7 @@ public class MatchService {
         return new LocalsProposalResponse(
                 savedProposal.getProposalId(),
                 savedProposal.getMatch().getMatchId(),
-                restaurantIds,
+                restaurantIds, // Integer 리스트 반환
                 savedProposal.getRecommendMenu(),
                 savedProposal.getDescription()
         );

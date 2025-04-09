@@ -3,15 +3,22 @@ import '../../../config/theme.dart';
 import '../../../models/review_model.dart';
 import '../review_write.dart';
 import 'delete_confirmation_modal.dart';
+import '../../../utils/review_utils.dart'; // ✅ 바텀시트 함수 임포트
 
-/// ✅ "수정 / 삭제" 작은 박스로 점 3개 아이콘 아래 표시
-Future<dynamic> showReviewOptionsModal(BuildContext context, Review review, String restaurantId, Offset position) async {
+/// ✅ 리뷰 수정/삭제 팝업 - 점 3개 누르면 뜨는 작은 메뉴
+Future<void> showReviewOptionsModal({
+  required BuildContext context,
+  required Review review,
+  required String kakaoPlaceId,
+  required Offset position,
+  required VoidCallback onReviewUpdated, // ✅ 리스트 갱신 콜백
+}) async {
   final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
 
-  return await showMenu(
+  await showMenu(
     context: context,
     position: RelativeRect.fromRect(
-      Rect.fromPoints(position, position), // 점 3개 아이콘 아래 위치
+      Rect.fromPoints(position, position),
       Offset.zero & overlay.size,
     ),
     items: [
@@ -20,17 +27,17 @@ Future<dynamic> showReviewOptionsModal(BuildContext context, Review review, Stri
           leading: Icon(Icons.edit, color: AppColors.primary),
           title: Text("수정"),
           onTap: () async {
-            Navigator.pop(context); // 모달 닫기
-            final updatedReview = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ReviewWriteScreen(
-                  kakaoPlaceId: restaurantId, // ✅ restaurantId 추가
-                  review: review, // ✅ 기존 리뷰 데이터 전달
-                ),
-              ),
+            Navigator.pop(context); // 메뉴 닫기
+
+            final updatedReview = await showReviewBottomSheet(
+              context: context,
+              kakaoPlaceId: kakaoPlaceId,
+              review: review,
             );
-            Navigator.pop(context, updatedReview); // ✅ 수정된 리뷰를 반환
+
+            if (updatedReview != null) {
+              onReviewUpdated(); // ✅ 리스트 갱신
+            }
           },
         ),
       ),
@@ -38,16 +45,21 @@ Future<dynamic> showReviewOptionsModal(BuildContext context, Review review, Stri
         child: ListTile(
           leading: Icon(Icons.delete, color: Colors.redAccent),
           title: Text("삭제"),
-          onTap: () {
-            Navigator.pop(context); // 모달 닫기
-            showDeleteConfirmationModal(context, review.id).then((result) {
-              if (result == true) {
-                Navigator.pop(context, true); // ✅ 삭제 완료 반환
-              }
-            });
+          onTap: () async {
+            Navigator.pop(context); // 메뉴 닫기
+
+            final deleted = await showDeleteConfirmationModal(context, review.id);
+            if (deleted == true) {
+              onReviewUpdated(); // ✅ 리스트 갱신
+            }
           },
         ),
       ),
     ],
+    // ✅ 커스텀 테마 적용 (라운드 + 투명도)
+    color: Colors.white.withOpacity(0.86),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(15), // 라운드 크게
+    ),
   );
 }

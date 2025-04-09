@@ -18,6 +18,12 @@ class RestaurantInfo extends StatefulWidget {
 
 class _RestaurantInfoState extends State<RestaurantInfo> {
   bool _isExpanded = false;
+  bool _isPriceExpanded = false;
+
+  int _calculateTotalCount(Map<String, dynamic> avgAmount) {
+    final amountMapRaw = Map<String, dynamic>.from(avgAmount)..remove('avg');
+    return amountMapRaw.values.fold<int>(0, (sum, v) => sum + (int.tryParse(v.toString()) ?? 0));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +36,10 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
     final todayRaw = openingHours[todayEng]?.toLowerCase().trim() ?? '';
     final hasOpeningInfo = todayRaw.isNotEmpty && todayRaw != "closed";
 
-
+    // 결제 데이터 확인 - 데이터가 null이거나 비어있는지
+    final hasAvgPriceData = widget.data.avgAmount != null &&
+        widget.data.avgAmount['avg'] != null &&
+        _calculateTotalCount(widget.data.avgAmount) > 0;
 
     final filteredImages = restaurantImages.where((url) => url != widget.imageUrl).toList();
 
@@ -40,24 +49,71 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
         /// ✅ 대표 + 서브 이미지
         _buildImageLayout(widget.imageUrl, filteredImages),
 
-        /// ✅ 태그
+        /// ✅ 평균 가격대 + 그래프 - 데이터가 있을 때만 표시
+        if (hasAvgPriceData)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Row(
+              children: [
+                const Icon(Icons.credit_card, size: 18, color: Colors.grey),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '1인당 ${widget.data.avgAmount['avg'] ?? ''}원',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                      Text(
+                        '${_calculateTotalCount(widget.data.avgAmount)}명의 사용자가 제공한 정보',
+                        style: const TextStyle(fontSize: 13, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => _isPriceExpanded = !_isPriceExpanded),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(
+                      _isPriceExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                      size: 20,
+                      color: Colors.grey,
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
+
+        /// 가격대 그래프 (토글 시 표시)
+        if (hasAvgPriceData && _isPriceExpanded)
+          _buildPriceGraph(widget.data.avgAmount),
         /// ✅ 태그
         if (tags.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Wrap(
-              spacing: 8.0,
-              runSpacing: 1.0,
+              spacing: 8,
+              runSpacing: 8,
               children: tags.map<Widget>((tag) {
                 final tagName = tag['tagName']?.toString().replaceAll(' ', '') ?? '';
-                return Chip(
-                  label: Text(
-                    '#$tagName',
-                    style: const TextStyle(fontSize: 12, color: AppColors.primaryDark),
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
-                  backgroundColor: AppColors.primary.withOpacity(0.15),
-                  shape: const StadiumBorder(),
-                  side: BorderSide.none,
+                  child: Text(
+                    '#$tagName',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF4A4A4A),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 );
               }).toList(),
             ),
@@ -102,6 +158,68 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
     );
   }
 
+// 가격 그래프 메서드 수정
+  Widget _buildPriceGraph(Map<String, dynamic> avgAmount) {
+    final amountMapRaw = Map<String, dynamic>.from(avgAmount)..remove('avg');
+    final amountMap = amountMapRaw.map((key, value) {
+      final parsed = int.tryParse(value.toString()) ?? 0;
+      return MapEntry(key, parsed);
+    });
+
+    final totalCount = amountMap.values.fold<int>(0, (sum, value) => sum + value);
+    final barColor = Colors.green.shade400;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: amountMap.entries.map((entry) {
+          final label = entry.key;
+          final value = entry.value;
+          final ratio = totalCount == 0 ? 0.0 : value / totalCount;
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              children: [
+                // 금액 텍스트 공간 확장
+                const SizedBox(width: 25),
+                SizedBox(
+                  width: 140, // 폰트 공간 확장 (기존 100에서 140으로)
+                  child: Text(
+                    '$label원',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+                // 그래프 크기 축소
+                SizedBox(
+                  width: 150, // 그래프 너비 고정 (화면에 따라 조정 가능)
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: ratio, // 비율에 따라 그래프 표시
+                      minHeight: 6,
+                      backgroundColor: Colors.grey.shade200,
+                      valueColor: AlwaysStoppedAnimation<Color>(barColor),
+                    ),
+                  ),
+                ),
+                // 비율 퍼센트 표시 (선택적)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Text(
+                    '${(ratio * 100).toStringAsFixed(0)}%',
+                    style: TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   Widget _buildImageLayout(String? mainUrl, List<String> subUrls) {
     final allImages = [if (mainUrl != null) mainUrl, ...subUrls];
 
@@ -113,85 +231,99 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
         fit: BoxFit.cover,
       );
     } else if (allImages.length == 1) {
-      return GestureDetector(
-        onTap: () => _showImageDialog(context, allImages[0]),
-        child: Image.network(
-          allImages[0],
-          width: double.infinity,
-          height: 200,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Image.asset("assets/images/rice.png", width: double.infinity, height: 200, fit: BoxFit.cover);
-          },
+      return Container(
+        height: 200,
+        width: double.infinity,
+        child: GestureDetector(
+          onTap: () => _showImageDialog(context, allImages[0]),
+          child: Image.network(
+            allImages[0],
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Image.asset("assets/images/rice.png", fit: BoxFit.cover);
+            },
+          ),
         ),
       );
     } else if (allImages.length == 2) {
-      return Row(
-        children: allImages.map((url) {
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => _showImageDialog(context, url),
-              child: Container(
-                height: 200,
-                margin: const EdgeInsets.all(4),
-                child: Image.network(
-                  url,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Image.asset("assets/images/rice.png", fit: BoxFit.cover);
-                  },
+      return Container(
+        height: 200,
+        child: Row(
+          children: allImages.map((url) {
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => _showImageDialog(context, url),
+                child: Container(
+                  margin: const EdgeInsets.all(2),
+                  child: _buildCroppedImage(url),
                 ),
               ),
-            ),
-          );
-        }).toList(),
+            );
+          }).toList(),
+        ),
       );
     } else {
-      return Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: GestureDetector(
-              onTap: () => _showImageDialog(context, allImages[0]),
-              child: Container(
-                height: 200,
-                margin: const EdgeInsets.all(4),
-                child: Image.network(
-                  allImages[0],
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Image.asset("assets/images/rice.png", fit: BoxFit.cover);
-                  },
+      // 세 개 이상 이미지가 있을 때
+      return Container(
+        height: 200,
+        child: Row(
+          children: [
+            // 왼쪽 큰 이미지
+            Expanded(
+              flex: 2,
+              child: GestureDetector(
+                onTap: () => _showImageDialog(context, allImages[0]),
+                child: Container(
+                  margin: const EdgeInsets.all(2),
+                  child: _buildCroppedImage(allImages[0]),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Column(
-              children: [1, 2].where((i) => i < allImages.length).map((i) {
-                return SizedBox(
-                  height: 97, // (200 - margin * 2) / 2
-                  child: GestureDetector(
-                    onTap: () => _showImageDialog(context, allImages[i]),
-                    child: Container(
-                      margin: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        image: DecorationImage(
-                          image: NetworkImage(allImages[i]),
-                          fit: BoxFit.cover,
-                          onError: (_, __) {},
-                        ),
+            // 오른쪽 이미지 컬럼
+            Expanded(
+              flex: 1,
+              child: Column(
+                children: [1, 2].where((i) => i < allImages.length).map((i) {
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () => _showImageDialog(context, allImages[i]),
+                      child: Container(
+                        margin: const EdgeInsets.all(2),
+                        child: _buildCroppedImage(allImages[i]),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             ),
-          )
-        ],
+          ],
+        ),
       );
     }
+  }
+
+// 이미지를 중앙 크롭하여 균일하게 표시하는 헬퍼 메서드
+  Widget _buildCroppedImage(String url) {
+    return ClipRRect( // ✅ 둥근 모서리 추가
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        width: double.infinity,
+        height: double.infinity,
+        child: FittedBox(
+          fit: BoxFit.cover,
+          alignment: Alignment.center,
+          child: Image.network(
+            url,
+            errorBuilder: (context, error, stackTrace) {
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset("assets/images/rice.png", fit: BoxFit.cover),
+              );
+            },
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildOpeningStatus(Map<String, String> hours) {

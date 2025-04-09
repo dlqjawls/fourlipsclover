@@ -13,11 +13,8 @@ class SearchResultList extends StatefulWidget {
   final String query;
   final String? filter;
 
-  const SearchResultList({
-    Key? key,
-    required this.query,
-    this.filter,
-  }) : super(key: key);
+  const SearchResultList({Key? key, required this.query, this.filter})
+    : super(key: key);
 
   @override
   State<SearchResultList> createState() => _SearchResultListState();
@@ -52,8 +49,10 @@ class _SearchResultListState extends State<SearchResultList> {
   void _loadMoreItems() {
     final searchProvider = Provider.of<SearchProvider>(context, listen: false);
     final filteredResults = _getFilteredResults(searchProvider.searchResults);
-    
-    if (!_isAllLoaded && !_isLoading && _displayCount < filteredResults.length) {
+
+    if (!_isAllLoaded &&
+        !_isLoading &&
+        _displayCount < filteredResults.length) {
       setState(() {
         _isLoading = true;
       });
@@ -75,44 +74,62 @@ class _SearchResultListState extends State<SearchResultList> {
   }
 
   // 필터 적용된 결과 가져오기
-  List<RestaurantResponse> _getFilteredResults(List<RestaurantResponse> results) {
-    if (widget.filter != null && widget.filter!.isNotEmpty) {
-      // 카테고리 기준으로 필터링
-      return results.where((restaurant) {
-        final category = restaurant.category ?? "";
-        return category.contains(widget.filter!);
-      }).toList();
+  List<RestaurantResponse> _getFilteredResults(
+    List<RestaurantResponse> results,
+  ) {
+    // 태그 검색 결과를 우선 보존
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    final hasTagSearch = searchProvider.selectedTagIds.isNotEmpty;
+
+    // 결과가 비어있거나 태그 검색을 수행한 경우에는 필터링 건너뛰기
+    if (results.isEmpty || hasTagSearch) {
+      return List.from(results);
     }
+
     return List.from(results);
   }
 
-  // 카테고리 텍스트를 해시태그로 변환
-  List<Widget> _getCategoryTags(String? category) {
-    if (category == null || category.isEmpty) {
-      return [
-        Text(
-          "#식당",
+  // 태그 정보를 기반으로 태그 위젯 생성 (박스 없이 텍스트만)
+  List<Widget> _getTagWidgets(List<Map<String, dynamic>>? tags) {
+    if (tags == null || tags.isEmpty) {
+      return [];
+    }
+
+    // 태그를 frequency 내림차순, 동점이면 avgConfidence 내림차순으로 정렬
+    final sortedTags = List<Map<String, dynamic>>.from(tags)..sort((a, b) {
+      // frequency 비교 (높은 순)
+      final aFreq = a['frequency'] as int?;
+      final bFreq = b['frequency'] as int?;
+
+      if (aFreq != bFreq) {
+        if (aFreq == null) return 1;
+        if (bFreq == null) return -1;
+        return bFreq.compareTo(aFreq); // 내림차순 (높은 값이 먼저)
+      }
+
+      // frequency가 같으면 avgConfidence로 비교 (높은 순)
+      final aConf = a['avgConfidence'] as num?;
+      final bConf = b['avgConfidence'] as num?;
+      if (aConf == null && bConf == null) return 0;
+      if (aConf == null) return 1;
+      if (bConf == null) return -1;
+      return bConf.compareTo(aConf); // 내림차순
+    });
+
+    // 상위 3개 태그만 표시 (박스 없이 텍스트만)
+    return sortedTags.take(3).map((tag) {
+      return Padding(
+        padding: EdgeInsets.only(right: 8),
+        child: Text(
+          "#${tag['tagName'] ?? ''}",
           style: TextStyle(
             fontFamily: 'Anemone_air',
             fontSize: 12,
             color: AppColors.darkGray,
           ),
         ),
-      ];
-    }
-    
-    // "음식점 > 한식 > 육류,고기" 형태에서 태그 추출
-    final parts = category.split(' > ');
-    return parts.skip(1).map((tag) => 
-      Text(
-        "#$tag",
-        style: TextStyle(
-          fontFamily: 'Anemone_air',
-          fontSize: 12,
-          color: AppColors.darkGray,
-        ),
-      )
-    ).toList();
+      );
+    }).toList();
   }
 
   // 로딩 인디케이터 위젯
@@ -120,12 +137,10 @@ class _SearchResultListState extends State<SearchResultList> {
     return Container(
       padding: EdgeInsets.symmetric(vertical: 16),
       color: Colors.white,
-      child: Center(
-        child: CloverLoadingSpinner(size: 50),
-      ),
+      child: Center(child: CloverLoadingSpinner(size: 50)),
     );
   }
-  
+
   // 더보기 버튼 위젯
   Widget _buildLoadMoreButton() {
     return GestureDetector(
@@ -136,10 +151,7 @@ class _SearchResultListState extends State<SearchResultList> {
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border(
-            top: BorderSide(
-              color: AppColors.verylightGray,
-              width: 1,
-            ),
+            top: BorderSide(color: AppColors.verylightGray, width: 1),
           ),
         ),
         child: Center(
@@ -173,14 +185,12 @@ class _SearchResultListState extends State<SearchResultList> {
     final searchProvider = Provider.of<SearchProvider>(context);
     final allResults = searchProvider.searchResults;
     final filteredResults = _getFilteredResults(allResults);
-    
+
     // 검색 중인 경우 로딩 스피너 표시
     if (searchProvider.isLoading) {
-      return Center(
-        child: CloverLoadingSpinner(size: 80),
-      );
+      return Center(child: CloverLoadingSpinner(size: 80));
     }
-    
+
     // 오류가 있는 경우 오류 메시지 표시
     if (searchProvider.error != null) {
       return Center(
@@ -195,34 +205,51 @@ class _SearchResultListState extends State<SearchResultList> {
         ),
       );
     }
-    
+
     // 결과가 없는 경우
     if (filteredResults.isEmpty) {
       return Center(
-        child: Text(
-          "검색 결과가 없습니다.",
-          style: TextStyle(
-            fontFamily: 'Anemone_air',
-            fontSize: 16,
-            color: AppColors.darkGray,
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 48, color: AppColors.lightGray),
+            SizedBox(height: 16),
+            Text(
+              "검색 결과가 없습니다",
+              style: TextStyle(
+                fontFamily: 'Anemone_air',
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkGray,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              "${widget.query.isNotEmpty ? '"${widget.query}" 또는 ' : ''}다른 태그로 검색해보세요",
+              style: TextStyle(
+                fontFamily: 'Anemone_air',
+                fontSize: 14,
+                color: AppColors.mediumGray,
+              ),
+            ),
+          ],
         ),
       );
     }
 
     // 현재 표시할 항목 수
     int itemCount = Math.min(_displayCount, filteredResults.length);
-    
+
     // 아직 모든 항목을 로드하지 않았으면 더보기 버튼 또는 로딩 인디케이터 위한 공간 추가
     if (!_isAllLoaded && filteredResults.length > _displayCount) {
       itemCount += 1;
     }
-    
+
     return ListView.builder(
-      primary: true, 
+      primary: true,
       physics: AlwaysScrollableScrollPhysics(),
       itemCount: itemCount,
-      
+
       itemBuilder: (context, index) {
         // 마지막 항목인 경우 더보기 버튼 또는 로딩 인디케이터 표시
         if (index == _displayCount && index < filteredResults.length) {
@@ -245,19 +272,16 @@ class _SearchResultListState extends State<SearchResultList> {
           children: [
             // 첫 번째 항목 이전에는 구분선 없음
             if (index > 0)
-              Divider(
-                height: 1,
-                thickness: 1,
-                color: AppColors.verylightGray,
-              ),
+              Divider(height: 1, thickness: 1, color: AppColors.verylightGray),
             GestureDetector(
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => RestaurantDetailScreen(
-                      restaurantId: restaurant.kakaoPlaceId,
-                    ),
+                    builder:
+                        (_) => RestaurantDetailScreen(
+                          restaurantId: restaurant.kakaoPlaceId,
+                        ),
                   ),
                 );
               },
@@ -299,7 +323,7 @@ class _SearchResultListState extends State<SearchResultList> {
                               children: [
                                 // 식당명
                                 Text(
-                                  "${restaurant.placeName ?? '이름 없음'}",
+                                  restaurant.placeName ?? '이름 없음',
                                   style: TextStyle(
                                     fontFamily: 'Anemone_air',
                                     fontWeight: FontWeight.bold,
@@ -308,50 +332,71 @@ class _SearchResultListState extends State<SearchResultList> {
                                   ),
                                 ),
 
-                                // 해시태그 - 카테고리를 기반으로 해시태그 생성
-                                SizedBox(height: 2),
-                                Wrap(
-                                  spacing: 8,
-                                  children: _getCategoryTags(restaurant.category),
-                                ),
+                                // 태그 정보 표시
+                                SizedBox(height: 4),
+                                if (restaurant.tags != null &&
+                                    restaurant.tags!.isNotEmpty)
+                                  Wrap(
+                                    children: _getTagWidgets(restaurant.tags),
+                                  ),
 
                                 SizedBox(height: 6),
-                                // 거리 (있는 경우)
-                                Row(
-                                  children: [
-                                    if (restaurant.distance != null)
-                                      Text(
-                                        "${restaurant.distance!.toStringAsFixed(1)}km",
-                                        style: TextStyle(
-                                          fontFamily: 'Anemone_air',
-                                          color: AppColors.darkGray,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    SizedBox(width: 10),
-                                    // 전화번호가 있는 경우
-                                    if (restaurant.phone != null && restaurant.phone!.isNotEmpty)
-                                      Text(
-                                        "${restaurant.phone}",
-                                        style: TextStyle(
-                                          fontFamily: 'Anemone_air',
-                                          color: AppColors.mediumGray,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                  ],
-                                ),
 
-                                SizedBox(height: 4),
-                                // 주소
+                                // 주소 - 도로명 주소 우선 표시
                                 Text(
-                                  "${restaurant.addressName ?? restaurant.roadAddressName ?? '주소 정보 없음'}",
+                                  restaurant.addressName ?? '주소 정보 없음',
                                   style: TextStyle(
                                     fontFamily: 'Anemone_air',
                                     color: AppColors.mediumGray,
                                     fontSize: 12,
                                   ),
                                   overflow: TextOverflow.ellipsis,
+                                ),
+                                SizedBox(height: 6),
+                                //좋아요/싫어요 표시
+                                Row(
+                                  children: [
+                                    // 좋아요 수 (0이어도 표시)
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.thumb_up,
+                                          size: 12,
+                                          color: AppColors.mediumGray,
+                                        ),
+                                        SizedBox(width: 2),
+                                        Text(
+                                          "${restaurant.likeSentiment ?? 0}",
+                                          style: TextStyle(
+                                            fontFamily: 'Anemone_air',
+                                            color: AppColors.mediumGray,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        SizedBox(width: 6),
+                                      ],
+                                    ),
+
+                                    // 싫어요 수 (0이어도 표시)
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.thumb_down,
+                                          size: 12,
+                                          color: AppColors.mediumGray,
+                                        ),
+                                        SizedBox(width: 2),
+                                        Text(
+                                          "${restaurant.dislikeSentiment ?? 0}",
+                                          style: TextStyle(
+                                            fontFamily: 'Anemone_air',
+                                            color: AppColors.mediumGray,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -360,17 +405,23 @@ class _SearchResultListState extends State<SearchResultList> {
                       ),
                     ),
 
-                    // 이미지 (실제 이미지는 아직 없으므로 임시 UI)
+                    // 이미지 표시
                     SizedBox(width: 12),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: SizedBox(
                         width: 100,
                         height: 100,
-                        child: Container(
-                          color: Colors.grey[300],
-                          child: Center(child: Text('이미지')),
-                        ),
+                        child:
+                            restaurant.restaurantImages != null &&
+                                    restaurant.restaurantImages!.isNotEmpty
+                                ? Image.network(
+                                  restaurant.restaurantImages!.first,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (_, __, ___) => _buildDefaultImage(),
+                                )
+                                : _buildDefaultImage(),
                       ),
                     ),
                   ],
@@ -380,6 +431,23 @@ class _SearchResultListState extends State<SearchResultList> {
           ],
         );
       },
+    );
+  }
+
+  // 기본 이미지 위젯
+  Widget _buildDefaultImage() {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: AppColors.lightGray,
+      child: Center(
+        child: Image.asset(
+          'assets/images/default_image.png',
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+        ),
+      ),
     );
   }
 }

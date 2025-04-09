@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'dart:convert';
 
 /// 레스토랑 정보 모델
 class RestaurantResponse {
@@ -17,6 +18,9 @@ class RestaurantResponse {
   final List<String>? restaurantImages;
   final List<String>? menu;
   final List<Map<String, dynamic>>? tags;
+  final Map<String, dynamic>? avgAmount;
+  final int? likeSentiment; 
+  final int? dislikeSentiment; 
   double? distance;
 
   RestaurantResponse({
@@ -35,8 +39,10 @@ class RestaurantResponse {
     this.restaurantImages,
     this.distance,
     this.tags,
-    this.menu,
-
+    this.avgAmount,
+    this.menu,   
+    this.likeSentiment,     
+    this.dislikeSentiment,  
   });
 
   factory RestaurantResponse.fromJson(Map<String, dynamic> json) {
@@ -54,12 +60,17 @@ class RestaurantResponse {
       y: json['y'],
       menu: (json['menu'] as List?)?.map((item) => item.toString()).toList(),
       openingHours: json['openingHours'] != null
-          ? Map<String, String>.from(json['openingHours'])
+          ? Map<String, String>.from(jsonDecode(json['openingHours']))
           : null,
       restaurantImages: (json['restaurantImages'] as List<dynamic>?)
-          ?.map((img) => img['url'].toString())
+          ?.map((img) => img.toString())
           .toList(),
       tags: (json['tags'] as List<dynamic>?)?.cast<Map<String, dynamic>>(),
+      avgAmount: json['avgAmount'] != null
+          ? Map<String, dynamic>.from(jsonDecode(json['avgAmount']))
+          : null,
+      likeSentiment: json['likeSentiment'], 
+      dislikeSentiment: json['dislikeSentiment'], 
     );
   }
 
@@ -80,6 +91,7 @@ class RestaurantResponse {
       'restaurantImages': restaurantImages,
       'distance': distance,
       'tags': tags,
+      'avgAmount': avgAmount,
       'menu': menu,
     };
   }

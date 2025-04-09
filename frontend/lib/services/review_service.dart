@@ -87,22 +87,33 @@ class ReviewService {
     required String kakaoPlaceId,
     required String content,
     required DateTime visitedAt,
-    File? imageFile,
+    List<File>? imageFiles,
     required String accessToken,
+    int amount = 0,
+    int visitedPersonnel = 1,
+    DateTime? paidAt,
   }) async {
     final url = Uri.parse('$baseUrl$apiPrefix/reviews');
     final request = http.MultipartRequest('POST', url);
 
     request.headers['Authorization'] = 'Bearer $accessToken';
 
+    String toIso8601WithoutMicroseconds(DateTime dt) {
+      return dt.toIso8601String().split('.').first;
+    }
+
     final jsonMap = {
       "memberId": memberId,
       "kakaoPlaceId": kakaoPlaceId,
       "content": content,
-      "visitedAt": visitedAt.toIso8601String(),
+      "visitedAt": toIso8601WithoutMicroseconds(visitedAt),
+      "amount": amount,
+      "visitedPersonnel": visitedPersonnel,
+      "paidAt": toIso8601WithoutMicroseconds(paidAt ?? visitedAt),
     };
     final jsonString = jsonEncode(jsonMap);
     final jsonBytes = utf8.encode(jsonString);
+    print('[💾 리뷰 JSON 데이터] ${jsonString}');
 
     request.files.add(http.MultipartFile.fromBytes(
       'data',
@@ -111,14 +122,16 @@ class ReviewService {
       filename: 'data.json',
     ));
 
-    if (imageFile != null) {
-      final mimeType = lookupMimeType(imageFile.path) ?? 'image/jpeg';
-      final mimeParts = mimeType.split('/');
-      request.files.add(await http.MultipartFile.fromPath(
-        'images',
-        imageFile.path,
-        contentType: MediaType(mimeParts[0], mimeParts[1]),
-      ));
+    if (imageFiles != null && imageFiles.isNotEmpty) {
+      for (var imageFile in imageFiles) {
+        final mimeType = lookupMimeType(imageFile.path) ?? 'image/jpeg';
+        final mimeParts = mimeType.split('/');
+        request.files.add(await http.MultipartFile.fromPath(
+          'images',
+          imageFile.path,
+          contentType: MediaType(mimeParts[0], mimeParts[1]),
+        ));
+      }
     }
 
     final streamedResponse = await request.send();

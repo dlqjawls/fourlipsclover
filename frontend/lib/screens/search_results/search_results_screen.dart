@@ -91,8 +91,15 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     final searchProvider = Provider.of<SearchProvider>(context, listen: false);
     final mapProvider = Provider.of<MapProvider>(context, listen: false);
 
-    // 검색 실행 (태그는 아직 사용하지 않음)
-    final results = await searchProvider.fetchSearchResults(_currentQuery);
+    // 태그 ID 목록 가져오기
+    final tagIds = searchProvider.selectedTagIds;
+    print('SearchResultsScreen: 검색에 사용할 태그 ID - $tagIds');
+
+    // 검색 실행 (태그 ID 포함)
+    final results = await searchProvider.fetchSearchResults(
+      _currentQuery,
+      tagIds: tagIds.isNotEmpty ? tagIds : null,
+    );
 
     if (mounted) {
       setState(() {
@@ -502,8 +509,6 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            SizedBox(width: 4),
-            Icon(Icons.close, size: 14, color: AppColors.darkGray),
           ],
         ),
       ),

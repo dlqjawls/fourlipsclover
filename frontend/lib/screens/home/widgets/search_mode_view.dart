@@ -153,23 +153,29 @@ class _SearchModeViewState extends State<SearchModeView>
 
   // 검색 수행
   void _performSearch() {
-    // Provider에서 태그 목록 가져오기
-    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
-    final selectedTags = searchProvider.selectedTags;
-
-    if (widget.controller.text.isEmpty) {
-      // 텍스트가 없으면 위치 기반 검색 실행
-      _performLocationSearch();
+  // Provider에서 태그 목록과 태그 ID 가져오기
+  final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+  final selectedTags = searchProvider.selectedTags;
+  final selectedTagIds = searchProvider.selectedTagIds;
+  
+  if (widget.controller.text.isEmpty) {
+    // 텍스트가 없으면 위치 기반 검색 실행
+    _performLocationSearch();
+  } else {
+    // 태그 검색 콜백이 있다면 태그와 함께 검색
+    if (widget.onSearchWithTags != null && selectedTags.isNotEmpty) {
+      // 태그 ID도 함께 전달
+      searchProvider.fetchSearchResults(
+        widget.controller.text,
+        tagIds: selectedTagIds.isNotEmpty ? selectedTagIds : null,
+      );
+      widget.onSearchWithTags!(widget.controller.text, selectedTags);
     } else {
-      // 태그 검색 콜백이 있다면 태그와 함께 검색
-      if (widget.onSearchWithTags != null && selectedTags.isNotEmpty) {
-        widget.onSearchWithTags!(widget.controller.text, selectedTags);
-      } else {
-        // 텍스트만 있으면 일반 검색 실행
-        widget.onSearch(widget.controller.text);
-      }
+      // 텍스트만 있으면 일반 검색 실행
+      widget.onSearch(widget.controller.text);
     }
   }
+}
 
   // 모든 태그 제거
   void _clearAllTags() {

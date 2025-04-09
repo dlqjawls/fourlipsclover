@@ -5,6 +5,7 @@ import com.patriot.fourlipsclover.chat.entity.ChatMemberId;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ChatMemberRepository extends JpaRepository<ChatMember, ChatMemberId> {
     boolean existsByChatRoom_ChatRoomIdAndMember_MemberId(Integer chatRoomId, Long memberId);
@@ -14,4 +15,6 @@ public interface ChatMemberRepository extends JpaRepository<ChatMember, ChatMemb
     int countByChatRoom_ChatRoomId(Integer chatRoomId);
 
     List<ChatMember> findByChatRoom_ChatRoomId(Integer chatRoomId);
+
+    Optional<Object> findByChatRoom_ChatRoomIdAndMember_MemberId(Integer chatRoomId, Long memberId);
 }
