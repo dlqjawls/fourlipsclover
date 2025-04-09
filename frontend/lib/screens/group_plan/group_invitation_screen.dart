@@ -8,8 +8,8 @@ import '../../providers/group_provider.dart';
 import '../../widgets/clover_loading_spinner.dart';
 import 'dart:math' as math;
 import '../../widgets/toast_bar.dart';
-import 'group_widgets/envelope_widget.dart';
-import 'group_widgets/invitation_content_widget.dart';
+import 'group_widgets/invitation/envelope_widget.dart';
+import 'group_widgets/invitation/invitation_content_widget.dart';
 
 class GroupInvitationScreen extends StatefulWidget {
   final String token;
