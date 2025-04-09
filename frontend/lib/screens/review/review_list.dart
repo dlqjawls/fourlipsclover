@@ -152,13 +152,14 @@ class _ReviewListState extends State<ReviewList> {
                     final index = entry.key;
                     final review = entry.value;
 
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0,
-                        vertical: 8.0,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
@@ -198,117 +199,98 @@ class _ReviewListState extends State<ReviewList> {
                                       },
                                     );
                                   },
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(left: 8.0),
-                                    child: Icon(
-                                      Icons.more_vert,
-                                      size: 20,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
+                                );
+                              },
+                              behavior: HitTestBehavior.translucent, // 중요: 패딩도 터치로 인식되게
+                              child: Padding(
+                                padding: const EdgeInsets.all(12), // 터치 범위 확대
+                                child: Icon(
+                                  Icons.more_vert,
+                                  size: 20,
+                                  color: Colors.grey[600],
                                 ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            review.content,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          const SizedBox(height: 8),
-                          // 변경된 이미지 처리
-                          _buildReviewImage(review),
-                          const SizedBox(height: 8),
-                          Consumer<ReviewProvider>(
-                            builder: (context, provider, _) {
-                              final currentReview = provider.getReview(
-                                review.id,
-                              );
-                              if (currentReview == null)
-                                return SizedBox.shrink();
-                              return Row(
-                                children: [
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.thumb_up,
-                                      size: 18,
-                                      color:
-                                          currentReview.isLiked
-                                              ? AppColors.primary
-                                              : AppColors.lightGray,
-                                    ),
-                                    onPressed: () {
-                                      if (currentReview.memberId == memberId) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              "다른 이용자의 리뷰에 반응을 남겨주세요.",
-                                            ),
-                                            duration: Duration(seconds: 2),
-                                          ),
-                                        );
-                                      } else {
-                                        _toggleLike(currentReview.id, "LIKE");
-                                      }
-                                    },
-                                  ),
-                                  Text(
-                                    '${currentReview.likes}',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.thumb_down,
-                                      size: 18,
-                                      color:
-                                          currentReview.isDisliked
-                                              ? AppColors.primary
-                                              : AppColors.lightGray,
-                                    ),
-                                    onPressed: () {
-                                      if (currentReview.memberId == memberId) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              "다른 이용자의 리뷰에 반응을 남겨주세요.",
-                                            ),
-                                            duration: Duration(seconds: 2),
-                                          ),
-                                        );
-                                      } else {
-                                        _toggleLike(
-                                          currentReview.id,
-                                          "DISLIKE",
-                                        );
-                                      }
-                                    },
-                                  ),
-                                  Text(
-                                    '${currentReview.dislikes}',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                          if (index < reviews.length - 1)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: Divider(
-                                color: Colors.grey[300],
-                                thickness: 0.7,
-                                height: 16,
                               ),
                             ),
                         ],
                       ),
-                    );
-                  }).toList(),
+                      const SizedBox(height: 12),
+                      Text(
+                        review.content,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: 16),
+                      // 변경된 이미지 처리
+                      _buildReviewImage(review),
+                      const SizedBox(height: 12),
+                      Consumer<ReviewProvider>(
+                        builder: (context, provider, _) {
+                          final currentReview = provider.getReview(review.id);
+                          if (currentReview == null) return SizedBox.shrink();
+                          return Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  Icons.thumb_up,
+                                  size: 18,
+                                  color: currentReview.isLiked ? AppColors
+                                      .primary : AppColors.lightGray,
+                                ),
+                                onPressed: () {
+                                  if (currentReview.memberId == memberId) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("다른 이용자의 리뷰에 반응을 남겨주세요."),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  } else {
+                                    _toggleLike(currentReview.id, "LIKE");
+                                  }
+                                },
+                              ),
+                              Text('${currentReview.likes}',
+                                  style: const TextStyle(fontSize: 12)),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.thumb_down,
+                                  size: 18,
+                                  color: currentReview.isDisliked ? AppColors
+                                      .primary : AppColors.lightGray,
+                                ),
+                                onPressed: () {
+                                  if (currentReview.memberId == memberId) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("다른 이용자의 리뷰에 반응을 남겨주세요."),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  } else {
+                                    _toggleLike(currentReview.id, "DISLIKE");
+                                  }
+                                },
+                              ),
+                              Text('${currentReview.dislikes}',
+                                  style: const TextStyle(fontSize: 12)),
+                            ],
+                          );
+                        },
+                      ),
+                      if (index < reviews.length - 1)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Divider(
+                            color: Colors.grey[300],
+                            thickness: 0.7,
+                            height: 16,
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }).toList(),
             );
           },
         ),
@@ -350,14 +332,23 @@ class _ReviewListState extends State<ReviewList> {
       child: AspectRatio(
         aspectRatio: aspectRatio,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child:
-              imageUrls.length == 1
-                  ? Image(
-                    image:
-                        imageUrls.first.startsWith("http")
-                            ? NetworkImage(imageUrls.first)
-                            : AssetImage(imageUrls.first) as ImageProvider,
+          borderRadius: BorderRadius.circular(16),
+          child: imageUrls.length == 1
+              ? Image(
+            image: imageUrls.first.startsWith("http")
+                ? NetworkImage(imageUrls.first)
+                : AssetImage(imageUrls.first) as ImageProvider,
+            fit: BoxFit.cover,
+          )
+              : Stack(
+            children: [
+              PageView.builder(
+                itemCount: imageUrls.length,
+                itemBuilder: (context, pageIndex) {
+                  return Image(
+                    image: imageUrls[pageIndex].startsWith("http")
+                        ? NetworkImage(imageUrls[pageIndex])
+                        : AssetImage(imageUrls[pageIndex]) as ImageProvider,
                     fit: BoxFit.cover,
                   )
                   : Stack(

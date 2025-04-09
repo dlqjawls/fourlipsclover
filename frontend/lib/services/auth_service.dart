@@ -6,8 +6,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import '../services/matching/matching_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthService {
+  final _secureStorage = const FlutterSecureStorage();
+
   // 카카오 로그인 처리
   Future<Map<String, dynamic>> kakaoLogin() async {
     try {
@@ -42,6 +45,9 @@ class AuthService {
       if (token == null) {
         throw Exception('카카오 로그인 실패: 토큰을 가져오지 못했습니다.');
       }
+
+      // 카카오 access_token 저장
+      await _saveKakaoAccessToken(token.accessToken);
 
       debugPrint('카카오 사용자 정보 요청 시작');
       final user = await UserApi.instance.me();
@@ -186,9 +192,10 @@ class AuthService {
   Future<void> logout() async {
     try {
       await UserApi.instance.logout();
-      await clearLoginState(); // 로그아웃 시 SharedPreferences에서 모든 로그인 데이터 제거
+      await _secureStorage.delete(key: 'kakao_access_token');
+      await clearLoginState();
     } catch (error) {
-      debugPrint('카카오 로그아웃 실패: $error');
+      debugPrint('로그아웃 실패: $error');
       throw error;
     }
   }
@@ -246,6 +253,63 @@ class AuthService {
       debugPrint('로그인 상태 초기화 완료');
     } catch (e) {
       debugPrint('로그인 상태 초기화 중 오류 발생: $e');
+    }
+  }
+
+  Future<void> _saveKakaoAccessToken(String accessToken) async {
+    try {
+      await _secureStorage.write(key: 'kakao_access_token', value: accessToken);
+      debugPrint('카카오 access_token 저장 완료');
+    } catch (e) {
+      debugPrint('카카오 access_token 저장 실패: $e');
+      throw e;
+    }
+  }
+
+  Future<bool> tryAutoLogin() async {
+    try {
+      debugPrint('자동 로그인 시도 시작');
+      final accessToken = await _secureStorage.read(key: 'kakao_access_token');
+      debugPrint('저장된 카카오 access_token: ${accessToken != null ? '존재함' : '없음'}');
+
+      if (accessToken == null) {
+        debugPrint('카카오 access_token이 없음');
+        return false;
+      }
+
+      // 카카오 토큰 유효성 검사
+      try {
+        debugPrint('카카오 토큰 유효성 검사');
+        await UserApi.instance.accessTokenInfo();
+        debugPrint('카카오 토큰 유효함');
+      } catch (e) {
+        debugPrint('카카오 토큰이 유효하지 않음: $e');
+        // 토큰이 유효하지 않으면 삭제
+        await _secureStorage.delete(key: 'kakao_access_token');
+        await clearLoginState();
+        return false;
+      }
+
+      debugPrint('서버 로그인 시도');
+      final loginResult = await _processServerLogin(accessToken);
+      debugPrint('서버 로그인 결과: ${loginResult['jwtToken'] != null ? '성공' : '실패'}');
+
+      if (loginResult['jwtToken'] != null) {
+        await saveLoginState(true, loginResult['jwtToken']);
+        debugPrint('자동 로그인 성공 - JWT 토큰 저장 완료');
+        return true;
+      }
+
+      // 서버 로그인 실패 시 토큰 삭제
+      await _secureStorage.delete(key: 'kakao_access_token');
+      await clearLoginState();
+      return false;
+    } catch (e) {
+      debugPrint('자동 로그인 실패: $e');
+      // 오류 발생 시 토큰 삭제
+      await _secureStorage.delete(key: 'kakao_access_token');
+      await clearLoginState();
+      return false;
     }
   }
 }

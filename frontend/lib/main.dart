@@ -86,6 +86,29 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
       _checkOnboarding();
     });
+
+    // 앱 시작 시 자동 로그인 시도
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (_navigatorKey.currentContext != null) {
+        try {
+          final appProvider = Provider.of<AppProvider>(
+            _navigatorKey.currentContext!,
+            listen: false,
+          );
+          await appProvider.initializeApp();
+
+          // 자동 로그인 성공 시 홈 화면으로 이동
+          if (appProvider.isLoggedIn && _navigatorKey.currentContext != null) {
+            Navigator.pushReplacementNamed(
+              _navigatorKey.currentContext!,
+              '/home',
+            );
+          }
+        } catch (e) {
+          print('앱 프로바이더 초기화 오류: $e');
+        }
+      }
+    });
   }
 
   Future<void> _checkOnboarding() async {
@@ -151,40 +174,24 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ChangeNotifierProvider(create: (_) => TagProvider()),
       ],
       child: MaterialApp(
-        title: '네입클로버',
+        title: '네잎클로버',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        navigatorKey: _navigatorKey, // 네비게이터 키 추가
+        navigatorKey: _navigatorKey,
         home: Builder(
           builder: (context) {
-            // 홈 화면에서 저장된 초대 토큰 확인
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (_showOnboarding) {
-                // 온보딩 후 초대 토큰 확인
-                _checkPendingInvitation(context);
-              } else {
-                // 로그인 화면에서 초대 토큰 확인
-                _checkPendingInvitation(context);
-              }
-            });
-
-            // 온보딩 화면과 로그인 화면 중 선택
             return _showOnboarding
                 ? const OnboardingScreen()
                 : const LoginScreen();
           },
         ),
         routes: AppRoutes.routes,
-        // 로컬라이제이션 설정 추가
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: const [
-          Locale('ko', 'KR'), // 한국어
-          Locale('en', 'US'), // 영어
-        ],
+        supportedLocales: const [Locale('ko', 'KR'), Locale('en', 'US')],
       ),
     );
   }
