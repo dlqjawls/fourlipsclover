@@ -328,10 +328,6 @@ public class MatchService {
         match.setUpdatedAt(LocalDateTime.now());
         matchRepository.save(match);
 
-        // 기획서 작성 여부 확인 (기획서를 작성해야 채팅방을 생성)
-        LocalsProposal localsProposal = (LocalsProposal) localsProposalRepository.findByMatch(match)
-                .orElseThrow(() -> new MatchBusinessException("기획서가 작성되지 않았습니다."));
-
         // 채팅방 생성
         ChatRoom chatRoom = new ChatRoom();
         chatRoom.setName("Match Chat: " + match.getMatchId());
@@ -345,9 +341,9 @@ public class MatchService {
 
         // MatchDetailResponse DTO 생성 및 매핑
         LocalsConfirmResponse response = new LocalsConfirmResponse();
-        response.setRegionName(match.getRegion().getName());           // Region 엔티티의 이름 (getName() 메서드)
+        response.setRegionName(match.getRegion().getName());
         response.setMatchCreatorId(match.getMemberId());
-        response.setStatus(match.getStatus().name());                    // 상태를 문자열로 반환
+        response.setStatus(match.getStatus().name());
         response.setMatchId(matchId);
 
         // GuideRequestForm 정보 매핑 (null 체크)
@@ -411,8 +407,6 @@ public class MatchService {
         if (match.getStatus() != ApprovalStatus.CONFIRMED) {
             throw new MatchBusinessException("CONFIRMED 상태의 매칭만 기획서를 작성할 수 있습니다.");
         }
-
-        // 이미 기획서가 작성된 매칭인지 확인
         localsProposalRepository.findByMatch_MatchId(request.getMatchId())
                 .ifPresent(existing -> {
                     throw new MatchBusinessException("이미 기획서가 작성되었습니다.");
