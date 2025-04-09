@@ -18,4 +18,6 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Integer> {
 
     // 매칭으로 채팅방을 찾는 쿼리
     Optional<ChatRoom> findByMatch(Match match);
+
+    ChatRoom findByMatch_MatchId(int matchId);
 }

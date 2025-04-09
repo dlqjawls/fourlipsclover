@@ -253,26 +253,29 @@ public class ChatService {
         );
     }
 
-//    @Transactional
-//    public void leaveChatRoom(Integer chatRoomId, Long memberId) {
-//        // 채팅방을 찾아옵니다.
-//        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
-//                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다: " + chatRoomId));
-//
-//        // 채팅방에 속한 멤버를 찾습니다.
-//        ChatMember chatMember = (ChatMember) chatMemberRepository.findByChatRoom_ChatRoomIdAndMember_MemberId(chatRoomId, memberId)
-//                .orElseThrow(() -> new IllegalArgumentException("해당 채팅방에서 멤버를 찾을 수 없습니다."));
-//
-//        // 채팅방에서 해당 멤버를 삭제합니다.
-//        chatMemberRepository.delete(chatMember);
-//
-//        // 채팅방에 남은 멤버가 있는지 확인
-//        long remainingMembersCount = chatMemberRepository.countByChatRoom_ChatRoomId(chatRoomId);
-//
-//        // 마지막 멤버가 나갔다면 채팅방을 삭제
-//        if (remainingMembersCount == 0) {
-//            chatRoomRepository.delete(chatRoom);
-//        }
-//    }
+    @Transactional
+    public void leaveChatRoom(Integer chatRoomId, Long memberId) {
+        // 채팅방을 찾아옵니다.
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다: " + chatRoomId));
+
+        // 채팅방에 속한 멤버를 찾습니다.
+        ChatMember chatMember = (ChatMember) chatMemberRepository.findByChatRoom_ChatRoomIdAndMember_MemberId(chatRoomId, memberId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 채팅방에서 멤버를 찾을 수 없습니다."));
+
+        // 채팅방에서 해당 멤버를 삭제합니다.
+        chatMemberRepository.delete(chatMember);
+
+        // 채팅방에 남은 멤버가 있는지 확인
+        long remainingMembersCount = chatMemberRepository.countByChatRoom_ChatRoomId(chatRoomId);
+
+        // 마지막 멤버가 나갔다면 채팅방을 삭제
+        if (remainingMembersCount == 0) {
+            // 채팅방 삭제 전, 해당 채팅방의 모든 메시지 삭제
+            chatMessageRepository.deleteAllByChatRoom_ChatRoomId(chatRoomId);
+
+            chatRoomRepository.delete(chatRoom);
+        }
+    }
 
 }
