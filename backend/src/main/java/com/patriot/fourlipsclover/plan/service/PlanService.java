@@ -3,7 +3,6 @@ package com.patriot.fourlipsclover.plan.service;
 import com.patriot.fourlipsclover.exception.*;
 import com.patriot.fourlipsclover.group.entity.Group;
 import com.patriot.fourlipsclover.group.entity.GroupMember;
-import com.patriot.fourlipsclover.group.entity.GroupMemberId;
 import com.patriot.fourlipsclover.group.repository.GroupMemberRepository;
 import com.patriot.fourlipsclover.group.repository.GroupRepository;
 import com.patriot.fourlipsclover.member.dto.mapper.MemberMapper;
@@ -101,15 +100,16 @@ public class PlanService {
         return PlanMapper.toResponse(savedPlan, planMemberRepository);
     }
 
+    // group에 소속된 plan 목록 조회
     @Transactional(readOnly = true)
     public List<PlanListResponse> getPlansByGroup(int groupId, long currentMemberId) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GroupNotFoundException("그룹을 찾을 수 없습니다. id=" + groupId));
 
-        boolean isMember = groupMemberRepository.existsById(new GroupMemberId(groupId, currentMemberId));
-        if (!isMember) {
-            throw new NotGroupMemberException("그룹 소속 회원만 계획을 확인할 수 있습니다.");
-        }
+//        boolean isMember = groupMemberRepository.existsById(new GroupMemberId(groupId, currentMemberId));
+//        if (!isMember) {
+//            throw new NotGroupMemberException("그룹 소속 회원만 계획을 확인할 수 있습니다.");
+//        }
 
         List<Plan> plans = planRepository.findPlansByGroupId(groupId);
         return PlanMapper.toPlanListResponseList(plans);
@@ -121,10 +121,10 @@ public class PlanService {
         Plan plan = planRepository.findById(planId)
                 .orElseThrow(() -> new PlanNotFoundException("계획을 찾을 수 없습니다. id=" + planId));
 
-        boolean isMember = groupMemberRepository.existsByGroup_GroupIdAndMember_MemberId(groupId, currentMemberId);
-        if (!isMember) {
-            throw new NotGroupMemberException("그룹 소속 회원만 계획을 확인할 수 있습니다.");
-        }
+//        boolean isMember = groupMemberRepository.existsByGroup_GroupIdAndMember_MemberId(groupId, currentMemberId);
+//        if (!isMember) {
+//            throw new NotGroupMemberException("그룹 소속 회원만 계획을 확인할 수 있습니다.");
+//        }
 
         return PlanMapper.toPlanDetailResponse(plan, planMemberRepository);
     }
@@ -224,7 +224,7 @@ public class PlanService {
 //        }
 
         Plan plan = schedule.getPlan();
-        
+
         PlanScheduleDetailResponse response = new PlanScheduleDetailResponse();
         response.setPlanId(plan.getPlanId());
         response.setPlanScheduleId(scheduleId);
