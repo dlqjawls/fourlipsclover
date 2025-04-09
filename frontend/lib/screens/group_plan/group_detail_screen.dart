@@ -280,7 +280,6 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             planProvider.isLoading ||
             _isLoadingDetail ||
             _isLoadingPlans,
-        overlayColor: Colors.white.withOpacity(0.7), // 0.7 opacity 유지
         minDisplayTime: const Duration(milliseconds: 1200), // 최소 1.2초 표시
         child: Column(
           children: [

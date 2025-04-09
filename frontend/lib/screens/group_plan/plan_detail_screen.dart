@@ -433,7 +433,6 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
       ),
       body: LoadingOverlay(
         isLoading: _isLoading || isProviderLoading,
-        overlayColor: Colors.white.withOpacity(0.7),
         minDisplayTime: const Duration(milliseconds: 1200),
         child:
             _planDetail == null
