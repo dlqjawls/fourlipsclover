@@ -114,11 +114,11 @@ public class ChatController {
         return deferredResult;
     }
 
-//    @DeleteMapping("/room/{chatRoomId}/leave")
-//    public ResponseEntity<Void> leaveChatRoom(@PathVariable Integer chatRoomId) {
-//        long currentMemberId = getCurrentMemberId();  // 현재 로그인된 사용자 ID
-//        chatService.leaveChatRoom(chatRoomId, currentMemberId);  // 채팅방 나가기
-//        return ResponseEntity.ok().build();
-//    }
+    @DeleteMapping("/{chatRoomId}/leave")
+    public ResponseEntity<Void> leaveChatRoom(@PathVariable Integer chatRoomId) {
+        long currentMemberId = getCurrentMemberId();  // 현재 로그인된 사용자 ID
+        chatService.leaveChatRoom(chatRoomId, currentMemberId);  // 채팅방 나가기
+        return ResponseEntity.ok().build();
+    }
 
 }
