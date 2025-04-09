@@ -17,6 +17,7 @@ public class LocalsConfirmResponse {
     private String regionName;
     private String status;  // 상태 (PENDING, CONFIRMED, REJECTED)
     private Long matchCreatorId;
+    private Integer matchId;
 
     private String foodPreference;
     private String requirements;

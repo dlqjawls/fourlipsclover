@@ -18,7 +18,7 @@ Future<void> showReviewOptionsModal({
   await showMenu(
     context: context,
     position: RelativeRect.fromRect(
-      Rect.fromPoints(position, position), // 점 세개 위치 기준
+      Rect.fromPoints(position, position),
       Offset.zero & overlay.size,
     ),
     items: [
@@ -29,7 +29,6 @@ Future<void> showReviewOptionsModal({
           onTap: () async {
             Navigator.pop(context); // 메뉴 닫기
 
-            // ✅ 수정 시 바텀시트로 ReviewWriteScreen 호출
             final updatedReview = await showReviewBottomSheet(
               context: context,
               kakaoPlaceId: kakaoPlaceId,
@@ -57,5 +56,10 @@ Future<void> showReviewOptionsModal({
         ),
       ),
     ],
+    // ✅ 커스텀 테마 적용 (라운드 + 투명도)
+    color: Colors.white.withOpacity(0.86),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(15), // 라운드 크게
+    ),
   );
 }
