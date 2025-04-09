@@ -1,7 +1,6 @@
 // lib/screens/home/widgets/local_favorite_detail.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:math' show cos, sqrt, pi;
 import '../../../config/theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/nearby_restaurant_service.dart';
@@ -12,7 +11,8 @@ class LocalFavoriteDetailScreen extends StatefulWidget {
   const LocalFavoriteDetailScreen({Key? key}) : super(key: key);
 
   @override
-  State<LocalFavoriteDetailScreen> createState() => _LocalFavoriteDetailScreenState();
+  State<LocalFavoriteDetailScreen> createState() =>
+      _LocalFavoriteDetailScreenState();
 }
 
 class _LocalFavoriteDetailScreenState extends State<LocalFavoriteDetailScreen> {
@@ -41,26 +41,6 @@ class _LocalFavoriteDetailScreenState extends State<LocalFavoriteDetailScreen> {
         final restaurants = await NearbyRestaurantService.findNearbyRestaurants(
           latitude: authProvider.currentPosition!.latitude,
           longitude: authProvider.currentPosition!.longitude,
-        );
-
-        // 각 식당마다 거리 계산
-        for (var restaurant in restaurants) {
-          if (restaurant.x != null && restaurant.y != null) {
-            final dx = 111.3 *
-                cos(authProvider.currentPosition!.latitude * pi / 180) *
-                (authProvider.currentPosition!.longitude - restaurant.x!);
-            final dy = 111.3 *
-                (authProvider.currentPosition!.latitude - restaurant.y!);
-            restaurant.distance = sqrt(dx * dx + dy * dy);
-          } else {
-            restaurant.distance = double.infinity; // 위치 정보가 없는 경우
-          }
-        }
-
-        // 거리순으로 정렬
-        restaurants.sort(
-          (a, b) => (a.distance ?? double.infinity)
-              .compareTo(b.distance ?? double.infinity),
         );
 
         if (mounted) {
@@ -102,10 +82,7 @@ class _LocalFavoriteDetailScreenState extends State<LocalFavoriteDetailScreen> {
         foregroundColor: AppColors.darkGray,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: _refreshList,
-          ),
+          IconButton(icon: Icon(Icons.refresh), onPressed: _refreshList),
         ],
       ),
       body: _buildBody(),
@@ -114,9 +91,7 @@ class _LocalFavoriteDetailScreenState extends State<LocalFavoriteDetailScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
+      return Center(child: CircularProgressIndicator(color: AppColors.primary));
     }
 
     if (_errorMessage.isNotEmpty) {
@@ -146,9 +121,7 @@ class _LocalFavoriteDetailScreenState extends State<LocalFavoriteDetailScreen> {
     }
 
     if (_restaurants.isEmpty) {
-      return Center(
-        child: Text('주변에 맛집이 없습니다.'),
-      );
+      return Center(child: Text('주변에 맛집이 없습니다.'));
     }
 
     return RefreshIndicator(
@@ -167,18 +140,21 @@ class _LocalFavoriteDetailScreenState extends State<LocalFavoriteDetailScreen> {
   }
 
   Widget _buildRestaurantListItem(RestaurantResponse restaurant) {
-    // 카테고리 분리 (해시태그로 변환)
-    final categories = restaurant.categoryName?.split(' > ') ?? [];
-    final hashtags = categories.map((cat) => '#$cat').toList();
+    // 거리 표시 형식 변환
+    final distanceText =
+        (restaurant.distance ?? 0) < 1
+            ? '${((restaurant.distance ?? 0) * 1000).round()} m'
+            : '${(restaurant.distance ?? 0).toStringAsFixed(1)} km';
 
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => RestaurantDetailScreen(
-              restaurantId: restaurant.kakaoPlaceId ?? '',
-            ),
+            builder:
+                (context) => RestaurantDetailScreen(
+                  restaurantId: restaurant.kakaoPlaceId,
+                ),
           ),
         );
       },
@@ -199,23 +175,25 @@ class _LocalFavoriteDetailScreenState extends State<LocalFavoriteDetailScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 식당 이미지 (임시로 회색 박스)
+              // 식당 이미지
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Container(
+                child: SizedBox(
                   width: 80,
                   height: 80,
-                  color: AppColors.lightGray,
-                  child: Center(
-                    child: Icon(
-                      Icons.restaurant,
-                      color: AppColors.mediumGray,
-                    ),
-                  ),
+                  child:
+                      restaurant.restaurantImages != null &&
+                              restaurant.restaurantImages!.isNotEmpty
+                          ? Image.network(
+                            restaurant.restaurantImages!.first,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _buildDefaultImage(),
+                          )
+                          : _buildDefaultImage(),
                 ),
               ),
               SizedBox(width: 16),
-              
+
               // 식당 정보
               Expanded(
                 child: Column(
@@ -231,43 +209,18 @@ class _LocalFavoriteDetailScreenState extends State<LocalFavoriteDetailScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 4),
-                    
-                    // 주소
-                    Text(
-                      restaurant.roadAddressName ?? '주소 없음',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.darkGray,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 4),
-                    
-                    // 카테고리
-                    Text(
-                      restaurant.category ?? '',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.mediumGray,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    
-                    // 해시태그
-                    if (hashtags.isNotEmpty)
+                    SizedBox(height: 8),
+
+                    // 태그 (avgConfidence 기준으로 정렬하여 상위 3개만 표시)
+                    if (restaurant.tags != null && restaurant.tags!.isNotEmpty)
                       Wrap(
                         spacing: 6,
-                        children: hashtags
-                            .take(3)
-                            .map((tag) => _buildHashtagChip(tag))
-                            .toList(),
+                        children: _getSortedTags(restaurant.tags!),
                       ),
                   ],
                 ),
               ),
-              
+
               // 거리 표시
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -276,7 +229,7 @@ class _LocalFavoriteDetailScreenState extends State<LocalFavoriteDetailScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${(restaurant.distance ?? 0) * 1000 > 0 ? (restaurant.distance! * 1000).round() : 0} m',
+                  distanceText,
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.darkGray,
@@ -291,6 +244,43 @@ class _LocalFavoriteDetailScreenState extends State<LocalFavoriteDetailScreen> {
     );
   }
 
+  // frequency 높은 순서, 같으면 avgConfidence 높은 순으로 정렬된 태그 위젯 반환
+  List<Widget> _getSortedTags(List<Map<String, dynamic>> tags) {
+    // 태그를 frequency 내림차순, 동점이면 avgConfidence 내림차순으로 정렬
+    final sortedTags = List<Map<String, dynamic>>.from(tags)..sort((a, b) {
+      // frequency 비교 (높은 순)
+      final aFreq = a['frequency'] as int?;
+      final bFreq = b['frequency'] as int?;
+
+      if (aFreq != bFreq) {
+        if (aFreq == null) return 1;
+        if (bFreq == null) return -1;
+        return bFreq.compareTo(aFreq); // 내림차순 (높은 값이 먼저)
+      }
+
+      // frequency가 같으면 avgConfidence로 비교 (높은 순)
+      final aConf = a['avgConfidence'] as num?;
+      final bConf = b['avgConfidence'] as num?;
+      if (aConf == null && bConf == null) return 0;
+      if (aConf == null) return 1;
+      if (bConf == null) return -1;
+      return bConf.compareTo(aConf); // 내림차순
+    });
+
+    // 상위 3개 태그만 사용하여 위젯으로 변환
+    return sortedTags
+        .take(3)
+        .map((tag) => _buildHashtagChip('#${tag['tagName']?.toString() ?? ''}'))
+        .toList();
+  }
+
+  Widget _buildDefaultImage() {
+    return Container(
+      color: AppColors.lightGray,
+      child: Center(child: Icon(Icons.restaurant, color: AppColors.mediumGray)),
+    );
+  }
+
   Widget _buildHashtagChip(String tag) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -300,10 +290,7 @@ class _LocalFavoriteDetailScreenState extends State<LocalFavoriteDetailScreen> {
       ),
       child: Text(
         tag,
-        style: TextStyle(
-          fontSize: 10,
-          color: AppColors.mediumGray,
-        ),
+        style: TextStyle(fontSize: 10, color: AppColors.mediumGray),
       ),
     );
   }
