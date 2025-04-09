@@ -88,27 +88,30 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     });
 
     // 앱 시작 시 자동 로그인 시도
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (_navigatorKey.currentContext != null) {
-        try {
-          final appProvider = Provider.of<AppProvider>(
-            _navigatorKey.currentContext!,
-            listen: false,
-          );
-          await appProvider.initializeApp();
+WidgetsBinding.instance.addPostFrameCallback((_) async {
+  if (_navigatorKey.currentContext != null) {
+    try {
+      final appProvider = Provider.of<AppProvider>(
+        _navigatorKey.currentContext!,
+        listen: false,
+      );
+      await appProvider.initializeApp();
 
-          // 자동 로그인 성공 시 홈 화면으로 이동
-          if (appProvider.isLoggedIn && _navigatorKey.currentContext != null) {
-            Navigator.pushReplacementNamed(
-              _navigatorKey.currentContext!,
-              '/home',
-            );
-          }
-        } catch (e) {
-          print('앱 프로바이더 초기화 오류: $e');
-        }
+      // 여기에 초대 토큰 확인 메서드 추가
+      await _checkPendingInvitation(_navigatorKey.currentContext!);
+
+      // 자동 로그인 성공 시 홈 화면으로 이동
+      if (appProvider.isLoggedIn && _navigatorKey.currentContext != null) {
+        Navigator.pushReplacementNamed(
+          _navigatorKey.currentContext!,
+          '/home',
+        );
       }
-    });
+    } catch (e) {
+      print('앱 프로바이더 초기화 오류: $e');
+    }
+  }
+});
   }
 
   Future<void> _checkOnboarding() async {
