@@ -26,6 +26,7 @@ public class RestaurantResponse {
 	private Integer restaurantId;
 	private Integer likeSentiment;
 	private Integer dislikeSentiment;
+	private Double score;
 
 	@Data
 	@NoArgsConstructor
