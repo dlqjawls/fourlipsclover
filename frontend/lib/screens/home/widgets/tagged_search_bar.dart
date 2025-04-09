@@ -106,17 +106,18 @@ class TaggedSearchBarState extends State<TaggedSearchBar>
 
   // 검색 실행 함수
   void _performSearch() {
-    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
-    final selectedTags = searchProvider.selectedTags;
-
-    if (widget.onSearch != null) {
-      widget.onSearch!(_textController.text, selectedTags);
-    } else {
-      // 기본 검색 동작 (콘솔에 출력)
-      print('검색어: ${_textController.text}, 태그: $selectedTags');
-      // TODO: 실제 검색 로직 구현
-    }
+  final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+  final selectedTags = searchProvider.selectedTags;
+  final selectedTagIds = searchProvider.selectedTagIds; // 태그 ID 가져오기
+  
+  if (widget.onSearch != null) {
+    // 태그 이름과 함께 태그 ID도 전달 (UI 코드 업데이트 필요)
+    widget.onSearch!(_textController.text, selectedTags);
+  } else {
+    // 기본 검색 동작
+    print('검색어: ${_textController.text}, 태그: $selectedTags, 태그 ID: $selectedTagIds');
   }
+}
 
   // 모든 태그 제거 함수
   void _clearAllTags() {

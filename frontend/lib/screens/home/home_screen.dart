@@ -106,15 +106,6 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    '아직 처리하지 않은 그룹 초대가 있습니다.\n지금 확인하고 새로운 모험을 시작해보세요!',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppColors.darkGray,
-                      height: 1.5,
-                    ),
-                  ),
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -221,15 +212,18 @@ class _HomeScreenState extends State<HomeScreen>
       searchProvider.addSearchHistory(query);
     }
 
+    // 태그 ID 확인 (로깅용)
+    final tagIds = searchProvider.selectedTagIds;
     print('HomeScreen: Provider에 저장된 태그 목록 - ${searchProvider.selectedTags}');
+    print('HomeScreen: Provider에 저장된 태그 ID 목록 - $tagIds');
 
+    // 검색 결과 화면으로 이동 (실제 API 호출은 SearchResultsScreen에서 수행)
     Navigator.push(
       context,
       MaterialPageRoute(
         builder:
             (context) => SearchResultsScreen(
               searchQuery: query.trim().isNotEmpty ? query : "맛집",
-              // IMPORTANT: Use the provider's tags directly
               selectedTags: searchProvider.selectedTags,
             ),
       ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:math' show cos, sqrt, pi;
 import '../../../config/theme.dart';
 import '../../../utils/text_style_extensions.dart';
 import '../../../providers/auth_provider.dart';
@@ -28,41 +27,38 @@ class _LocalFavoritesState extends State<LocalFavorites> {
     // 빌드 사이클 완료 후에 실행하도록 스케줄링
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        // mounted 체크 추가
         _initializeLocation();
       }
     });
   }
 
   Future<void> _initializeLocation() async {
-    if (!mounted) return; // mounted 체크 추가
+    if (!mounted) return;
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
       if (authProvider.currentPosition == null) {
-        // 빌드 과정에서는 상태 변경 알림 없이 위치 정보만 가져오기
         await authProvider.getCurrentLocation(context, notify: false);
 
-        // 위치 정보를 가져온 후 별도로 상태 업데이트
         if (mounted) {
           authProvider.notifyListeners();
         }
       }
 
       if (mounted) {
-        _loadNearbyRestaurants(); // 또는 해당 위젯의 데이터 로드 메서드
+        _loadNearbyRestaurants();
       }
     } catch (e) {
       print('위치 초기화 오류: $e');
       if (mounted) {
-        _loadNearbyRestaurants(); // 또는 해당 위젯의 데이터 로드 메서드
+        _loadNearbyRestaurants();
       }
     }
   }
 
   Future<void> _loadNearbyRestaurants() async {
-    if (!mounted) return; // mounted 체크 추가
+    if (!mounted) return;
 
     setState(() {
       _isLoading = true;
@@ -78,31 +74,7 @@ class _LocalFavoritesState extends State<LocalFavorites> {
           longitude: authProvider.currentPosition!.longitude,
         );
 
-        // 각 식당마다 거리 계산
-        for (var restaurant in restaurants) {
-          if (restaurant.x != null && restaurant.y != null) {
-            final dx =
-                111.3 *
-                cos(authProvider.currentPosition!.latitude * pi / 180) *
-                (authProvider.currentPosition!.longitude - restaurant.x!);
-            final dy =
-                111.3 *
-                (authProvider.currentPosition!.latitude - restaurant.y!);
-            restaurant.distance = sqrt(dx * dx + dy * dy);
-          } else {
-            restaurant.distance = double.infinity; // 위치 정보가 없는 경우
-          }
-        }
-
-        // 거리순으로 정렬
-        restaurants.sort(
-          (a, b) => (a.distance ?? double.infinity).compareTo(
-            b.distance ?? double.infinity,
-          ),
-        );
-
         if (mounted) {
-          // mounted 체크 추가
           setState(() {
             _restaurants = restaurants;
             _isLoading = false;
@@ -110,7 +82,6 @@ class _LocalFavoritesState extends State<LocalFavorites> {
         }
       } else {
         if (mounted) {
-          // mounted 체크 추가
           setState(() {
             _errorMessage = '위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.';
             _isLoading = false;
@@ -120,7 +91,6 @@ class _LocalFavoritesState extends State<LocalFavorites> {
     } catch (e) {
       print('주변 레스토랑 로딩 오류: $e');
       if (mounted) {
-        // mounted 체크 추가
         setState(() {
           _errorMessage = '주변 레스토랑을 불러오는데 실패했습니다.';
           _isLoading = false;
@@ -130,13 +100,12 @@ class _LocalFavoritesState extends State<LocalFavorites> {
   }
 
   Future<void> _refreshLocation() async {
-    if (!mounted) return; // mounted 체크 추가
+    if (!mounted) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.getCurrentLocation(context);
 
     if (mounted) {
-      // mounted 체크 추가
       _loadNearbyRestaurants();
     }
   }
@@ -144,6 +113,11 @@ class _LocalFavoritesState extends State<LocalFavorites> {
   @override
   Widget build(BuildContext context) {
     final baseStyle = Theme.of(context).textTheme.bodyMedium;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // 정사각형 카드에 맞게 높이 조정 (텍스트 영역까지 고려)
+    final cardWidth = screenWidth / 2 - 24;
+    final gridHeight = (cardWidth + 50) * 2 + 16; // 이미지 + 텍스트 영역 + 간격
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,14 +156,13 @@ class _LocalFavoritesState extends State<LocalFavorites> {
               SizedBox(height: 30),
               Text(
                 '회원님만을 위해 준비했어요',
-                style:
-                    Theme.of(context).textTheme.bodySmall
-                        ?.copyWith(fontSize: 16, height: 1.3)
-                        .emphasized,
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(fontSize: 16, height: 1.3)
+                    .emphasized,
               ),
               SizedBox(height: 20),
 
-              // 현지인이 선호하는 맛집 + 새로고침 아이콘 (한 줄에 함께 표시)
+              // 현지인이 선호하는 맛집 + 새로고침 아이콘
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -255,7 +228,7 @@ class _LocalFavoritesState extends State<LocalFavorites> {
           )
         else
           SizedBox(
-            height: 500,
+            height: gridHeight,
             child: PageView.builder(
               itemCount: (_restaurants.length / 4).ceil(),
               itemBuilder: (context, pageIndex) {
@@ -265,7 +238,7 @@ class _LocalFavoritesState extends State<LocalFavorites> {
                   child: GridView.count(
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisCount: 2,
-                    childAspectRatio: 0.78,
+                    childAspectRatio: cardWidth / (cardWidth + 50), // 이미지 + 텍스트 영역
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
                     children: List.generate(
@@ -277,21 +250,12 @@ class _LocalFavoritesState extends State<LocalFavorites> {
 
                         final restaurant = _restaurants[itemIndex];
 
-                        // 카테고리 분리 (해시태그로 변환)
-                        final categories =
-                            restaurant.categoryName?.split(' > ') ?? [];
-                        final hashtags =
-                            categories.map((cat) => '#$cat').toList();
-
                         return RestaurantCard(
                           name: restaurant.placeName ?? '이름 없음',
-                          address: restaurant.roadAddressName ?? '주소 없음',
-                          category: restaurant.category ?? '',
-                          phone: restaurant.phone ?? '전화번호 없음',
-                          likes: 0, // 서버에서 제공하지 않는 정보
-                          hashtags: hashtags,
+                          tags: restaurant.tags,
                           distance: restaurant.distance ?? 0.0,
-                          kakaoPlaceId: restaurant.kakaoPlaceId ?? '',
+                          kakaoPlaceId: restaurant.kakaoPlaceId,
+                          images: restaurant.restaurantImages,
                         );
                       },
                     ),
@@ -301,13 +265,12 @@ class _LocalFavoritesState extends State<LocalFavorites> {
             ),
           ),
 
-        // local_favorites.dart의 자세히 보기 버튼 부분 수정
+        // 자세히 보기 버튼
         Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0),
             child: OutlinedButton(
               onPressed: () {
-                // 자세히 보기 버튼 클릭 시 LocalFavoriteDetailScreen으로 이동
                 Navigator.push(
                   context,
                   MaterialPageRoute(

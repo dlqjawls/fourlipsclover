@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:math' show cos, sqrt, pi;
 import '../../../config/theme.dart';
 import '../../../utils/text_style_extensions.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/nearby_restaurant_service.dart';
 import '../../../models/restaurant_model.dart';
-import './restaurant_card.dart'; // 공통 RestaurantCard 임포트
+import './restaurant_card.dart';
 
 class CategoryRecommendations extends StatefulWidget {
   const CategoryRecommendations({Key? key}) : super(key: key);
@@ -27,45 +26,40 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
 
     // 빌드 사이클 이후로 위치 초기화 연기
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {  // mounted 체크 추가
+      if (mounted) {
         _initializeLocation();
       }
     });
   }
 
   Future<void> _initializeLocation() async {
-    if (!mounted) return;  // 먼저 mounted 체크
-    
+    if (!mounted) return;
+
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
       if (authProvider.currentPosition == null) {
-        // 빌드 과정 중에는 상태 업데이트 없이 위치만 가져오기
         await authProvider.getCurrentLocation(context, notify: false);
 
-        // 위치 정보를 가져온 후에 별도로 상태 업데이트
-        if (mounted) {  // mounted 체크
+        if (mounted) {
           authProvider.notifyListeners();
-          print(
-            '위치 확인: ${authProvider.currentPosition?.latitude}, ${authProvider.currentPosition?.longitude}',
-          );
         }
       }
 
-      if (mounted) {  // mounted 체크
+      if (mounted) {
         _loadCategoryRestaurants();
       }
     } catch (e) {
       print('위치 초기화 오류: $e');
-      if (mounted) {  // mounted 체크
+      if (mounted) {
         _loadCategoryRestaurants();
       }
     }
   }
 
   Future<void> _loadCategoryRestaurants() async {
-    if (!mounted) return;  // 먼저 mounted 체크
-    
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -81,36 +75,14 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
               longitude: authProvider.currentPosition!.longitude,
             );
 
-        // 각 카테고리의 식당마다 거리 계산 수정
-        for (var category in categoryRestaurants) {
-          for (var restaurant in category.restaurants) {
-            if (restaurant.x != null && restaurant.y != null) {
-              final dx = 111.3 *
-                  cos(authProvider.currentPosition!.latitude * pi / 180) *
-                  (authProvider.currentPosition!.longitude - restaurant.x!);
-              final dy = 111.3 *
-                  (authProvider.currentPosition!.latitude - restaurant.y!);
-              restaurant.distance = sqrt(dx * dx + dy * dy);
-            } else {
-              restaurant.distance = double.infinity; // 위치 정보가 없는 경우
-            }
-          }
-          
-          // 거리순으로 정렬
-          category.restaurants.sort(
-            (a, b) => (a.distance ?? double.infinity)
-                .compareTo(b.distance ?? double.infinity),
-          );
-        }
-
-        if (mounted) {  // mounted 체크 추가
+        if (mounted) {
           setState(() {
             _categoryRestaurants = categoryRestaurants;
             _isLoading = false;
           });
         }
       } else {
-        if (mounted) {  // mounted 체크 추가
+        if (mounted) {
           setState(() {
             _errorMessage = '위치 정보를 가져올 수 없습니다. 위치 권한을 확인해주세요.';
             _isLoading = false;
@@ -119,7 +91,7 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
       }
     } catch (e) {
       print('카테고리별 레스토랑 로딩 오류: $e');
-      if (mounted) {  // mounted 체크 추가
+      if (mounted) {
         setState(() {
           _errorMessage = '레스토랑 정보를 불러오는데 실패했습니다.';
           _isLoading = false;
@@ -129,12 +101,12 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
   }
 
   Future<void> _refreshLocation() async {
-    if (!mounted) return;  // mounted 체크 추가
-    
+    if (!mounted) return;
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.getCurrentLocation(context);
-    
-    if (mounted) {  // mounted 체크 추가
+
+    if (mounted) {
       _loadCategoryRestaurants();
     }
   }
@@ -209,10 +181,7 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
                       '#',
                       style:
                           baseStyle
-                              ?.copyWith(
-                                fontSize: 16,
-                                color: AppColors.primary,
-                              )
+                              ?.copyWith(fontSize: 16, color: AppColors.primary)
                               .emphasized,
                     ),
                   ),
@@ -228,31 +197,24 @@ class _CategoryRecommendationsState extends State<CategoryRecommendations> {
 
             // 카테고리별 맛집 리스트 - 가로 스크롤
             SizedBox(
-              height: 240, // 카드 높이 조정
+              height: 260, // 이미지 + 텍스트 영역에 맞게 높이 조정
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.only(left: 16, right: 8),
                 itemCount: category.restaurants.length,
                 itemBuilder: (context, restaurantIndex) {
                   final restaurant = category.restaurants[restaurantIndex];
-                  
-                  // 카테고리 분리 (해시태그로 변환)
-                  final categories = restaurant.categoryName?.split(' > ') ?? [];
-                  final hashtags = categories.map((cat) => '#$cat').toList();
 
-                  // RestaurantCard 위젯 사용
+                  // 업데이트된 RestaurantCard 위젯 사용
                   return Container(
-                    width: 170, // 카드 너비 조정
+                    width: 160, // 카드 너비
                     margin: const EdgeInsets.only(right: 12, bottom: 8),
                     child: RestaurantCard(
                       name: restaurant.placeName ?? '이름 없음',
-                      address: restaurant.roadAddressName ?? '주소 없음',
-                      category: restaurant.category ?? '',
-                      phone: restaurant.phone ?? '전화번호 없음',
-                      likes: 0, // 서버에서 제공하지 않는 정보
-                      hashtags: hashtags,
+                      tags: restaurant.tags,
                       distance: restaurant.distance ?? 0.0,
-                      kakaoPlaceId: restaurant.kakaoPlaceId ?? '',
+                      kakaoPlaceId: restaurant.kakaoPlaceId,
+                      images: restaurant.restaurantImages,
                     ),
                   );
                 },
