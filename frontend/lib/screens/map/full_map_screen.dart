@@ -84,12 +84,21 @@ class _FullMapScreenState extends State<FullMapScreen> {
         // GPS 버튼을 누르지 않아도 현재 위치 표시 (선택적)
         // _locationService.moveToCurrentLocation();
       }
-    });
 
-    // 라벨 클릭 이벤트 리스너 설정
-    KakaoMapPlatform.setLabelClickListener((String labelId) {
-      print('라벨 클릭됨: $labelId');
-      _handleLabelClick(labelId);
+      // 지연 후 라벨 클릭 이벤트 리스너 설정 (네이티브 구성요소 초기화 시간 확보)
+      Future.delayed(Duration(milliseconds: 1500), () {
+        try {
+          KakaoMapPlatform.setLabelClickListener((String labelId) {
+            print('라벨 클릭됨 (Flutter): $labelId');
+            if (mounted) {
+              _handleLabelClick(labelId);
+            }
+          });
+          print('라벨 클릭 리스너 설정 성공');
+        } catch (e) {
+          print('라벨 클릭 리스너 설정 실패: $e');
+        }
+      });
     });
   }
 
@@ -183,88 +192,6 @@ class _FullMapScreenState extends State<FullMapScreen> {
     }
   }
 
-  // 지도 옵션 바텀시트
-  void _showMapOptions(BuildContext context, MapProvider mapProvider) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Container(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 라벨 표시 옵션 - CustomSwitch 사용
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '라벨 표시',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'Anemone_air',
-                            color: AppColors.darkGray,
-                          ),
-                        ),
-                        CustomSwitch(
-                          value: mapProvider.showLabels,
-                          onChanged: (value) {
-                            mapProvider.toggleLabels(value);
-                            setState(() {});
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // 위치 추적 토글
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '현재 위치 추적',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'Anemone_air',
-                            color: AppColors.darkGray,
-                          ),
-                        ),
-                        CustomSwitch(
-                          value: _locationService.isLocationTracking,
-                          onChanged: (value) {
-                            if (value) {
-                              _locationService.startLocationTracking();
-                              _locationService.moveToCurrentLocation();
-                            } else {
-                              _locationService.stopLocationTracking();
-                            }
-                            setState(() {}); // 바텀시트 UI 업데이트
-                            this.setState(() {}); // 메인 화면 UI 업데이트
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final mapProvider = Provider.of<MapProvider>(context);
@@ -307,15 +234,6 @@ class _FullMapScreenState extends State<FullMapScreen> {
                   icon: Icon(Icons.arrow_back, color: AppColors.darkGray),
                   onPressed: () => Navigator.pop(context),
                 ),
-                actions: [
-                  // 추가 옵션 버튼
-                  IconButton(
-                    icon: Icon(Icons.more_vert, color: AppColors.darkGray),
-                    onPressed: () {
-                      _showMapOptions(context, mapProvider);
-                    },
-                  ),
-                ],
                 systemOverlayStyle: SystemUiOverlayStyle.light,
               ),
       body: Stack(

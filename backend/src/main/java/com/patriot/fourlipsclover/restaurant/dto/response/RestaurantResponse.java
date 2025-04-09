@@ -12,13 +12,13 @@ import lombok.NoArgsConstructor;
 @Builder
 public class RestaurantResponse {
 
-	private String id;
 	private String openingHours;
 	private List<String> restaurantImages;
 	private String avgAmount;
 	private String placeName;
 	private String addressName;
 	private String category;
+	private String phone;
 	private List<TagData> tags;
 	private Double x;
 	private Double y;
@@ -26,6 +26,7 @@ public class RestaurantResponse {
 	private Integer restaurantId;
 	private Integer likeSentiment;
 	private Integer dislikeSentiment;
+	private Double score;
 
 	@Data
 	@NoArgsConstructor
