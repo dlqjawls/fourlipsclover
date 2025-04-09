@@ -41,13 +41,10 @@ import com.patriot.fourlipsclover.restaurant.repository.ReviewLikeJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewSentimentRepository;
 import com.patriot.fourlipsclover.tag.service.TagService;
 import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -451,52 +448,53 @@ public class RestaurantService {
 		});
 	}
 
-	private String calculateAvgAmountJson(Integer restaurantId) {
-		List<VisitPayment> payments = visitPaymentRepository.findByRestaurantId_RestaurantId(
-				restaurantId);
+	private String calculateAvgAmountJson(String kakaoPlaceId) {
+		// 카카오 PlaceId로 레스토랑 찾기
+		Restaurant restaurant = restaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
+				.orElseThrow(() -> new InvalidDataException("존재하지 않는 식당입니다."));
 
-		if (payments.isEmpty()) {
-			return "{\"avg\": \"정보 없음\", \"avgSection\": \"정보 없음\"}";
+		// 찾은 레스토랑의 ID로 결제 데이터 조회
+		List<VisitPayment> payments = visitPaymentRepository.findByRestaurantId_RestaurantId(restaurant.getRestaurantId());
+
+		// 유효한 결제 데이터만 필터링
+		List<VisitPayment> validPayments = payments.stream()
+				.filter(payment ->
+						payment.getVisitedPersonnel() != null &&
+								payment.getVisitedPersonnel() > 0 &&
+								payment.getAmount() != null &&
+								payment.getAmount() > 0)
+				.collect(Collectors.toList());
+
+		// 1인당 결제 금액 계산
+		List<Integer> perPersonAmounts = validPayments.stream()
+				.map(payment -> payment.getAmount() / payment.getVisitedPersonnel())
+				.collect(Collectors.toList());
+
+		if (perPersonAmounts.isEmpty()) {
+			return null;
 		}
 
-		Map<String, Integer> avgAmountInfo = new LinkedHashMap<>();
-		int totalPerPersonAmount = 0;
-		int validPaymentCount = 0;
+		// 가격대별 분포 계산
+		Map<String, Integer> priceRangeDistribution = new LinkedHashMap<>();
+		perPersonAmounts.forEach(amount -> {
+			String range = calculatePriceRange(amount);
+			priceRangeDistribution.merge(range, 1, Integer::sum);
+		});
 
-		// 1인당 평균 금액 계산 및 범위별 분포 집계
-		for (VisitPayment payment : payments) {
-			if (payment.getVisitedPersonnel() <= 0) {
-				continue;
-			}
+		// 평균 금액의 구간 계산
+		String avgAmountRange = calculatePriceRange(
+				(int) perPersonAmounts.stream()
+						.mapToInt(Integer::intValue)
+						.average()
+						.orElse(0)
+		);
 
-			Integer perPersonAmount = payment.getAmount() / payment.getVisitedPersonnel();
-			totalPerPersonAmount += perPersonAmount;
-			validPaymentCount++;
-
-			String range = calculatePriceRange(perPersonAmount);
-			// 결제 건수를 기준으로 +1씩 증가
-			avgAmountInfo.merge(range, 1, Integer::sum);
-		}
-
-		if (avgAmountInfo.isEmpty() || validPaymentCount == 0) {
-			return "{\"avg\": \"정보 없음\", \"avgSection\": \"정보 없음\"}";
-		}
-
-		// 정확한 평균 금액 계산
-		int exactAvg = totalPerPersonAmount / validPaymentCount;
-
-		// 가장 많은 분포의 범위 찾기
-		String avgPriceRange = avgAmountInfo.entrySet().stream()
-				.max(Comparator.comparing(Map.Entry::getValue))
-				.map(Map.Entry::getKey)
-				.orElse("정보 없음");
-
+		// 결과 맵 생성
 		Map<String, Object> result = new LinkedHashMap<>();
-		result.put("avg", exactAvg);
-		result.put("avgSection", avgPriceRange);
+		result.put("avg", avgAmountRange);
 
-		// 0이 아닌 값만 결과에 포함
-		avgAmountInfo.forEach((key, value) -> {
+		// 분포 정보 추가
+		priceRangeDistribution.forEach((key, value) -> {
 			if (value > 0) {
 				result.put(key, value);
 			}
@@ -507,7 +505,7 @@ public class RestaurantService {
 			return new ObjectMapper().writeValueAsString(result);
 		} catch (Exception e) {
 			log.error("Error converting avg amount to JSON", e);
-			return "{\"avg\": \"정보 없음\", \"avgSection\": \"정보 없음\"}";
+			return "{\"avg\": \"정보 없음\"}";
 		}
 	}
 
@@ -544,4 +542,5 @@ public class RestaurantService {
 		}
 		return "100000 ~";
 	}
+
 }
