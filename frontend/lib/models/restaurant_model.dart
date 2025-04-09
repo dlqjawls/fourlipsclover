@@ -18,6 +18,7 @@ class RestaurantResponse {
   final List<String>? restaurantImages;
   final List<String>? menu;
   final List<Map<String, dynamic>>? tags;
+  final Map<String, dynamic>? avgAmount;
   double? distance;
 
   RestaurantResponse({
@@ -36,6 +37,7 @@ class RestaurantResponse {
     this.restaurantImages,
     this.distance,
     this.tags,
+    this.avgAmount,
     this.menu,
 
   });
@@ -61,6 +63,9 @@ class RestaurantResponse {
           ?.map((img) => img.toString())
           .toList(),
       tags: (json['tags'] as List<dynamic>?)?.cast<Map<String, dynamic>>(),
+      avgAmount: json['avgAmount'] != null
+          ? Map<String, dynamic>.from(jsonDecode(json['avgAmount']))
+          : null,
     );
   }
 
@@ -81,6 +86,7 @@ class RestaurantResponse {
       'restaurantImages': restaurantImages,
       'distance': distance,
       'tags': tags,
+      'avgAmount': avgAmount,
       'menu': menu,
     };
   }
