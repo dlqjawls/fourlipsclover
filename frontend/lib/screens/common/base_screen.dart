@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../widgets/common_widgets.dart';
 import '../home/home_screen.dart';
-import '../journal/journal.dart';
 import '../ai/ai_plan.dart';
 import '../user/user_screen.dart';
 import '../group_plan/group_screen.dart';

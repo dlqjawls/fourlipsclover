@@ -1,5 +1,5 @@
 import 'package:flutter/services.dart';
-import '../config/kakao_config.dart';
+import '../../config/kakao_config.dart';
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
 import 'package:flutter/material.dart';
 

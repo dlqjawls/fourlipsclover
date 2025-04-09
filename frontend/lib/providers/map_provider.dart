@@ -1,8 +1,8 @@
 // lib/providers/map_provider.dart (리팩토링 버전)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import '../services/kakao_route_service.dart';
-import '../services/kakao_map_service.dart';
+import '../services/kakao/kakao_route_service.dart';
+import '../services/kakao/kakao_map_service.dart';
 import '../models/route_model.dart';
 import '../utils/map_utils.dart';
 

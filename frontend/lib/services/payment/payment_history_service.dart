@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/user_payment.dart';
+import '../../models/user_payment.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
-import '../providers/app_provider.dart';
+import '../../providers/app_provider.dart';
 
 class PaymentService {
   final String? jwtToken;

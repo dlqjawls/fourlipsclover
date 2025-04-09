@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../models/plan/plan_schedule_model.dart';
 import '../../../providers/plan_provider.dart';
 import '../../../config/theme.dart';
+import '../../../widgets/toast_bar.dart';
 import './schedule_update_bottom_sheet.dart';
 
 class ScheduleDetailBottomSheet extends StatelessWidget {
@@ -246,15 +247,11 @@ class ScheduleDetailBottomSheet extends StatelessWidget {
         onScheduleDeleted();
 
         if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('일정이 삭제되었습니다')));
+          ToastBar.clover('일정 삭제 완료');
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('일정 삭제에 실패했습니다: $e')));
+          ToastBar.clover('일정 삭제 실패');
         }
       } finally {
         planProvider.setLoading(false);

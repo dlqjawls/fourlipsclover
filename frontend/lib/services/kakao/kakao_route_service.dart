@@ -2,7 +2,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import '../models/route_model.dart';
+import '../../models/route_model.dart';
 
 class KakaoRouteService {
   static const String baseUrl = 'https://apis-navi.kakaomobility.com/v1/directions';

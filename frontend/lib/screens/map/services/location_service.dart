@@ -2,7 +2,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import '../../../services/kakao_map_service.dart';
+import '../../../services/kakao/kakao_map_service.dart';
 import '../../../providers/map_provider.dart';
 
 /// 위치 서비스 클래스 - 위치 관련 기능 캡슐화

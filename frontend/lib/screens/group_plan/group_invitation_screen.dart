@@ -7,6 +7,7 @@ import '../../models/group/member_model.dart';
 import '../../providers/group_provider.dart';
 import '../../widgets/clover_loading_spinner.dart';
 import 'dart:math' as math;
+import '../../widgets/toast_bar.dart';
 import 'group_widgets/envelope_widget.dart';
 import 'group_widgets/invitation_content_widget.dart';
 
@@ -237,16 +238,7 @@ class _GroupInvitationScreenState extends State<GroupInvitationScreen>
           await prefs.remove('pendingInvitationToken');
 
           // 성공 메시지 표시
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('그룹 가입 요청이 완료되었습니다'),
-              backgroundColor: AppColors.primaryDark,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
+          ToastBar.clover('그룹 가입 요청 완료');
 
           // 그룹 목록 새로고침
           await groupProvider.fetchMyGroups();
@@ -299,14 +291,7 @@ class _GroupInvitationScreenState extends State<GroupInvitationScreen>
     );
 
     // 사용자에게 피드백 제공
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('그룹 초대를 거절했습니다'),
-        backgroundColor: AppColors.red,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+ToastBar.clover('그룹 초대를 거절 했습니다.');
   }
 
   @override

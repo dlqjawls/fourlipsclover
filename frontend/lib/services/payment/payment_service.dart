@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import '../models/payment_history.dart';
+import '../../models/payment_history.dart';
 
 class PaymentInitData {
   final String tid;

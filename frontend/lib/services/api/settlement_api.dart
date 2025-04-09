@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/settlement/settlement_model.dart';
 import '../../models/settlement/settlement_request_model.dart';
+import '../../models/settlement/settlement_situation_model.dart';
 import '../../models/settlement/update_participant_model.dart';
 
 class SettlementApi {
@@ -184,4 +185,79 @@ class SettlementApi {
       rethrow;
     }
   }
+  // lib/services/api/settlement_api.dart에 추가할 코드
+
+/// 정산 현황 조회하기
+/// [planId] 계획 ID
+Future<List<SettlementSituationResponse>> getSettlementSituation(int planId) async {
+  final token = await _getAuthToken();
+  
+  if (!_validateToken(token)) {
+    throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+  }
+  
+  final url = Uri.parse('$baseUrl$planApiPrefix/$planId/settlement/situation');
+  
+  debugPrint('정산 현황 조회 API 호출: $url');
+  
+  try {
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+    
+    debugPrint('응답 코드: ${response.statusCode}');
+    
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+      return data.map((json) => SettlementSituationResponse.fromJson(json)).toList();
+    } else {
+      throw Exception(
+        '정산 현황 조회에 실패했습니다: ${response.statusCode}, ${response.body}',
+      );
+    }
+  } catch (e) {
+    debugPrint('API 호출 중 에러 발생: $e');
+    rethrow;
+  }
+}
+
+/// 정산 거래 완료 처리하기
+/// [planId] 계획 ID
+/// [transactionId] 거래 ID
+Future<String> completeTransaction(int planId, int transactionId) async {
+  final token = await _getAuthToken();
+  
+  if (!_validateToken(token)) {
+    throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+  }
+  
+  final url = Uri.parse('$baseUrl$planApiPrefix/$planId/settlement/transactions/$transactionId/complete');
+  
+  debugPrint('정산 거래 완료 API 호출: $url');
+  
+  try {
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+    
+    debugPrint('응답 코드: ${response.statusCode}');
+    
+    if (response.statusCode == 200) {
+      return response.body;
+    } else {
+      throw Exception(
+        '정산 거래 완료 처리에 실패했습니다: ${response.statusCode}, ${response.body}',
+      );
+    }
+  } catch (e) {
+    debugPrint('API 호출 중 에러 발생: $e');
+    rethrow;
+  }
+}
 }

@@ -4,10 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/theme.dart';
 import '../../providers/group_provider.dart';
 import '../../widgets/clover_loading_spinner.dart';
+import '../../widgets/toast_bar.dart';
 import 'group_widgets/empty_group_view.dart';
 import 'group_widgets/group_list_view.dart';
 import 'bottomsheet/group_create_bottom_sheet.dart';
-import '../../services/deep_link_service.dart';
+import '../../services/invitation/deep_link_service.dart';
 
 class GroupScreen extends StatefulWidget {
   const GroupScreen({Key? key}) : super(key: key);
@@ -50,18 +51,15 @@ class _GroupScreenState extends State<GroupScreen> {
 
     if (token != null && mounted) {
       debugPrint('초대 화면으로 이동: $token');
-      Navigator.of(context).pushNamed(
-        '/group/invitation', 
-        arguments: {'token': token}
-      ).then((_) {
+      Navigator.of(
+        context,
+      ).pushNamed('/group/invitation', arguments: {'token': token}).then((_) {
         // 초대 화면에서 돌아오면 상태 업데이트
         _checkPendingInvitation();
       });
     } else {
       // 토큰이 없는 경우 사용자에게 알림
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('처리할 초대가 없습니다'))
-      );
+      ToastBar.clover('처리할 초대가 없습니다.');
     }
   }
 
@@ -82,15 +80,7 @@ class _GroupScreenState extends State<GroupScreen> {
       setState(() {
         _isError = true;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '그룹 목록을 불러오는데 실패했습니다.',
-            style: TextStyle(fontFamily: 'Anemone_air'),
-          ),
-          backgroundColor: AppColors.red,
-        ),
-      );
+      ToastBar.clover('그룹 목록 로드 실패');
     }
   }
 
@@ -102,13 +92,16 @@ class _GroupScreenState extends State<GroupScreen> {
 
     return Scaffold(
       // 플로팅 액션 버튼 - 초대가 있을 때만 표시
-      floatingActionButton: _hasPendingInvitation ? FloatingActionButton(
-        heroTag: 'invitationFab',
-        onPressed: _navigateToInvitationScreen,
-        backgroundColor: AppColors.orange,
-        tooltip: '그룹 초대 확인',
-        child: const Icon(Icons.mail, color: Colors.white),
-      ) : null,
+      floatingActionButton:
+          _hasPendingInvitation
+              ? FloatingActionButton(
+                heroTag: 'invitationFab',
+                onPressed: _navigateToInvitationScreen,
+                backgroundColor: AppColors.orange,
+                tooltip: '그룹 초대 확인',
+                child: const Icon(Icons.mail, color: Colors.white),
+              )
+              : null,
 
       body: LoadingOverlay(
         isLoading: isLoading,
@@ -137,62 +130,63 @@ class _GroupScreenState extends State<GroupScreen> {
                 children: [
                   // 메인 콘텐츠 (에러 또는 그룹 목록)
                   Expanded(
-                    child: _isError
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                color: AppColors.red,
-                                size: 48,
-                              ),
-                              SizedBox(height: 16),
-                              Text(
-                                '그룹 목록을 불러오는데 실패했습니다.',
-                                style: TextStyle(
-                                  fontFamily: 'Anemone_air',
-                                  color: AppColors.darkGray,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: _fetchGroups,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                ),
-                                child: Text(
-                                  '다시 시도',
-                                  style: TextStyle(
-                                    fontFamily: 'Anemone_air',
+                    child:
+                        _isError
+                            ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    color: AppColors.red,
+                                    size: 48,
                                   ),
-                                ),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    '그룹 목록을 불러오는데 실패했습니다.',
+                                    style: TextStyle(
+                                      fontFamily: 'Anemone_air',
+                                      color: AppColors.darkGray,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  SizedBox(height: 16),
+                                  ElevatedButton(
+                                    onPressed: _fetchGroups,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                    ),
+                                    child: Text(
+                                      '다시 시도',
+                                      style: TextStyle(
+                                        fontFamily: 'Anemone_air',
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        )
-                      : Consumer<GroupProvider>(
-                          builder: (context, groupProvider, child) {
-                            final groups = groupProvider.groups;
+                            )
+                            : Consumer<GroupProvider>(
+                              builder: (context, groupProvider, child) {
+                                final groups = groupProvider.groups;
 
-                            return groups.isEmpty && !isLoading
-                                ? EmptyGroupView(
-                                    onCreateGroup: () {
-                                      _showGroupCreateBottomSheet(context);
-                                    },
-                                  )
-                                : groups.isEmpty 
-                                  ? SizedBox()
-                                  : GroupListView(
+                                return groups.isEmpty && !isLoading
+                                    ? EmptyGroupView(
+                                      onCreateGroup: () {
+                                        _showGroupCreateBottomSheet(context);
+                                      },
+                                    )
+                                    : groups.isEmpty
+                                    ? SizedBox()
+                                    : GroupListView(
                                       groups: groups,
                                       groupProvider: groupProvider,
                                       onCreateGroup: () {
                                         _showGroupCreateBottomSheet(context);
                                       },
                                     );
-                          },
-                        ),
+                              },
+                            ),
                   ),
                 ],
               ),

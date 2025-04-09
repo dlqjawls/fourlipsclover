@@ -5,7 +5,7 @@ import '../models/group/member_model.dart';
 import '../services/api/group_api.dart';
 import 'package:flutter/widgets.dart';
 import '../models/group/group_join_request_model.dart';
-import '../services/deep_link_service.dart';
+import '../services/invitation/deep_link_service.dart';
 
 class GroupProvider with ChangeNotifier {
   final GroupApi _groupApi = GroupApi();

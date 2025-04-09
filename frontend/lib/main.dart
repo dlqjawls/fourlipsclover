@@ -7,10 +7,10 @@ import 'config/theme.dart';
 import 'providers/app_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
-import 'services/kakao_service.dart';
+import 'services/kakao/kakao_service.dart';
 import 'providers/search_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'services/kakao_map_service.dart';
+import 'services/kakao/kakao_map_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/group_provider.dart';
 import 'providers/plan_provider.dart';
@@ -22,7 +22,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:frontend/services/user_service.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 import 'providers/matching_provider.dart';
-import 'services/deep_link_service.dart';
+import 'services/invitation/deep_link_service.dart';
 import 'providers/review_provider.dart';
 
 void main() async {

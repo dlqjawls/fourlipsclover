@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import '../../../config/theme.dart';
 import '../../../models/notice/notice_model.dart';
 import '../../../providers/notice_provider.dart';
+import '../../../widgets/toast_bar.dart';
 import '../bottomsheet/notice_create_bottom_sheet.dart';
 import '../bottomsheet/notice_edit_bottom_sheet.dart'; // 수정 바텀시트 추가
 
@@ -50,9 +51,7 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
     } catch (e) {
       debugPrint('공지사항 로드 중 오류: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('공지사항을 불러오는데 실패했습니다: $e')));
+        ToastBar.clover('공지사항 로드 실패');
       }
     } finally {
       if (mounted) {
@@ -98,13 +97,9 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
           // 생성 후 공지사항 목록 다시 불러오기
           _loadNotices();
 
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('공지사항이 추가되었습니다')));
+          ToastBar.clover('공지사항 추가 완료');
         } catch (e) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('공지사항 추가에 실패했습니다: $e')));
+          ToastBar.clover('공지사항 추가 실패');
         }
       },
     );
@@ -150,13 +145,9 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
           // 수정 후 공지사항 목록 다시 불러오기
           _loadNotices();
 
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('공지사항이 수정되었습니다')));
+          ToastBar.clover('공지사항 수정 완료');
         } catch (e) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('공지사항 수정에 실패했습니다: $e')));
+          ToastBar.clover('공지사항 수정 실패');
         }
       },
       onNoticeDeleted: () async {
@@ -173,13 +164,9 @@ class _PlanNoticeBoardState extends State<PlanNoticeBoard> {
       await noticeProvider.deleteNotice(widget.planId, planNoticeId);
       _loadNotices(); // 목록 새로고침
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('공지사항이 삭제되었습니다')));
+      ToastBar.clover('공지사항 삭제 완료');
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('공지사항 삭제에 실패했습니다: $e')));
+      ToastBar.clover('공지사항 삭제 실패');
     }
   }
 

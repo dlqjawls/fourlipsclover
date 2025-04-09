@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../config/theme.dart';
+import '../../../widgets/toast_bar.dart';
 
 class GroupInvitationDialog extends StatelessWidget {
   final String inviteUrl;
@@ -84,9 +85,7 @@ class GroupInvitationDialog extends StatelessWidget {
                   ),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: inviteUrl));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('초대 링크가 클립보드에 복사되었습니다')),
-                    );
+                    ToastBar.clover('초대 링크 복사 완료');
                   },
                 ),
               ],
@@ -126,9 +125,7 @@ class GroupInvitationDialog extends StatelessWidget {
                       Navigator.of(context).pop();
                     } catch (e) {
                       debugPrint('카카오 공유 호출 오류: $e');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('카카오톡 공유를 시작할 수 없습니다')),
-                      );
+                      ToastBar.clover('카카오톡 공유 시작 실패');
                     }
                   },
                   style: ElevatedButton.styleFrom(

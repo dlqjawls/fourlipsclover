@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../config/theme.dart';
 import '../../../providers/group_provider.dart';
 import '../../../widgets/custom_switch.dart';
+import '../../../widgets/toast_bar.dart';
 
 class GroupCreateBottomSheet extends StatefulWidget {
   const GroupCreateBottomSheet({Key? key}) : super(key: key);
@@ -349,17 +350,7 @@ class _GroupCreateBottomSheetState extends State<GroupCreateBottomSheet> {
                               ).fetchMyGroups();
 
                               if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      '그룹이 생성되었습니다.',
-                                      style: TextStyle(
-                                        fontFamily: 'Anemone_air',
-                                      ),
-                                    ),
-                                    backgroundColor: AppColors.primary,
-                                  ),
-                                );
+                                ToastBar.clover('그룹 생성 완료');
                                 Navigator.of(
                                   context,
                                 ).pop(true); // true 반환하여 생성 성공 알림
@@ -371,30 +362,12 @@ class _GroupCreateBottomSheetState extends State<GroupCreateBottomSheet> {
                                       context,
                                       listen: false,
                                     ).error;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      error ?? '그룹 생성에 실패했습니다.',
-                                      style: TextStyle(
-                                        fontFamily: 'Anemone_air',
-                                      ),
-                                    ),
-                                    backgroundColor: AppColors.red,
-                                  ),
-                                );
+                                ToastBar.clover('그룹 생성 실패');
                               }
                             }
                           } catch (e) {
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    '오류가 발생했습니다: $e',
-                                    style: TextStyle(fontFamily: 'Anemone_air'),
-                                  ),
-                                  backgroundColor: AppColors.red,
-                                ),
-                              );
+                              ToastBar.clover('그룹 생성 오류 : $e');
                             }
                           } finally {
                             if (mounted) {
