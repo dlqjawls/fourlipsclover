@@ -18,7 +18,7 @@ class RestaurantResponse {
   final List<String>? restaurantImages;
   final List<String>? menu;
   final List<Map<String, dynamic>>? tags;
-  final String? avgAmount;
+  final Map<String, dynamic>? avgAmount;
   final int? likeSentiment; 
   final int? dislikeSentiment; 
   double? distance;
@@ -66,7 +66,9 @@ class RestaurantResponse {
           ?.map((img) => img.toString())
           .toList(),
       tags: (json['tags'] as List<dynamic>?)?.cast<Map<String, dynamic>>(),
-      avgAmount: json['avgAmount'], 
+      avgAmount: json['avgAmount'] != null
+          ? Map<String, dynamic>.from(jsonDecode(json['avgAmount']))
+          : null,
       likeSentiment: json['likeSentiment'], 
       dislikeSentiment: json['dislikeSentiment'], 
     );
