@@ -7,7 +7,7 @@ import '../../widgets/clover_loading_spinner.dart';
 import '../../widgets/toast_bar.dart';
 import 'group_widgets/empty_group_view.dart';
 import 'group_widgets/group_list_view.dart';
-import 'bottomsheet/group_create_bottom_sheet.dart';
+import 'bottomsheet/group/group_create_bottom_sheet.dart';
 import '../../services/invitation/deep_link_service.dart';
 
 class GroupScreen extends StatefulWidget {

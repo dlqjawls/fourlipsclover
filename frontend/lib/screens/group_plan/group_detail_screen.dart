@@ -9,12 +9,12 @@ import '../../providers/plan_provider.dart';
 import '../../providers/group_provider.dart';
 import '../../config/theme.dart';
 import '../../widgets/toast_bar.dart';
-import 'bottomsheet/join_request_bottom_sheet.dart';
-import 'group_widgets/group_calendar.dart';
+import 'bottomsheet/invitation/join_request_bottom_sheet.dart';
+import 'group_widgets/calendar/group_calendar.dart';
 import 'plan_widgets/empty_plan_view.dart';
 import 'plan_widgets/plan_list_view.dart';
-import 'bottomsheet/plan_create_bottom_sheet.dart';
-import 'bottomsheet/calendar_event_bottom_sheet.dart';
+import 'bottomsheet/plan/plan_create_bottom_sheet.dart';
+import 'bottomsheet/calendar/calendar_event_bottom_sheet.dart';
 import 'group_widgets/group_members_bar.dart';
 import 'group_widgets/group_edit_dialog.dart';
 import '../../models/plan/plan_model.dart';
@@ -22,8 +22,8 @@ import '../../providers/user_provider.dart';
 import './plan_detail_screen.dart';
 import '../../widgets/clover_loading_spinner.dart';
 import '../../services/kakao/kakao_share_service.dart';
-import './group_widgets/group_invitation_dialog.dart';
-import 'plan_widgets/group_expenses_analysis_view.dart';
+import 'group_widgets/invitation/group_invitation_dialog.dart';
+import 'group_widgets/analysis/group_expenses_analysis_view.dart';
 
 class GroupDetailScreen extends StatefulWidget {
   final Group group;

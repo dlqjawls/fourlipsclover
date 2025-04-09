@@ -10,10 +10,10 @@ import '../../config/theme.dart';
 import '../../widgets/clover_loading_spinner.dart';
 import '../../widgets/toast_bar.dart';
 import 'plan_widgets/plan_members_bar.dart';
-import 'plan_widgets/plan_notice_board.dart';
-import 'plan_widgets/timeline_plan_schedule_view.dart';
-import 'plan_widgets/plan_settlement_view.dart';
-import 'bottomsheet/plan_member_management_sheet.dart';
+import 'plan_widgets/notice/plan_notice_board.dart';
+import 'plan_widgets/schedule/timeline_plan_schedule_view.dart';
+import 'plan_widgets/settlement/plan_settlement_view.dart';
+import 'bottomsheet/plan/plan_member_management_sheet.dart';
 import '../../config/theme.dart';
 
 class PlanDetailScreen extends StatefulWidget {
