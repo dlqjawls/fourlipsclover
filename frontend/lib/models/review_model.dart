@@ -19,6 +19,9 @@ class Review {
   bool isLiked;
   bool isDisliked;
   final List<String> imageUrls;
+  final int? totalAmount;
+  final int? visitorCount;
+
 
   Review({
     required this.id,
@@ -38,6 +41,8 @@ class Review {
     this.isLiked = false,
     this.isDisliked = false,
     required this.imageUrls,
+    this.totalAmount,
+    this.visitorCount,
   });
 
   factory Review.fromResponse(ReviewResponse response) {
