@@ -1,7 +1,7 @@
 // lib/screens/map/services/label_service.dart
 import 'package:flutter/material.dart';
 import '../../../providers/map_provider.dart';
-import '../../../services/kakao_map_service.dart';
+import '../../../services/kakao/kakao_map_service.dart';
 import '../../../models/restaurant_model.dart';
 
 /// 라벨 서비스 클래스 - 지도 라벨 관련 기능 캡슐화

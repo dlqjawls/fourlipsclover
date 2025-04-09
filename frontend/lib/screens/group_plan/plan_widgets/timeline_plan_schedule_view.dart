@@ -6,6 +6,7 @@ import '../../../models/plan/plan_model.dart';
 import '../../../models/plan/plan_schedule_model.dart';
 import '../../../providers/plan_provider.dart';
 import '../../../config/theme.dart';
+import '../../../widgets/toast_bar.dart';
 import '../bottomsheet/schedule_create_bottom_sheet.dart';
 import './timeline_card.dart';
 import './empty_schedule_view.dart';
@@ -85,16 +86,7 @@ class _TimelinePlanScheduleViewState extends State<TimelinePlanScheduleView> {
         setState(() {
           _schedules = []; // 빈 목록으로 설정
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('일정을 불러오는데 실패했습니다. 나중에 다시 시도해주세요.'),
-            duration: Duration(seconds: 3),
-            action: SnackBarAction(
-              label: '재시도',
-              onPressed: () => _loadSchedules(),
-            ),
-          ),
-        );
+ToastBar.clover('일정 데이터 로드 실패');
       }
     } finally {
       if (mounted) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../config/theme.dart';
 import '../../../models/group/group_model.dart';
 import '../../../providers/group_provider.dart';
+import '../../../widgets/toast_bar.dart';
 import 'group_card.dart';
 
 class GroupListView extends StatefulWidget {
@@ -164,17 +165,7 @@ class _GroupListViewState extends State<GroupListView> {
                                   },
                                 );
                               } else if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      '그룹 정보를 불러오는데 실패했습니다.',
-                                      style: TextStyle(
-                                        fontFamily: 'Anemone_air',
-                                      ),
-                                    ),
-                                    backgroundColor: AppColors.red,
-                                  ),
-                                );
+                                ToastBar.clover('그룹 정보 로드 실패');
                               }
                             }
                           },

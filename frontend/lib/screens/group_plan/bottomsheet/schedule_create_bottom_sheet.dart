@@ -8,6 +8,7 @@ import '../../../models/restaurant_model.dart';
 import '../../../providers/plan_provider.dart';
 import '../../../widgets/clover_loading_spinner.dart';
 import '../../../config/theme.dart';
+import '../../../widgets/toast_bar.dart';
 import 'custom_time_picker.dart';
 import 'restaurant_search_screen.dart';
 
@@ -84,9 +85,7 @@ class _ScheduleCreateBottomSheetState extends State<ScheduleCreateBottomSheet> {
 
     // 유효성 검사 - 레스토랑 ID 또는 kakaoPlaceId 중 하나는 있어야 함
     if (_restaurantId == null && _kakaoPlaceId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('방문 장소를 선택해주세요')));
+      ToastBar.clover('방문 장소를 선택해주세요.');
       return;
     }
 
@@ -122,9 +121,7 @@ class _ScheduleCreateBottomSheetState extends State<ScheduleCreateBottomSheet> {
 
       // 성공 메시지
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('일정이 추가되었습니다.')));
+        ToastBar.clover('일정 추가 완료');
 
         // 콜백 호출 - Navigator.pop 전에 호출해야 부모 위젯이 업데이트를 감지할 수 있음
         if (widget.onScheduleCreated != null) {
@@ -139,9 +136,7 @@ class _ScheduleCreateBottomSheetState extends State<ScheduleCreateBottomSheet> {
     } catch (e) {
       // 에러 메시지
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('일정 추가에 실패했습니다: $e')));
+        ToastBar.clover('일정 추가 실패');
       }
     } finally {
       if (mounted) {

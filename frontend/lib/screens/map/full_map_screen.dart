@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import '../../providers/map_provider.dart';
 import '../../config/theme.dart';
-import '../../services/kakao_map_service.dart';
+import '../../services/kakao/kakao_map_service.dart';
 import '../../widgets/kakao_map_native_view.dart';
 import '../../widgets/custom_switch.dart';
 import '../../models/restaurant_model.dart';

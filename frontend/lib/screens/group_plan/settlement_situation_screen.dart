@@ -9,6 +9,7 @@ import '../../models/settlement/settlement_situation_model.dart';
 import '../../models/settlement/settlement_transaction_response.dart';
 import '../../models/settlement/transaction_types.dart';
 import '../../config/theme.dart';
+import '../../widgets/toast_bar.dart';
 
 class SettlementSituationScreen extends StatefulWidget {
   final int planId;
@@ -21,7 +22,8 @@ class SettlementSituationScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<SettlementSituationScreen> createState() => _SettlementSituationScreenState();
+  State<SettlementSituationScreen> createState() =>
+      _SettlementSituationScreenState();
 }
 
 class _SettlementSituationScreenState extends State<SettlementSituationScreen> {
@@ -40,13 +42,13 @@ class _SettlementSituationScreenState extends State<SettlementSituationScreen> {
     });
 
     try {
-      await Provider.of<SettlementProvider>(context, listen: false)
-          .fetchSettlementSituation(widget.planId);
+      await Provider.of<SettlementProvider>(
+        context,
+        listen: false,
+      ).fetchSettlementSituation(widget.planId);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('정산 현황을 불러오는 데 실패했습니다: $e')),
-        );
+        ToastBar.clover('정산 현황 불러오기 실패');
       }
     } finally {
       if (mounted) {
@@ -63,19 +65,17 @@ class _SettlementSituationScreenState extends State<SettlementSituationScreen> {
     });
 
     try {
-      final result = await Provider.of<SettlementProvider>(context, listen: false)
-          .completeTransaction(widget.planId, transactionId);
+      final result = await Provider.of<SettlementProvider>(
+        context,
+        listen: false,
+      ).completeTransaction(widget.planId, transactionId);
 
       if (result && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('정산 완료 처리되었습니다')),
-        );
+        ToastBar.clover('정산완료 처리 완료');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('정산 완료 처리에 실패했습니다: $e')),
-        );
+        ToastBar.clover('정산완료 처리 실패');
       }
     } finally {
       if (mounted) {
@@ -114,9 +114,7 @@ class _SettlementSituationScreenState extends State<SettlementSituationScreen> {
               return Column(
                 children: [
                   _buildHeader(situation),
-                  Expanded(
-                    child: _buildTransactionList(situation),
-                  ),
+                  Expanded(child: _buildTransactionList(situation)),
                 ],
               );
             },
@@ -127,8 +125,10 @@ class _SettlementSituationScreenState extends State<SettlementSituationScreen> {
   }
 
   Widget _buildHeader(SettlementSituationResponse situation) {
-    final statusText = Provider.of<SettlementProvider>(context, listen: false)
-        .getSettlementStatusText(situation.settlementStatus);
+    final statusText = Provider.of<SettlementProvider>(
+      context,
+      listen: false,
+    ).getSettlementStatusText(situation.settlementStatus);
 
     return Container(
       width: double.infinity,
@@ -139,10 +139,7 @@ class _SettlementSituationScreenState extends State<SettlementSituationScreen> {
         children: [
           Text(
             widget.planTitle,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Row(
@@ -150,20 +147,14 @@ class _SettlementSituationScreenState extends State<SettlementSituationScreen> {
               Text('총무: ${situation.treasurerName}'),
               const SizedBox(width: 12),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: _getStatusColor(situation.settlementStatus),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   statusText,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
                 ),
               ),
             ],
@@ -181,28 +172,30 @@ class _SettlementSituationScreenState extends State<SettlementSituationScreen> {
   Widget _buildTransactionList(SettlementSituationResponse situation) {
     // 거래 상태별로 정렬 (진행 중인 거래가 먼저)
     final transactions = [...situation.settlementTransactionResponses];
-    
+
     // 상태별 우선순위에 따라 정렬
     transactions.sort((a, b) {
       // 상태별 우선순위: PENDING, FAILED, COMPLETED, CANCELED
-      final getStatusPriority = (TransactionStatus status) {
+      getStatusPriority(TransactionStatus status) {
         switch (status) {
-          case TransactionStatus.PENDING: return 0;
-          case TransactionStatus.FAILED: return 1;
-          case TransactionStatus.COMPLETED: return 2;
-          case TransactionStatus.CANCELED: return 3;
-          default: return 4;
-        }
-      };
-      
-      return getStatusPriority(a.transactionStatus) 
-          .compareTo(getStatusPriority(b.transactionStatus));
+          case TransactionStatus.PENDING:
+            return 0;
+          case TransactionStatus.FAILED:
+            return 1;
+          case TransactionStatus.COMPLETED:
+            return 2;
+          case TransactionStatus.CANCELED:
+            return 3;
+          }
+      }
+
+      return getStatusPriority(
+        a.transactionStatus,
+      ).compareTo(getStatusPriority(b.transactionStatus));
     });
 
     if (transactions.isEmpty) {
-      return const Center(
-        child: Text('정산 거래 내역이 없습니다.'),
-      );
+      return const Center(child: Text('정산 거래 내역이 없습니다.'));
     }
 
     return ListView.separated(
@@ -210,10 +203,13 @@ class _SettlementSituationScreenState extends State<SettlementSituationScreen> {
       separatorBuilder: (context, index) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final transaction = transactions[index];
-        final isPending = transaction.transactionStatus == TransactionStatus.PENDING;
-        final statusText = Provider.of<SettlementProvider>(context, listen: false)
-            .getTransactionStatusText(transaction.transactionStatus);
-        
+        final isPending =
+            transaction.transactionStatus == TransactionStatus.PENDING;
+        final statusText = Provider.of<SettlementProvider>(
+          context,
+          listen: false,
+        ).getTransactionStatusText(transaction.transactionStatus);
+
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -237,14 +233,14 @@ class _SettlementSituationScreenState extends State<SettlementSituationScreen> {
             children: [
               Text(
                 '${currencyFormatter.format(transaction.cost)}원',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               Text(
                 '상태: $statusText',
                 style: TextStyle(
-                  color: _getTransactionStatusColor(transaction.transactionStatus),
+                  color: _getTransactionStatusColor(
+                    transaction.transactionStatus,
+                  ),
                 ),
               ),
               if (transaction.createdAt != null)
@@ -259,15 +255,20 @@ class _SettlementSituationScreenState extends State<SettlementSituationScreen> {
                 ),
             ],
           ),
-          trailing: isPending && situation.settlementStatus != SettlementStatus.COMPLETED
-              ? ElevatedButton(
-                  onPressed: () => _completeTransaction(transaction.settlementTransactionId),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                  ),
-                  child: const Text('완료 처리'),
-                )
-              : _getStatusIcon(transaction.transactionStatus),
+          trailing:
+              isPending &&
+                      situation.settlementStatus != SettlementStatus.COMPLETED
+                  ? ElevatedButton(
+                    onPressed:
+                        () => _completeTransaction(
+                          transaction.settlementTransactionId,
+                        ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                    ),
+                    child: const Text('완료 처리'),
+                  )
+                  : _getStatusIcon(transaction.transactionStatus),
         );
       },
     );
@@ -300,7 +301,7 @@ class _SettlementSituationScreenState extends State<SettlementSituationScreen> {
         return Colors.grey;
     }
   }
-  
+
   Color _getTransactionStatusColor(TransactionStatus status) {
     switch (status) {
       case TransactionStatus.PENDING:

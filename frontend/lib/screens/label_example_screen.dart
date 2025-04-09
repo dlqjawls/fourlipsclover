@@ -6,7 +6,7 @@ import 'dart:async'; // StreamSubscription을 위한 import
 import '../providers/map_provider.dart';
 import '../widgets/kakao_map_native_view.dart';
 import '../config/theme.dart';
-import '../services/kakao_map_service.dart';
+import '../services/kakao/kakao_map_service.dart';
 import 'package:geolocator/geolocator.dart'; // 위치 정보를 위한 패키지
 import 'map/widgets/route_summary_modal.dart';
 import 'map/widgets/route_search_panel.dart';

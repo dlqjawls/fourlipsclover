@@ -6,6 +6,7 @@ import '../../../models/plan/member_info_response.dart';
 import '../../../providers/plan_provider.dart';
 import '../../../providers/user_provider.dart';
 import '../../../widgets/clover_loading_spinner.dart';
+import '../../../widgets/toast_bar.dart';
 import 'train_seat_member_selection.dart';
 
 class PlanMemberManagementSheet extends StatefulWidget {
@@ -91,13 +92,7 @@ class _PlanMemberManagementSheetState extends State<PlanMemberManagementSheet> {
       );
 
       if (mounted) {
-        // 성공 메시지 표시 후 팝업 닫기
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${_selectedMemberIds.length}명의 멤버가 추가되었습니다.'),
-            backgroundColor: AppColors.primary,
-          ),
-        );
+        ToastBar.clover('${_selectedMemberIds.length}명의 멤버가 추가되었습니다.');
         Navigator.of(context).pop(true); // 변경 사항이 있음을 알림
       }
     } catch (e) {

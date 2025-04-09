@@ -4,16 +4,14 @@ import 'package:provider/provider.dart';
 import '../../../models/group/group_model.dart';
 import '../../../providers/group_provider.dart';
 import '../../../config/theme.dart';
+import '../../../widgets/toast_bar.dart';
 
 class GroupEditDialog extends StatefulWidget {
   final Group group;
   final Function(Group) onUpdate;
 
-  const GroupEditDialog({
-    Key? key,
-    required this.group,
-    required this.onUpdate,
-  }) : super(key: key);
+  const GroupEditDialog({Key? key, required this.group, required this.onUpdate})
+    : super(key: key);
 
   @override
   State<GroupEditDialog> createState() => _GroupEditDialogState();
@@ -29,7 +27,9 @@ class _GroupEditDialogState extends State<GroupEditDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.group.name);
-    _descriptionController = TextEditingController(text: widget.group.description);
+    _descriptionController = TextEditingController(
+      text: widget.group.description,
+    );
     _isPublic = widget.group.isPublic;
   }
 
@@ -43,7 +43,7 @@ class _GroupEditDialogState extends State<GroupEditDialog> {
   @override
   Widget build(BuildContext context) {
     final groupProvider = Provider.of<GroupProvider>(context);
-    
+
     return AlertDialog(
       title: Text(
         '그룹 정보 수정',
@@ -53,99 +53,104 @@ class _GroupEditDialogState extends State<GroupEditDialog> {
           color: AppColors.primaryDark,
         ),
       ),
-      content: groupProvider.isLoading
-          ? const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20.0),
-                child: CircularProgressIndicator(),
-              ),
-            )
-          : SingleChildScrollView(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 그룹 이름 입력 필드
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: InputDecoration(
-                        labelText: '그룹 이름',
-                        labelStyle: TextStyle(color: AppColors.primaryDark),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+      content:
+          groupProvider.isLoading
+              ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+              : SingleChildScrollView(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 그룹 이름 입력 필드
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          labelText: '그룹 이름',
+                          labelStyle: TextStyle(color: AppColors.primaryDark),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
+                          ),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: AppColors.primary, width: 2),
-                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return '그룹 이름을 입력해주세요';
+                          }
+                          return null;
+                        },
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return '그룹 이름을 입력해주세요';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    // 그룹 설명 입력 필드
-                    TextFormField(
-                      controller: _descriptionController,
-                      decoration: InputDecoration(
-                        labelText: '그룹 설명',
-                        labelStyle: TextStyle(color: AppColors.primaryDark),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                      // 그룹 설명 입력 필드
+                      TextFormField(
+                        controller: _descriptionController,
+                        decoration: InputDecoration(
+                          labelText: '그룹 설명',
+                          labelStyle: TextStyle(color: AppColors.primaryDark),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
+                          ),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: AppColors.primary, width: 2),
-                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return '그룹 설명을 입력해주세요';
+                          }
+                          return null;
+                        },
+                        maxLines: 3,
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return '그룹 설명을 입력해주세요';
-                        }
-                        return null;
-                      },
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    // 공개 여부 토글
-                    Row(
-                      children: [
-                        Text(
-                          '공개 그룹',
-                          style: TextStyle(color: AppColors.darkGray),
-                        ),
-                        const Spacer(),
-                        Switch(
-                          value: _isPublic,
-                          onChanged: (value) {
-                            setState(() {
-                              _isPublic = value;
-                            });
-                          },
-                          activeColor: AppColors.primary,
-                        ),
-                      ],
-                    ),
-                  ],
+                      // 공개 여부 토글
+                      Row(
+                        children: [
+                          Text(
+                            '공개 그룹',
+                            style: TextStyle(color: AppColors.darkGray),
+                          ),
+                          const Spacer(),
+                          Switch(
+                            value: _isPublic,
+                            onChanged: (value) {
+                              setState(() {
+                                _isPublic = value;
+                              });
+                            },
+                            activeColor: AppColors.primary,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
       actions: [
         TextButton(
-          onPressed: groupProvider.isLoading ? null : () => Navigator.of(context).pop(),
-          child: Text(
-            '취소',
-            style: TextStyle(
-              color: AppColors.darkGray,
-            ),
-          ),
+          onPressed:
+              groupProvider.isLoading
+                  ? null
+                  : () => Navigator.of(context).pop(),
+          child: Text('취소', style: TextStyle(color: AppColors.darkGray)),
         ),
         ElevatedButton(
           onPressed: groupProvider.isLoading ? null : _updateGroup,
@@ -169,7 +174,7 @@ class _GroupEditDialogState extends State<GroupEditDialog> {
     }
 
     final groupProvider = Provider.of<GroupProvider>(context, listen: false);
-    
+
     final success = await groupProvider.updateGroup(
       groupId: widget.group.groupId,
       name: _nameController.text.trim(),
@@ -188,14 +193,10 @@ class _GroupEditDialogState extends State<GroupEditDialog> {
       Navigator.of(context).pop();
 
       // 성공 메시지 표시
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('그룹 정보가 수정되었습니다')),
-      );
+      ToastBar.clover('그룹 정보 수정 완료');
     } else {
       // 에러 메시지 표시
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('그룹 정보 수정 실패: ${groupProvider.error}')),
-      );
+      ToastBar.clover('그룹 정보 수정 실패');
     }
   }
 }

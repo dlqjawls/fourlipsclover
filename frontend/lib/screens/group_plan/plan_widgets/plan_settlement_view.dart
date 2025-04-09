@@ -7,6 +7,7 @@ import '../../../providers/plan_provider.dart';
 import '../../../providers/settlement_provider.dart';
 import '../../../models/settlement/settlement_model.dart';
 import '../../../models/settlement/transaction_types.dart';
+import '../../../widgets/toast_bar.dart';
 import '../bottomsheet/expense_edit_bottom_sheet.dart';
 
 class PlanSettlementView extends StatefulWidget {
@@ -130,9 +131,7 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
         // 성공 시 정산 데이터 다시 로드
         await _loadSettlementData();
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('정산이 성공적으로 생성되었습니다.')));
+        ToastBar.clover('정산 생성 완료');
       } else {
         setState(() {
           _isLoading = false;
@@ -149,7 +148,7 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
       }
     }
   }
-  
+
   // 정산 요청 메서드
   Future<void> _requestSettlement() async {
     setState(() {
@@ -157,14 +156,15 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
     });
 
     try {
-      final settlementProvider = Provider.of<SettlementProvider>(context, listen: false);
+      final settlementProvider = Provider.of<SettlementProvider>(
+        context,
+        listen: false,
+      );
       final result = await settlementProvider.requestSettlement(widget.planId);
 
       if (result != null) {
         // 정산 요청 성공
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('정산 요청이 완료되었습니다')),
-        );
+        ToastBar.clover('정산 요청 완료');
 
         // 정산 현황 화면으로 이동
         Navigator.pushNamed(
@@ -175,18 +175,14 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
             'planTitle': widget.planTitle ?? '여행 계획',
           },
         );
-        
+
         // 정산 데이터 새로고침
         await _loadSettlementData();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('정산 요청 실패: ${settlementProvider.error}')),
-        );
+        ToastBar.clover('정산 요청 실패');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('정산 요청 중 오류 발생: $e')),
-      );
+      ToastBar.clover('정산 요청 오류 $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -308,10 +304,7 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
               const SizedBox(height: 8),
               Text(
                 '여행 날짜: ${_formatTravelDate()}',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.darkGray,
-                ),
+                style: TextStyle(fontSize: 14, color: AppColors.darkGray),
               ),
               Text(
                 '총 지출액: ${NumberFormat('#,###', 'ko_KR').format(_settlement!.totalAmount)}원',
@@ -327,93 +320,99 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
 
         // 영수증 또는 비용 없음 메시지
         Expanded(
-          child: _settlement!.expenses.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.receipt_long_outlined,
-                        size: 80,
-                        color: AppColors.mediumGray,
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        '등록된 결제 내역이 없습니다.',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: AppColors.darkGray,
-                          fontWeight: FontWeight.bold,
+          child:
+              _settlement!.expenses.isEmpty
+                  ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.receipt_long_outlined,
+                          size: 80,
+                          color: AppColors.mediumGray,
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        '여행 중 발생한 비용을 카카오페이로 결제하면\n자동으로 여기에 표시됩니다.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 14, color: AppColors.mediumGray),
-                      ),
-                    ],
-                  ),
-                )
-              : SingleChildScrollView(
-                  child: Center(
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 20),
-                      width: MediaQuery.of(context).size.width * 0.75,
-                      child: ReceiptWidget(
-                        settlement: _settlement!,
-                        planTitle: widget.planTitle ?? '여행 계획',
-                        date: _formatTravelDate(),
-                        planId: widget.planId,
-                        groupId: widget.groupId,
-                        onSettlementRequested: _loadSettlementData,
+                        const SizedBox(height: 20),
+                        Text(
+                          '등록된 결제 내역이 없습니다.',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: AppColors.darkGray,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          '여행 중 발생한 비용을 카카오페이로 결제하면\n자동으로 여기에 표시됩니다.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.mediumGray,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                  : SingleChildScrollView(
+                    child: Center(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 20),
+                        width: MediaQuery.of(context).size.width * 0.75,
+                        child: ReceiptWidget(
+                          settlement: _settlement!,
+                          planTitle: widget.planTitle ?? '여행 계획',
+                          date: _formatTravelDate(),
+                          planId: widget.planId,
+                          groupId: widget.groupId,
+                          onSettlementRequested: _loadSettlementData,
+                        ),
                       ),
                     ),
                   ),
-                ),
         ),
 
         // 정산 요청 버튼 또는 정산 현황 버튼
         Padding(
           padding: const EdgeInsets.all(16),
-          child: _settlement!.settlementStatus == SettlementStatus.PENDING
-              ? ElevatedButton.icon(
-                  onPressed: _settlement!.expenses.isEmpty
-                      ? null // 비용이 없으면 비활성화
-                      : _requestSettlement,
-                  icon: const Icon(Icons.request_page),
-                  label: const Text('정산 요청하기'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+          child:
+              _settlement!.settlementStatus == SettlementStatus.PENDING
+                  ? ElevatedButton.icon(
+                    onPressed:
+                        _settlement!.expenses.isEmpty
+                            ? null // 비용이 없으면 비활성화
+                            : _requestSettlement,
+                    icon: const Icon(Icons.request_page),
+                    label: const Text('정산 요청하기'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      disabledBackgroundColor: AppColors.mediumGray,
                     ),
-                    disabledBackgroundColor: AppColors.mediumGray,
-                  ),
-                )
-              : ElevatedButton.icon(
-                  onPressed: () {
-                    // 정산 현황 화면으로 이동
-                    Navigator.pushNamed(
-                      context,
-                      '/settlement/situation',
-                      arguments: {
-                        'planId': widget.planId,
-                        'planTitle': widget.planTitle ?? '여행 계획',
-                      },
-                    );
-                  },
-                  icon: const Icon(Icons.account_balance_wallet),
-                  label: const Text('정산 현황 보기'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                  )
+                  : ElevatedButton.icon(
+                    onPressed: () {
+                      // 정산 현황 화면으로 이동
+                      Navigator.pushNamed(
+                        context,
+                        '/settlement/situation',
+                        arguments: {
+                          'planId': widget.planId,
+                          'planTitle': widget.planTitle ?? '여행 계획',
+                        },
+                      );
+                    },
+                    icon: const Icon(Icons.account_balance_wallet),
+                    label: const Text('정산 현황 보기'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
-                ),
         ),
       ],
     );
@@ -727,9 +726,12 @@ class ReceiptWidget extends StatelessWidget {
       ),
     );
   }
-  
+
   // 결제 내역 상세 보기 바텀시트를 표시하는 메서드
-  void _showExpenseListBottomSheet(BuildContext context, Settlement settlement) {
+  void _showExpenseListBottomSheet(
+    BuildContext context,
+    Settlement settlement,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -757,7 +759,7 @@ class ReceiptWidget extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  
+
                   // 헤더
                   Padding(
                     padding: const EdgeInsets.all(16),
@@ -785,7 +787,7 @@ class ReceiptWidget extends StatelessWidget {
                       ],
                     ),
                   ),
-                  
+
                   // 결제 내역 리스트
                   Expanded(
                     child: ListView.separated(
@@ -795,7 +797,7 @@ class ReceiptWidget extends StatelessWidget {
                       itemBuilder: (context, index) {
                         final expense = settlement.expenses[index];
                         final currencyFormat = NumberFormat('#,###', 'ko_KR');
-                        
+
                         return ListTile(
                           title: Text(
                             '결제 #${expense.paymentApprovalId}',
@@ -808,7 +810,9 @@ class ReceiptWidget extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                DateFormat('yyyy.MM.dd HH:mm').format(expense.approvedAt),
+                                DateFormat(
+                                  'yyyy.MM.dd HH:mm',
+                                ).format(expense.approvedAt),
                                 style: const TextStyle(fontSize: 12),
                               ),
                               Text(
@@ -828,11 +832,14 @@ class ReceiptWidget extends StatelessWidget {
                                 ),
                               ),
                               IconButton(
-                                icon: Icon(Icons.edit, color: AppColors.primary),
+                                icon: Icon(
+                                  Icons.edit,
+                                  color: AppColors.primary,
+                                ),
                                 onPressed: () {
                                   // 바텀시트 닫기
                                   Navigator.pop(context);
-                                  
+
                                   // ExpenseEditBottomSheet 호출
                                   showModalBottomSheet(
                                     context: context,
@@ -879,7 +886,7 @@ class ReceiptWidget extends StatelessWidget {
                       },
                     ),
                   ),
-                  
+
                   // 하단 정산 정보
                   if (settlement.settlementStatus == SettlementStatus.PENDING)
                     Padding(
@@ -911,56 +918,48 @@ class ReceiptWidget extends StatelessWidget {
 
   // 정산 요청 메서드
   void _requestSettlement(BuildContext context) async {
-    final settlementProvider = Provider.of<SettlementProvider>(context, listen: false);
-    
+    final settlementProvider = Provider.of<SettlementProvider>(
+      context,
+      listen: false,
+    );
+
     // 로딩 표시
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
-    
+
     try {
       final result = await settlementProvider.requestSettlement(planId);
-      
+
       // 로딩 다이얼로그 닫기
       Navigator.of(context).pop();
-      
+
       if (result != null) {
-// 정산 요청 성공
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('정산 요청이 완료되었습니다')),
-        );
-        
+        // 정산 요청 성공
+        ToastBar.clover('정산 요청 완료');
+
         // 정산 현황 화면으로 이동
         Navigator.pushNamed(
           context,
           '/settlement/situation',
-          arguments: {
-            'planId': planId,
-            'planTitle': planTitle,
-          },
+          arguments: {'planId': planId, 'planTitle': planTitle},
         );
-        
+
         // 콜백 호출
         if (onSettlementRequested != null) {
           onSettlementRequested!();
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('정산 요청 실패: ${settlementProvider.error}')),
-        );
+        ToastBar.clover('정산 요청 실패');
       }
     } catch (e) {
       // 로딩 다이얼로그 닫기
       Navigator.of(context).pop();
-      
+
       // 오류 메시지
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('정산 요청 중 오류 발생: $e')),
-      );
+      ToastBar.clover('정산 요청 오류 $e');
     }
   }
 

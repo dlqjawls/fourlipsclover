@@ -6,6 +6,7 @@ import '../../../models/plan/plan_schedule_model.dart';
 import '../../../models/plan/plan_schedule_update_request.dart';
 import '../../../providers/plan_provider.dart';
 import '../../../config/theme.dart';
+import '../../../widgets/toast_bar.dart';
 import 'custom_time_picker.dart';
 
 class ScheduleUpdateBottomSheet extends StatefulWidget {
@@ -91,9 +92,7 @@ class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('일정 상세 정보를 불러오는데 실패했습니다: $e')));
+        ToastBar.clover('일정 상세 정보 로드 실패');
       }
     } finally {
       if (mounted) {
@@ -194,15 +193,11 @@ class _ScheduleUpdateBottomSheetState extends State<ScheduleUpdateBottomSheet> {
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('일정이 수정되었습니다')));
+        ToastBar.clover('일정 수정 완료');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('일정 수정에 실패했습니다: $e')));
+        ToastBar.clover('일정 수정 실패');
       }
     } finally {
       if (mounted) {

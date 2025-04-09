@@ -5,6 +5,7 @@ import '../../../config/theme.dart';
 import '../../../models/group/group_join_request_model.dart';
 import '../../../providers/group_provider.dart';
 import '../../../widgets/clover_loading_spinner.dart';
+import '../../../widgets/toast_bar.dart';
 
 class JoinRequestBottomSheet extends StatefulWidget {
   final int groupId;
@@ -278,15 +279,10 @@ class _JoinRequestBottomSheetState extends State<JoinRequestBottomSheet> {
 
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                accept
-                    ? '${request.member.nickname}님의 가입을 승인했습니다.'
-                    : '${request.member.nickname}님의 가입을 거절했습니다.',
-              ),
-              backgroundColor: accept ? AppColors.primary : Colors.red,
-            ),
+          ToastBar.clover(
+            accept
+                ? '${request.member.nickname}님의 가입을 승인했습니다.'
+                : '${request.member.nickname}님의 가입을 거절했습니다.',
           );
 
           // 상위 위젯에 요청 처리 완료 알림
@@ -298,13 +294,7 @@ class _JoinRequestBottomSheetState extends State<JoinRequestBottomSheet> {
           setState(() {
             _isLoading = false;
           });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('요청 처리에 실패했습니다: ${groupProvider.error}'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          ToastBar.clover('요청 처리 실패');
         }
       }
     } catch (e) {
@@ -313,12 +303,7 @@ class _JoinRequestBottomSheetState extends State<JoinRequestBottomSheet> {
           _isLoading = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('요청 처리 중 오류가 발생했습니다: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ToastBar.clover('요청 처리 실패');
       }
     }
   }

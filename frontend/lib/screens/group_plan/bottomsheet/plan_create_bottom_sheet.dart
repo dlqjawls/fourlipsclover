@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/widgets/toast_bar.dart';
 import 'package:provider/provider.dart';
 import '../../../models/plan/plan_create_request.dart';
 import '../../../providers/plan_provider.dart';
@@ -72,9 +73,7 @@ class _PlanCreateBottomSheetState extends State<PlanCreateBottomSheet> {
       }
     } catch (e) {
       debugPrint('그룹 멤버 목록을 가져오는데 실패했습니다: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('멤버 목록을 가져오는데 실패했습니다: $e')));
+      ToastBar.clover('멤버 목록 로드 실패');
     } finally {
       setState(() {
         _isLoading = false;
@@ -104,17 +103,13 @@ class _PlanCreateBottomSheetState extends State<PlanCreateBottomSheet> {
     if (_currentStep == 0) {
       // 날짜 선택 단계: 시작일과 종료일이 모두 선택되었는지 확인
       if (_startDate == null || _endDate == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('여행 시작일과 종료일을 모두 선택해주세요')));
+        ToastBar.clover('여행 시작일과 종료일을 모두 선택해주세요.');
         return;
       }
     } else if (_currentStep == 1) {
       // 멤버 선택 단계: 최소 한 명 이상의 멤버가 선택되었는지 확인
       if (_selectedMemberIds.isEmpty) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('최소 한 명 이상의 멤버를 선택해주세요')));
+        ToastBar.clover('최소 한 명 이상의 멤버를 선택해주세요.');
         return;
       }
     }
@@ -405,17 +400,13 @@ class _PlanCreateBottomSheetState extends State<PlanCreateBottomSheet> {
 
     // 종료일 검증
     if (_endDate!.isBefore(_startDate!)) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('종료일은 시작일 이후로 설정해주세요')));
+      ToastBar.clover('종료일은 시작일 이후로 설정해주세요.');
       return;
     }
 
     // 여행 멤버 선택 검증
     if (_selectedMemberIds.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('최소 한 명 이상의 멤버를 선택해주세요')));
+      ToastBar.clover('최소 한 명 이상의 멤버를 선택해주세요.');
       return;
     }
 
@@ -447,17 +438,13 @@ class _PlanCreateBottomSheetState extends State<PlanCreateBottomSheet> {
 
       // 성공 시 바텀시트 닫기
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('여행 계획이 성공적으로 생성되었습니다!')));
+        ToastBar.clover('여행 계획 생성 완료');
         Navigator.of(context).pop(true); // true 반환하여 생성 성공 알림
       }
     } catch (e) {
       // 에러 메시지 표시
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('계획 생성에 실패했습니다: $e')));
+        ToastBar.clover('여행 계획 생성 실패');
       }
     } finally {
       // 로딩 상태 해제
