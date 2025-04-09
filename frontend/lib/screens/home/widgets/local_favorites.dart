@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/home/widgets/test.dart';
+import 'package:frontend/screens/home/widgets/today_lottery.dart';
 import 'package:provider/provider.dart';
 import '../../../config/theme.dart';
 import '../../../utils/text_style_extensions.dart';
@@ -24,8 +24,6 @@ class _LocalFavoritesState extends State<LocalFavorites> {
   @override
   void initState() {
     super.initState();
-
-    // 빌드 사이클 완료 후에 실행하도록 스케줄링
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _initializeLocation();
@@ -115,10 +113,8 @@ class _LocalFavoritesState extends State<LocalFavorites> {
   Widget build(BuildContext context) {
     final baseStyle = Theme.of(context).textTheme.bodyMedium;
     final screenWidth = MediaQuery.of(context).size.width;
-
-    // 정사각형 카드에 맞게 높이 조정 (텍스트 영역까지 고려)
     final cardWidth = screenWidth / 2 - 24;
-    final gridHeight = (cardWidth + 50) * 2 + 16; // 이미지 + 텍스트 영역 + 간격
+    final gridHeight = (cardWidth + 50) * 2 + 16;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,7 +124,6 @@ class _LocalFavoritesState extends State<LocalFavorites> {
           height: 1,
           color: AppColors.verylightGray,
         ),
-
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Column(
@@ -163,8 +158,6 @@ class _LocalFavoritesState extends State<LocalFavorites> {
                         .emphasized,
               ),
               SizedBox(height: 20),
-
-              // 현지인이 선호하는 맛집 + 새로고침 아이콘
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -240,8 +233,7 @@ class _LocalFavoritesState extends State<LocalFavorites> {
                   child: GridView.count(
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisCount: 2,
-                    childAspectRatio:
-                        cardWidth / (cardWidth + 50), // 이미지 + 텍스트 영역
+                    childAspectRatio: cardWidth / (cardWidth + 50),
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
                     children: List.generate(
@@ -268,78 +260,77 @@ class _LocalFavoritesState extends State<LocalFavorites> {
             ),
           ),
 
-        // 기존 '자세히 보기' 버튼 근처에 추가
         Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                OutlinedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LocalFavoriteDetailScreen(),
-                      ),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.darkGray,
-                    side: BorderSide(color: AppColors.mediumGray),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
+            child: OutlinedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LocalFavoriteDetailScreen(),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('자세히 보기', style: baseStyle?.copyWith(fontSize: 14)),
-                      const SizedBox(width: 4),
-                      Icon(Icons.chevron_right, size: 16),
-                    ],
-                  ),
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.darkGray,
+                side: BorderSide(color: AppColors.mediumGray),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
                 ),
-                SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed:
-                      _restaurants.isNotEmpty
-                          ? () => FoodLotteryScreen.show(context, _restaurants)
-                          : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '오늘의 맛집',
-                        style: baseStyle?.copyWith(
-                          fontSize: 14,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.casino_outlined,
-                        size: 16,
-                        color: Colors.white,
-                      ),
-                    ],
-                  ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
                 ),
-              ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('자세히 보기', style: baseStyle?.copyWith(fontSize: 14)),
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_right, size: 16),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // 뽑기버튼
+        Center(
+          child: GestureDetector(
+            onTap:
+                _restaurants.isNotEmpty
+                    ? () => FoodLotteryScreen.show(context, _restaurants)
+                    : null,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primaryDark,
+                    AppColors.primary,
+                    AppColors.primaryLight,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.4),
+                    offset: Offset(0, 4),
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '오늘의 맛집 뽑기!',
+                    style: TextStyle(fontSize: 14, color: Colors.white),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
