@@ -37,20 +37,16 @@ class _ReviewListState extends State<ReviewList> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final appProvider = Provider.of<AppProvider>(context, listen: false);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
 
-    final appProvider = Provider.of<AppProvider>(context, listen: false);
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
+      setState(() {
+        accessToken = appProvider.jwtToken;
+        memberId = userProvider.userProfile?.memberId ?? 0;
+      });
 
-    accessToken = appProvider.jwtToken;
-    memberId = userProvider.userProfile?.memberId ?? 0;
-
-    reviewData = ReviewService.fetchReviews(
-      widget.restaurantId,
-      accessToken: accessToken,
-    ).then((reviews) {
-      reviews.sort((a, b) => b.date.compareTo(a.date));
-      Provider.of<ReviewProvider>(context, listen: false).setReviews(reviews);
-      return reviews;
+      _fetchReviews();
     });
   }
 
@@ -98,6 +94,7 @@ class _ReviewListState extends State<ReviewList> {
     }
   }
 
+
   Future<void> _onReviewWritten() async {
     final createdReview = await showReviewBottomSheet(
       context: context,
@@ -119,14 +116,14 @@ class _ReviewListState extends State<ReviewList> {
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 2.0),
           child: Row(
             children: [
-              Text("리뷰", style: Theme.of(context).textTheme.titleMedium),
+              Text("리뷰", style: Theme
+                  .of(context)
+                  .textTheme
+                  .titleMedium),
               const Spacer(),
               IconButton(
                 icon: const Icon(
-                  Icons.add,
-                  size: 24,
-                  color: AppColors.darkGray,
-                ),
+                    Icons.add, size: 24, color: AppColors.darkGray),
                 onPressed: _onReviewWritten,
               ),
             ],
@@ -147,10 +144,12 @@ class _ReviewListState extends State<ReviewList> {
             final reviews = snapshot.data!;
 
             return Column(
-              children:
-                  reviews.asMap().entries.map<Widget>((entry) {
-                    final index = entry.key;
-                    final review = entry.value;
+              children: reviews
+                  .asMap()
+                  .entries
+                  .map<Widget>((entry) {
+                final index = entry.key;
+                final review = entry.value;
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(
@@ -161,43 +160,36 @@ class _ReviewListState extends State<ReviewList> {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              CircleAvatar(
-                                radius: 20,
-                                backgroundImage: _buildProfileImageProvider(
-                                  review.profileImageUrl,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  review.username,
-                                  style: Theme.of(context).textTheme.bodyLarge,
-                                ),
-                              ),
-                              Text(
-                                "${review.visitCount}번째 방문 | ${_formatDate(review.date)}",
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              if (review.memberId == memberId)
-                                GestureDetector(
-                                  onTapDown: (details) {
-                                    final tapPosition = details.globalPosition;
-                                    showReviewOptionsModal(
-                                      context: context,
-                                      position: tapPosition,
-                                      review: review,
-                                      kakaoPlaceId: widget.restaurantId,
-                                      onReviewUpdated: () {
-                                        widget.onReviewUpdated();
-                                        _fetchReviews();
-                                      },
-                                    );
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundImage: _buildProfileImageProvider(
+                                review.profileImageUrl),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(review.username, style: Theme
+                                .of(context)
+                                .textTheme
+                                .bodyLarge),
+                          ),
+                          Text(
+                            "${review.visitCount}번째 방문 | ${_formatDate(
+                                review.date)}",
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey),
+                          ),
+                          if (review.memberId == memberId)
+                            GestureDetector(
+                              onTapDown: (details) {
+                                final tapPosition = details.globalPosition;
+                                showReviewOptionsModal(
+                                  context: context,
+                                  position: tapPosition,
+                                  review: review,
+                                  kakaoPlaceId: widget.restaurantId,
+                                  onReviewUpdated: () {
+                                    widget.onReviewUpdated();
+                                    _fetchReviews();
                                   },
                                 );
                               },
@@ -323,9 +315,10 @@ class _ReviewListState extends State<ReviewList> {
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder:
-                (context) =>
-                    ReviewPhotoGallery(review: review, initialIndex: 0),
+            builder: (context) => ReviewPhotoGallery(
+              review: review,
+              initialIndex: 0,
+            ),
           ),
         );
       },
@@ -350,53 +343,36 @@ class _ReviewListState extends State<ReviewList> {
                         ? NetworkImage(imageUrls[pageIndex])
                         : AssetImage(imageUrls[pageIndex]) as ImageProvider,
                     fit: BoxFit.cover,
-                  )
-                  : Stack(
-                    children: [
-                      PageView.builder(
-                        itemCount: imageUrls.length,
-                        itemBuilder: (context, pageIndex) {
-                          return Image(
-                            image:
-                                imageUrls[pageIndex].startsWith("http")
-                                    ? NetworkImage(imageUrls[pageIndex])
-                                    : AssetImage(imageUrls[pageIndex])
-                                        as ImageProvider,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                          );
-                        },
-                      ),
-                      Positioned(
-                        bottom: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.6),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            "1/${imageUrls.length}",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    width: double.infinity,
+                    height: double.infinity,
+                  );
+                },
+              ),
+              Positioned(
+                bottom: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  child: Text(
+                    "1/${imageUrls.length}",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
-
   String _formatDate(DateTime date) {
     return "${date.month}.${date.day}";
   }
