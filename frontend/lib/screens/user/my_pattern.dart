@@ -29,16 +29,7 @@ class _DataVizPageState extends State<DataVizPage> {
 
   Future<void> _loadData() async {
     try {
-      final now = DateTime.now();
-      final startDate = DateFormat(
-        'yyyy-MM-dd',
-      ).format(now.subtract(const Duration(days: 30)));
-      final endDate = DateFormat('yyyy-MM-dd').format(now);
-
-      final data = await _userService.getCategoryAnalysis(
-        startDate: startDate,
-        endDate: endDate,
-      );
+      final data = await _userService.getCategoryAnalysis();
 
       setState(() {
         categoryData = data;
