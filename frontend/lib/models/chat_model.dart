@@ -35,6 +35,7 @@ class ChatMessage {
   final String messageContent;
   final String messageType;
   final DateTime createdAt;
+  final List<String>? imageUrls;
 
   ChatMessage({
     required this.messageId,
@@ -45,9 +46,15 @@ class ChatMessage {
     required this.messageContent,
     required this.messageType,
     required this.createdAt,
+    this.imageUrls,
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    List<String>? urls;
+    if (json['imageUrls'] != null) {
+      urls = List<String>.from(json['imageUrls']);
+    }
+
     return ChatMessage(
       messageId: json['messageId'],
       chatRoomId: json['chatRoomId'],
@@ -57,6 +64,7 @@ class ChatMessage {
       messageContent: json['messageContent'],
       messageType: json['messageType'],
       createdAt: DateTime.parse(json['createdAt']),
+      imageUrls: urls,
     );
   }
 }

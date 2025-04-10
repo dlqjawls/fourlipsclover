@@ -18,6 +18,7 @@ import '../../models/plan/add_member_to_plan_request.dart';
 import '../../models/plan/add_member_to_plan_response.dart';
 import '../../models/plan/edit_treasurer_request.dart';
 import '../../models/plan/edit_treasurer_response.dart';
+import 'api_util.dart';
 
 /// 계획 API 클래스
 /// 백엔드 서버와의 HTTP 통신을 담당합니다.
@@ -26,18 +27,9 @@ class PlanApi {
   static String get baseUrl => dotenv.env['API_BASE_URL'] ?? '';
   static String getApiPrefix(int groupId) => '/api/group/$groupId/plan';
 
-  // 인증 토큰 가져오기 (SharedPreferences에서 직접 가져오도록 수정)
+  // 인증 토큰 가져오기 (ApiUtil 사용)
   Future<String?> _getAuthToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwtToken');
-
-    // 디버깅을 위해 토큰 존재 여부 출력
-    debugPrint('토큰 존재 여부: ${token != null}');
-    if (token == null) {
-      debugPrint('경고: JWT 토큰이 SharedPreferences에 저장되어 있지 않습니다.');
-    }
-
-    return token;
+    return await ApiUtil.getJwtToken();
   }
 
   // 토큰 유효성 검사

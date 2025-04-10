@@ -5,16 +5,18 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/user_provider.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class UserService {
   final UserProvider userProvider;
+  final _secureStorage = const FlutterSecureStorage();
 
   UserService({required this.userProvider});
 
   Future<UserProfile> getUserProfile() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwtToken');
+      final token = await _secureStorage.read(key: 'jwt_token');
       final baseUrl = dotenv.env['API_BASE_URL'];
       final userIdStr = prefs.getString('userId');
 
@@ -101,7 +103,7 @@ class UserService {
   Future<String> uploadProfileImage(String userId, String imagePath) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwtToken');
+      final token = await _secureStorage.read(key: 'jwt_token');
       final baseUrl = dotenv.env['API_BASE_URL'];
 
       final url = Uri.parse('$baseUrl/api/mypage/$userId/upload-profile-image');
@@ -131,7 +133,7 @@ class UserService {
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwtToken');
+      final token = await _secureStorage.read(key: 'jwt_token');
       final baseUrl = dotenv.env['API_BASE_URL'];
 
       final response = await http.get(
@@ -162,7 +164,7 @@ class UserService {
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwtToken');
+      final token = await _secureStorage.read(key: 'jwt_token');
       final baseUrl = dotenv.env['API_BASE_URL'];
 
       final response = await http.get(

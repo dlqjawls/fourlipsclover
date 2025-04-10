@@ -5,18 +5,19 @@ import 'package:frontend/models/local_certification_model.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class LocalCertificationService {
   final baseUrl = dotenv.env['API_BASE_URL'];
+  final _secureStorage = const FlutterSecureStorage();
 
   Future<LocalCertification> createLocalCertification({
     required double latitude,
     required double longitude,
   }) async {
     try {
-      // 토큰 가져오기
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwtToken');
+      // SecureStorage에서 토큰 가져오기
+      final token = await _secureStorage.read(key: 'jwt_token');
 
       debugPrint('저장된 토큰: $token');
 

@@ -207,14 +207,15 @@ class AuthService {
       await prefs.setBool('isLoggedIn', isLoggedIn);
 
       if (jwtToken != null && jwtToken.isNotEmpty) {
-        await prefs.setString('jwtToken', jwtToken);
+        // JWT 토큰을 SecureStorage에 저장
+        await _secureStorage.write(key: 'jwt_token', value: jwtToken);
 
         // JWT 토큰 디코딩 및 memberId 저장
         final Map<String, dynamic> decodedToken = JwtDecoder.decode(jwtToken);
         final String memberId = decodedToken['sub'];
         await prefs.setString('userId', memberId);
 
-        debugPrint('JWT 토큰 저장 완료. 토큰 길이: ${jwtToken.length}');
+        debugPrint('JWT 토큰 안전하게 저장 완료');
         debugPrint('memberId 저장 완료: $memberId');
       } else {
         debugPrint('경고: 저장하려는 JWT 토큰이 null이거나 비어 있습니다.');
@@ -248,8 +249,8 @@ class AuthService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('isLoggedIn');
-      await prefs.remove('jwtToken');
       await prefs.remove('userId');
+      await _secureStorage.delete(key: 'jwt_token');
       debugPrint('로그인 상태 초기화 완료');
     } catch (e) {
       debugPrint('로그인 상태 초기화 중 오류 발생: $e');
@@ -269,45 +270,37 @@ class AuthService {
   Future<bool> tryAutoLogin() async {
     try {
       debugPrint('자동 로그인 시도 시작');
-      final accessToken = await _secureStorage.read(key: 'kakao_access_token');
-      debugPrint('저장된 카카오 access_token: ${accessToken != null ? '존재함' : '없음'}');
 
-      if (accessToken == null) {
-        debugPrint('카카오 access_token이 없음');
+      // SecureStorage에서 JWT 토큰 불러오기
+      final jwtToken = await _secureStorage.read(key: 'jwt_token');
+      debugPrint('저장된 JWT 토큰: ${jwtToken != null ? '존재함' : '없음'}');
+
+      if (jwtToken == null || jwtToken.isEmpty) {
+        debugPrint('JWT 토큰이 없음');
         return false;
       }
 
-      // 카카오 토큰 유효성 검사
+      // JWT 토큰 유효성 검사
       try {
-        debugPrint('카카오 토큰 유효성 검사');
-        await UserApi.instance.accessTokenInfo();
-        debugPrint('카카오 토큰 유효함');
+        final isTokenValid = !JwtDecoder.isExpired(jwtToken);
+        debugPrint('JWT 토큰 유효성: $isTokenValid');
+
+        if (!isTokenValid) {
+          debugPrint('JWT 토큰이 만료됨');
+          await clearLoginState();
+          return false;
+        }
       } catch (e) {
-        debugPrint('카카오 토큰이 유효하지 않음: $e');
-        // 토큰이 유효하지 않으면 삭제
-        await _secureStorage.delete(key: 'kakao_access_token');
+        debugPrint('JWT 토큰 유효성 검사 실패: $e');
         await clearLoginState();
         return false;
       }
 
-      debugPrint('서버 로그인 시도');
-      final loginResult = await _processServerLogin(accessToken);
-      debugPrint('서버 로그인 결과: ${loginResult['jwtToken'] != null ? '성공' : '실패'}');
-
-      if (loginResult['jwtToken'] != null) {
-        await saveLoginState(true, loginResult['jwtToken']);
-        debugPrint('자동 로그인 성공 - JWT 토큰 저장 완료');
-        return true;
-      }
-
-      // 서버 로그인 실패 시 토큰 삭제
-      await _secureStorage.delete(key: 'kakao_access_token');
-      await clearLoginState();
-      return false;
+      // 토큰이 유효하면 자동 로그인 성공
+      debugPrint('자동 로그인 성공 - 유효한 JWT 토큰 확인됨');
+      return true;
     } catch (e) {
       debugPrint('자동 로그인 실패: $e');
-      // 오류 발생 시 토큰 삭제
-      await _secureStorage.delete(key: 'kakao_access_token');
       await clearLoginState();
       return false;
     }
