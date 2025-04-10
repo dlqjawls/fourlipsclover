@@ -1,7 +1,6 @@
 package com.patriot.fourlipsclover.restaurant.controller;
 
 import com.patriot.fourlipsclover.locals.service.LocalsElasticsearchService;
-import com.patriot.fourlipsclover.restaurant.document.RestaurantDocument;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewLikeCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
@@ -43,11 +42,11 @@ public class RestaurantController {
 	private final LocalsElasticsearchService localsElasticsearchService;
 
 	@Operation(summary = "그룹 맞춤 식당 추천", description = "그룹 ID를 기반으로 그룹 멤버들의 선호도에 맞는 식당을 추천합니다")
-	@GetMapping("/{groupId}/recommend")
-	public ResponseEntity<List<RestaurantDocument>> recommendRestaurantsForGroup(
-			@Parameter(description = "그룹 ID") @PathVariable Integer groupId) {
+	@GetMapping("/{planId}/recommend")
+	public ResponseEntity<List<RestaurantResponse>> recommendRestaurantsForGroup(
+			@Parameter(description = "그룹 ID") @PathVariable Integer planId) {
 		return ResponseEntity.ok(
-				localsElasticsearchService.recommendSimilarRestaurants(groupId));
+				localsElasticsearchService.recommendSimilarRestaurants(planId));
 	}
 
 	@GetMapping("/nearby")

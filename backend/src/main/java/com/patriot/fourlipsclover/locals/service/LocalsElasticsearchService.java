@@ -8,15 +8,17 @@ import co.elastic.clients.elasticsearch._types.query_dsl.FunctionScoreMode;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
-import com.patriot.fourlipsclover.group.entity.GroupMember;
-import com.patriot.fourlipsclover.group.repository.GroupMemberRepository;
 import com.patriot.fourlipsclover.locals.document.LocalsDocument;
 import com.patriot.fourlipsclover.locals.entity.LocalCertification;
 import com.patriot.fourlipsclover.locals.repository.LocalCertificationRepository;
 import com.patriot.fourlipsclover.locals.repository.LocalsElasticsearchRepository;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.entity.MemberReviewTag;
+import com.patriot.fourlipsclover.plan.entity.PlanMember;
+import com.patriot.fourlipsclover.plan.repository.PlanMemberRepository;
 import com.patriot.fourlipsclover.restaurant.document.RestaurantDocument;
+import com.patriot.fourlipsclover.restaurant.dto.response.RestaurantResponse;
+import com.patriot.fourlipsclover.restaurant.mapper.RestaurantSearchMapper;
 import com.patriot.fourlipsclover.restaurant.repository.RegionRepository;
 import com.patriot.fourlipsclover.tag.repository.MemberReviewTagRepository;
 import java.io.IOException;
@@ -36,7 +38,8 @@ public class LocalsElasticsearchService {
 	private final LocalsElasticsearchRepository localsElasticsearchRepository;
 	private final ElasticsearchClient elasticsearchClient;
 	private final RegionRepository regionRepository;
-	private final GroupMemberRepository groupMemberRepository;
+	private final RestaurantSearchMapper restaurantSearchMapper;
+	private final PlanMemberRepository planMemberRepository;
 
 	public List<LocalsDocument> recommendSimilarUsers(Long currentUserId, Integer regionId) {
 		List<String> tags = memberReviewTagRepository.findByMemberId(
@@ -105,21 +108,21 @@ public class LocalsElasticsearchService {
 				.map(Hit::source)
 				.collect(Collectors.toList());
 	}
-	
+
 
 	/**
 	 * 그룹 ID를 기반으로 비슷한 식당을 추천합니다.
 	 *
-	 * @param groupId 그룹 ID
+	 * @param planId 그룹 ID
 	 * @return 추천된 식당 목록
 	 */
-	public List<RestaurantDocument> recommendSimilarRestaurants(Integer groupId) {
+	public List<RestaurantResponse> recommendSimilarRestaurants(Integer planId) {
 		try {
 			// 그룹의 태그 정보 조회
-			List<Member> groupMembers = groupMemberRepository.findByGroup_GroupId(groupId).stream()
-					.map(GroupMember::getMember).toList();
+			List<Member> planMembers = planMemberRepository.findByPlan_PlanId(planId).stream()
+					.map(PlanMember::getMember).toList();
 			List<String> groupTags = new ArrayList<>();
-			for (Member mem : groupMembers) {
+			for (Member mem : planMembers) {
 				List<String> memberTags = memberReviewTagRepository.findByMember(mem).stream()
 						.map(t -> t.getTag().getName())
 						.toList();
@@ -180,6 +183,7 @@ public class LocalsElasticsearchService {
 
 			return response.hits().hits().stream()
 					.map(Hit::source)
+					.map(restaurantSearchMapper::toResponse)  // 매퍼 메소드 적용
 					.collect(Collectors.toList());
 		} catch (IOException e) {
 			throw new RuntimeException("유사 식당 추천 중 오류가 발생했습니다.", e);
