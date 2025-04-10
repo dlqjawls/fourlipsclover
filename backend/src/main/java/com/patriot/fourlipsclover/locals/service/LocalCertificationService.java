@@ -12,8 +12,11 @@ import com.patriot.fourlipsclover.locals.mapper.LocalCertificationMapper;
 import com.patriot.fourlipsclover.locals.repository.LocalCertificationRepository;
 import com.patriot.fourlipsclover.locals.repository.LocalRegionRepository;
 import com.patriot.fourlipsclover.member.repository.MemberRepository;
+import com.patriot.fourlipsclover.restaurant.dto.request.LikeStatus;
+import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
+import com.patriot.fourlipsclover.restaurant.repository.ReviewLikeJpaRepository;
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -34,6 +37,8 @@ public class LocalCertificationService {
 	private final LocalRegionRepository localRegionRepository;
 	private final MemberRepository memberRepository;
 	private final LocalCertificationMapper localCertificationMapper;
+	private final ReviewJpaRepository reviewJpaRepository;
+	private final ReviewLikeJpaRepository reviewLikeJpaRepository;
 	@Value("${kakao.rest-api-key}")
 	private String restApiKey;
 
@@ -96,5 +101,60 @@ public class LocalCertificationService {
 		} catch (JsonProcessingException e) {
 			throw new RuntimeException("주소 정보 파싱 중 오류 발생", e);
 		}
+	}
+
+	/**
+	 * 회원의 현지인 등급을 업데이트합니다. 3개월마다 실행됩니다.
+	 * <p>
+	 * 등급 기준: - 새싹: 리뷰 1회, GPS 인증 - 두잎클로버: 리뷰 5회, 출석 - 세잎클로버: 리뷰 10회 이상 + 누적 좋아요 30회 - 네잎클로버: 리뷰 20회
+	 * 이상 + 누적 좋아요 100회
+	 */
+	@Transactional
+	public void updateLocalGrades() {
+		// 인증된 모든 현지인 조회
+		List<LocalCertification> certifications = localCertificationRepository.findByCertificatedTrue();
+
+		for (LocalCertification certification : certifications) {
+			Long memberId = certification.getMember().getMemberId();
+
+			int reviewCount = getReviewCount(memberId);
+
+			int totalLikes = getTotalLikes(memberId);
+
+			LocalGrade newGrade;
+			if (reviewCount >= 20 && totalLikes >= 100) {
+				newGrade = LocalGrade.FOUR;
+			} else if (reviewCount >= 10 && totalLikes >= 30) {
+				newGrade = LocalGrade.THREE;
+			} else if (reviewCount >= 5) {
+				newGrade = LocalGrade.TWO;
+			} else if (reviewCount >= 1) {
+				newGrade = LocalGrade.ONE;
+			} else {
+				// 리뷰가 없으면 새싹 등급 유지
+				newGrade = LocalGrade.ONE;
+			}
+
+			// 등급에 변화가 있을 때만 업데이트
+			if (certification.getLocalGrade() != newGrade) {
+				certification.updateGrade(newGrade);
+				localCertificationRepository.save(certification);
+			}
+		}
+	}
+
+	/**
+	 * 회원의 리뷰 수를 조회합니다.
+	 */
+	private int getReviewCount(Long memberId) {
+		return reviewJpaRepository.countByMember_MemberId(memberId);
+	}
+
+	/**
+	 * 회원이 받은 총 좋아요 수를 조회합니다.
+	 */
+	private int getTotalLikes(Long memberId) {
+		return reviewLikeJpaRepository.countByMember_MemberIdAndLikeStatus(memberId,
+				LikeStatus.LIKE);
 	}
 }
