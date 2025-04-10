@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:frontend/screens/payment/kakao_pay_official_screen.dart';
 import 'package:frontend/services/matching/matching_approve.dart';
 import 'package:frontend/widgets/clover_loading_spinner.dart';
+import 'package:frontend/screens/matching/matching.dart';
+import 'package:frontend/screens/payment/payment_success_screen.dart';
 
 class MatchingConfirmBottomSheet extends StatefulWidget {
   final Group? selectedGroup;
@@ -158,7 +160,6 @@ class _MatchingConfirmBottomSheetState
         pgToken: result['pg_token'],
         orderId: paymentData['orderId']!,
         amount: paymentData['totalAmount']!,
-        // amount: int.parse(paymentData['totalAmount']!),
         tagIds: widget.tagIds,
         regionId: widget.regionId,
         guideMemberId: widget.guide['memberId'],
@@ -172,8 +173,23 @@ class _MatchingConfirmBottomSheetState
 
       if (!mounted) return;
 
-      Navigator.of(context).pop();
-      _showSuccessMessage();
+      // 현재 바텀시트 닫기
+      Navigator.pop(context);
+
+      // 매칭 화면으로 이동 (모든 이전 화면 제거)
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const MatchingScreen(),
+          settings: const RouteSettings(name: '/matching'),
+        ),
+        (route) => false,
+      );
+
+      // 성공 메시지 표시
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('매칭 신청이 완료되었습니다.')));
     } else if (result['error'] != null) {
       throw Exception(result['error']);
     }
@@ -186,13 +202,6 @@ class _MatchingConfirmBottomSheetState
       context,
     ).showSnackBar(SnackBar(content: Text('결제 중 오류가 발생했습니다: $error')));
     debugPrint('결제 오류: $error');
-  }
-
-  // 성공 메시지 표시
-  void _showSuccessMessage() {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('매칭 신청이 완료되었습니다.')));
   }
 
   // UI 구성 요소

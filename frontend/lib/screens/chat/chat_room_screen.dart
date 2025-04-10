@@ -1,15 +1,29 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/models/chat_model.dart';
 import 'package:frontend/services/chat_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/config/theme.dart';
+import 'package:provider/provider.dart';
+import 'package:frontend/providers/plan_provider.dart';
+import 'package:frontend/models/plan/plan_model.dart';
+import 'package:frontend/models/plan/plan_schedule_model.dart';
+import 'package:frontend/models/plan/plan_list_model.dart';
+import 'package:frontend/screens/group_plan/plan_widgets/timeline_card.dart';
+import 'package:frontend/screens/group_plan/bottomsheet/schedule_detail_bottom_sheet.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   final int chatRoomId;
+  final int groupId;
 
-  const ChatRoomScreen({Key? key, required this.chatRoomId}) : super(key: key);
+  const ChatRoomScreen({
+    Key? key,
+    required this.chatRoomId,
+    required this.groupId,
+  }) : super(key: key);
 
   @override
   State<ChatRoomScreen> createState() => _ChatRoomScreenState();
@@ -19,6 +33,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final ChatService _chatService = ChatService();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ImagePicker _picker = ImagePicker();
+  List<File> _selectedImages = [];
 
   ChatRoomDetail? _chatRoom;
   bool _isLoading = true;
@@ -32,6 +48,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   bool _showNewMessageBanner = false; // 새 메시지 알림 배너 표시 여부
   int _newMessageCount = 0; // 새로 도착한 메시지 개수
 
+  // 계획 관련 상태 변수들
+  List<PlanList> _availablePlans = [];
+  PlanList? _selectedPlan;
+  List<PlanSchedule> _planSchedules = [];
+  Timer? _schedulePollingTimer;
+  bool _isLoadingPlans = false;
+  bool _isLoadingSchedules = false;
+
   @override
   void initState() {
     super.initState();
@@ -39,11 +63,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     _loadChatRoom();
     _startPolling();
     _scrollController.addListener(_onScroll);
+    _startSchedulePolling(); // 일정 폴링 시작
   }
 
   @override
   void dispose() {
     _pollingTimer?.cancel();
+    _schedulePollingTimer?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -258,16 +284,293 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     }
   }
 
+  // 일정 폴링 시작
+  void _startSchedulePolling() {
+    _schedulePollingTimer = Timer.periodic(const Duration(seconds: 10), (
+      timer,
+    ) {
+      if (_selectedPlan != null) {
+        _loadPlanSchedules();
+      }
+    });
+  }
+
+  // 계획 목록 로드
+  Future<void> _loadAvailablePlans() async {
+    if (_isLoadingPlans) return;
+
+    setState(() {
+      _isLoadingPlans = true;
+    });
+
+    try {
+      final planProvider = Provider.of<PlanProvider>(context, listen: false);
+      final plans = await planProvider.fetchPlans(widget.groupId);
+      setState(() {
+        _availablePlans = plans;
+      });
+    } catch (e) {
+      String errorMessage = '계획 목록을 불러오는데 실패했습니다.';
+
+      if (e.toString().contains('403')) {
+        errorMessage = '그룹에 대한 접근 권한이 없습니다.';
+      } else if (e.toString().contains('404')) {
+        errorMessage = '그룹을 찾을 수 없습니다.';
+      } else if (e.toString().contains('500')) {
+        errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      }
+
+      // 에러 메시지를 스낵바로 표시
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      debugPrint('계획 목록 로드 중 오류: $e');
+    } finally {
+      setState(() {
+        _isLoadingPlans = false;
+      });
+    }
+  }
+
+  // 일정 목록 로드
+  Future<void> _loadPlanSchedules() async {
+    if (_selectedPlan == null || _isLoadingSchedules) return;
+
+    setState(() {
+      _isLoadingSchedules = true;
+    });
+
+    try {
+      final planProvider = Provider.of<PlanProvider>(context, listen: false);
+      final schedules = await planProvider.fetchPlanSchedules(
+        widget.groupId,
+        _selectedPlan!.planId,
+      );
+      setState(() {
+        _planSchedules = schedules;
+      });
+    } catch (e) {
+      debugPrint('일정 목록 로드 중 오류: $e');
+    } finally {
+      setState(() {
+        _isLoadingSchedules = false;
+      });
+    }
+  }
+
+  // 계획 선택 다이얼로그 표시
+  Future<void> _showPlanSelectionDialog() async {
+    if (_availablePlans.isEmpty) {
+      await _loadAvailablePlans();
+    }
+
+    if (_availablePlans.isEmpty) {
+      // 계획이 없는 경우 메시지 표시
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('사용 가능한 계획이 없습니다.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('계획 선택'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child:
+                  _isLoadingPlans
+                      ? const Center(child: CircularProgressIndicator())
+                      : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _availablePlans.length,
+                        itemBuilder: (context, index) {
+                          final plan = _availablePlans[index];
+                          return ListTile(
+                            title: Text(plan.title),
+                            subtitle: Text(
+                              '${DateFormat('yyyy-MM-dd').format(plan.startDate)} ~ ${DateFormat('yyyy-MM-dd').format(plan.endDate)}',
+                            ),
+                            onTap: () {
+                              setState(() {
+                                _selectedPlan = plan;
+                              });
+                              _loadPlanSchedules();
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('취소'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showImagePicker() async {
+    try {
+      final List<XFile>? pickedFiles = await _picker.pickMultiImage();
+      if (pickedFiles != null && pickedFiles.isNotEmpty) {
+        setState(() {
+          _selectedImages = pickedFiles.map((file) => File(file.path)).toList();
+        });
+        _showImagePreview();
+      }
+    } catch (e) {
+      debugPrint('이미지 선택 중 오류 발생: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('이미지 선택 중 오류가 발생했습니다')));
+    }
+  }
+
+  void _showImagePreview() {
+    final TextEditingController messageController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('선택한 이미지'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: double.maxFinite,
+                  height: 200,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _selectedImages.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Stack(
+                          children: [
+                            Image.file(
+                              _selectedImages[index],
+                              width: 200,
+                              height: 200,
+                              fit: BoxFit.cover,
+                            ),
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedImages.removeAt(index);
+                                  });
+                                  if (_selectedImages.isEmpty) {
+                                    Navigator.pop(context);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: messageController,
+                  decoration: InputDecoration(
+                    hintText: '메시지를 입력하세요 (선택)',
+                    hintStyle: TextStyle(color: Colors.grey.shade400),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _selectedImages.clear();
+                },
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await _sendImages(messageController.text.trim());
+                },
+                child: const Text('전송'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Future<void> _sendImages(String messageContent) async {
+    if (_selectedImages.isEmpty) return;
+
+    try {
+      // 이미지 메시지 전송
+      final message = await _chatService.sendImageMessage(
+        widget.chatRoomId,
+        messageContent.isNotEmpty
+            ? messageContent
+            : '이미지 ${_selectedImages.length}장',
+        _selectedImages,
+      );
+
+      setState(() {
+        _chatRoom!.messages.insert(0, message);
+        _lastMessageTime = message.createdAt;
+        _shouldAutoScroll = true;
+        _selectedImages.clear();
+      });
+
+      // 메시지 전송 후 즉시 스크롤을 맨 아래로 이동
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
+    } catch (e) {
+      debugPrint('이미지 전송 중 오류 발생: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('이미지 전송 중 오류가 발생했습니다: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // 키보드 포커스 해제
         FocusScope.of(context).unfocus();
       },
       behavior: HitTestBehavior.opaque,
       child: Scaffold(
-        resizeToAvoidBottomInset: true, // 키보드가 올라올 때 화면이 밀려 올라가도록 설정
+        resizeToAvoidBottomInset: true,
         appBar: AppBar(
           title:
               _chatRoom != null
@@ -280,17 +583,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
           centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context),
+          ),
           actions: [
-            if (_chatRoom != null)
-              IconButton(
-                icon: const Icon(Icons.people),
-                onPressed: () {
-                  _showMembersList();
-                },
-              ),
+            IconButton(
+              icon: const Icon(Icons.more_vert),
+              onPressed: _showMoreOptions,
+            ),
           ],
         ),
-        body: _buildBody(),
+        body: Column(
+          children: [Expanded(child: _buildBody()), _buildMessageInput()],
+        ),
       ),
     );
   }
@@ -333,9 +639,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   ? _buildEmptyMessages()
                   : _buildMessageList(),
         ),
-
-        // 메시지 입력창
-        _buildMessageInput(),
       ],
     );
   }
@@ -459,7 +762,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // 발신자 정보 (내 메시지가 아닐 경우)
           if (!isMine) ...[
             CircleAvatar(
               radius: 16,
@@ -480,7 +782,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             crossAxisAlignment:
                 isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
-              // 발신자 닉네임 (내 메시지가 아닐 경우)
               if (!isMine)
                 Padding(
                   padding: const EdgeInsets.only(left: 4, bottom: 4),
@@ -493,11 +794,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   ),
                 ),
 
-              // 메시지 내용과 시간
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // 시간 (내 메시지일 경우 왼쪽에 표시)
                   if (isMine)
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
@@ -510,7 +809,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       ),
                     ),
 
-                  // 메시지 버블
                   Container(
                     constraints: BoxConstraints(
                       maxWidth: MediaQuery.of(context).size.width * 0.65,
@@ -539,7 +837,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     ),
                   ),
 
-                  // 시간 (상대방 메시지일 경우 오른쪽에 표시)
                   if (!isMine)
                     Padding(
                       padding: const EdgeInsets.only(left: 8),
@@ -575,7 +872,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       ),
       child: Row(
         children: [
-          // 메시지 입력 필드
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            color: AppColors.primary,
+            onPressed: _showOptionsMenu,
+          ),
+          const SizedBox(width: 8),
           Expanded(
             child: TextField(
               controller: _messageController,
@@ -599,8 +901,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             ),
           ),
           const SizedBox(width: 8),
-
-          // 전송 버튼
           Container(
             decoration: BoxDecoration(
               color: AppColors.primary,
@@ -616,83 +916,134 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
   }
 
-  void _showMembersList() {
+  void _showOptionsMenu() {
+    FocusScope.of(context).unfocus(); // 키보드 숨기기
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.4,
-          minChildSize: 0.3,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (context, scrollController) {
-            return Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    '참여자 목록 (${_chatRoom!.members.length}명)',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: ListView.builder(
-                    controller: scrollController,
-                    itemCount: _chatRoom!.members.length,
-                    itemBuilder: (context, index) {
-                      final member = _chatRoom!.members[index];
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage:
-                              member.profileUrl != null
-                                  ? NetworkImage(member.profileUrl!)
-                                  : null,
-                          child:
-                              member.profileUrl == null
-                                  ? Text(member.memberNickname.substring(0, 1))
-                                  : null,
-                        ),
-                        title: Text(
-                          member.memberNickname,
-                          style: TextStyle(
-                            fontWeight:
-                                member.memberId == _currentUserId
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                          ),
-                        ),
-                        subtitle: Text(
-                          '${DateFormat('yyyy년 M월 d일', 'ko_KR').format(member.joinedAt)} 참여',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        trailing:
-                            member.memberId == _currentUserId
-                                ? const Chip(
-                                  label: Text(
-                                    '나',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                  backgroundColor: AppColors.primary,
-                                  labelStyle: TextStyle(color: Colors.white),
-                                )
-                                : null,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
+        return GridView.count(
+          crossAxisCount: 3,
+          padding: const EdgeInsets.all(16),
+          children: [
+            _buildOptionItem(Icons.image, '이미지 보내기', _showImagePicker),
+            _buildOptionItem(Icons.person_add, '초대하기', _inviteMembers),
+          ],
         );
       },
     );
+  }
+
+  Widget _buildOptionItem(IconData icon, String label, VoidCallback onTap) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(icon: Icon(icon, size: 30), onPressed: onTap),
+        Text(label, style: const TextStyle(fontSize: 12)),
+      ],
+    );
+  }
+
+  void _inviteMembers() {
+    // TODO: 초대 기능 구현
+    Navigator.pop(context);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('초대 기능은 아직 구현되지 않았습니다.')));
+  }
+
+  void _showMoreOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.image),
+                title: const Text('이미지 전송'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showImagePicker();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.exit_to_app),
+                title: const Text('채팅방 나가기'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showLeaveChatRoomDialog();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.report),
+                title: const Text('신고하기'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showReportDialog();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.block),
+                title: const Text('차단하기'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showBlockDialog();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showLeaveChatRoomDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('채팅방 나가기'),
+            content: const Text('정말로 채팅방을 나가시겠습니까?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  try {
+                    await _chatService.leaveChatRoom(widget.chatRoomId);
+                    if (mounted) {
+                      Navigator.pop(context); // 다이얼로그 닫기
+                      Navigator.pop(context); // 채팅방 화면 닫기
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('채팅방 나가기 실패: $e')));
+                    }
+                  }
+                },
+                child: const Text('나가기'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showReportDialog() {
+    // TODO: 신고 기능 구현
+  }
+
+  void _showBlockDialog() {
+    // TODO: 차단 기능 구현
   }
 }

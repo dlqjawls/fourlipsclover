@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:frontend/config/theme.dart';
 import 'package:frontend/services/matching/matching_service.dart';
 import 'package:frontend/models/matching/matching_main_model.dart'; // 추가
+import 'package:frontend/services/chat_service.dart';
+import 'package:frontend/models/chat_model.dart';
 import 'matching_local_resist.dart';
 import 'package:table_calendar/table_calendar.dart';
-import '../matchingchat/matching_chat.dart';
+import 'package:frontend/screens/chat/chat_room_screen.dart';
 import 'package:frontend/widgets/loading_overlay.dart';
 
 class MatchingLocalListScreen extends StatefulWidget {
@@ -467,16 +469,45 @@ class _MatchingLocalListScreenState extends State<MatchingLocalListScreen>
                   const SizedBox(width: 8),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => MatchingChatScreen(
-                                  groupId: match.matchId.toString(),
+                      onPressed: () async {
+                        try {
+                          final chatService = ChatService();
+                          final chatRooms = await chatService.getChatRooms();
+
+                          // 매칭 ID와 일치하는 채팅방 찾기
+                          final matchingChatRoom = chatRooms.firstWhere(
+                            (room) => room.matchId == match.matchId,
+                            orElse:
+                                () => ChatRoom(
+                                  chatRoomId: match.matchId,
+                                  groupId: match.matchId,
+                                  name: match.regionName ?? '채팅방',
+                                  participantNum: 2,
+                                  matchId: match.matchId,
                                 ),
-                          ),
-                        );
+                          );
+
+                          if (mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => ChatRoomScreen(
+                                      chatRoomId: matchingChatRoom.chatRoomId,
+                                      groupId: matchingChatRoom.groupId,
+                                    ),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('채팅방 이동 중 오류가 발생했습니다: $e'),
+                              ),
+                            );
+                          }
+                        }
                       },
                       icon: const Icon(Icons.chat_bubble_outline, size: 18),
                       label: const Text('대화하기'),
@@ -555,8 +586,26 @@ class _MatchingLocalListScreenState extends State<MatchingLocalListScreen>
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   _buildActionButton(
-                    onPressed: () {
-                      // TODO: 거절 처리
+                    onPressed: () async {
+                      try {
+                        await _matchingService.rejectMatch(match.matchId);
+                        if (!mounted) return;
+
+                        // 성공 메시지 표시
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('매칭을 거절했습니다.')),
+                        );
+
+                        // 매칭 목록 새로고침
+                        setState(() {
+                          _loadMatches();
+                        });
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('매칭 거절 실패: $e')));
+                      }
                     },
                     icon: Icons.close,
                     color: AppColors.red,

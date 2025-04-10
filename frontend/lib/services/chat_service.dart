@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/config/api_config.dart';
@@ -196,6 +197,82 @@ class ChatService {
     } catch (e) {
       debugPrint('멤버 초대 중 오류 발생: $e');
       throw Exception('멤버 초대 중 오류 발생: $e');
+    }
+  }
+
+  // 이미지 메시지 전송
+  Future<ChatMessage> sendImageMessage(
+    int chatRoomId,
+    String messageContent,
+    List<File> imageFiles,
+  ) async {
+    try {
+      final token = await _getAuthToken();
+
+      if (!_validateToken(token)) {
+        throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+      }
+
+      // multipart/form-data 요청 생성
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/chat/send/$chatRoomId/images'),
+      );
+
+      // 헤더 설정
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // 메시지 내용 추가
+      request.fields['messageContent'] = messageContent;
+
+      // 이미지 파일들 추가
+      for (var imageFile in imageFiles) {
+        request.files.add(
+          await http.MultipartFile.fromPath('images', imageFile.path),
+        );
+      }
+
+      // 요청 전송
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(
+          utf8.decode(response.bodyBytes),
+        );
+        return ChatMessage.fromJson(data);
+      } else {
+        throw Exception('이미지 메시지 전송에 실패했습니다: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('이미지 메시지 전송 중 오류 발생: $e');
+      throw Exception('이미지 메시지 전송 중 오류 발생: $e');
+    }
+  }
+
+  // 채팅방 나가기
+  Future<void> leaveChatRoom(int chatRoomId) async {
+    try {
+      final token = await _getAuthToken();
+
+      if (!_validateToken(token)) {
+        throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+      }
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/chat/$chatRoomId/leave'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('채팅방 나가기에 실패했습니다: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('채팅방 나가기 중 오류 발생: $e');
+      throw Exception('채팅방 나가기 중 오류 발생: $e');
     }
   }
 }

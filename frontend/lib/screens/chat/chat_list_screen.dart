@@ -77,24 +77,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }
 
     if (_chatRooms.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.chat_bubble_outline, size: 80, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text(
-              '채팅방이 없습니다.',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _loadChatRooms,
-              child: const Text('새로고침'),
-            ),
-          ],
-        ),
-      );
+      return _buildEmptyState();
     }
 
     return ListView.separated(
@@ -109,7 +92,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Widget _buildChatRoomItem(ChatRoom chatRoom) {
-    // 임시 데이터 (실제로는 마지막 메시지와 시간을 API에서 가져와야 함)
     final lastMessage = '';
     final lastMessageTime = DateTime.now();
     final formattedTime = DateFormat('a h:mm', 'ko_KR').format(lastMessageTime);
@@ -120,25 +102,60 @@ class _ChatListScreenState extends State<ChatListScreen> {
           context,
           MaterialPageRoute(
             builder:
-                (context) => ChatRoomScreen(chatRoomId: chatRoom.chatRoomId),
+                (context) => ChatRoomScreen(
+                  chatRoomId: chatRoom.chatRoomId,
+                  groupId: chatRoom.groupId,
+                ),
           ),
-        ).then((_) => _loadChatRooms()); // 채팅방에서 돌아오면 목록 새로고침
+        ).then((_) => _loadChatRooms());
       },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            bottom: BorderSide(color: Colors.grey.shade100, width: 1),
+          ),
+        ),
         child: Row(
           children: [
-            // 채팅방 아이콘 (그룹 채팅방 아이콘)
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: const Icon(Icons.group, color: AppColors.primary),
+            // 프로필 이미지
+            Stack(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.primary.withOpacity(0.8),
+                        AppColors.primary.withOpacity(0.4),
+                      ],
+                    ),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.person, size: 32, color: Colors.white),
+                  ),
+                ),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
 
             // 채팅방 정보
             Expanded(
@@ -152,44 +169,52 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           chatRoom.name,
                           style: const TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (lastMessage.isNotEmpty)
-                        Text(
-                          formattedTime,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
+                      Text(
+                        formattedTime,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                          fontWeight: FontWeight.w500,
                         ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
-                      // 참가자 수 표시
-                      Text(
-                        '${chatRoom.participantNum}명',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${chatRoom.participantNum}명',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                       if (lastMessage.isNotEmpty) ...[
                         const SizedBox(width: 8),
-                        const Text('•', style: TextStyle(color: Colors.grey)),
-                        const SizedBox(width: 8),
-                        // 마지막 메시지 표시
                         Expanded(
                           child: Text(
                             lastMessage,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey,
+                              color: Colors.grey.shade600,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -203,6 +228,57 @@ class _ChatListScreenState extends State<ChatListScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.primary.withOpacity(0.8),
+                  AppColors.primary.withOpacity(0.4),
+                ],
+              ),
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.chat_bubble_outline,
+                size: 50,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            '채팅방이 없습니다',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '새로운 매칭이 생성되면\n채팅방이 자동으로 생성됩니다',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+              height: 1.5,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -3,8 +3,10 @@ import '../../services/payment/payment_service.dart';
 import 'payment_history_screen.dart';
 import '../../config/theme.dart';
 import '../../screens/matching/matching.dart';
+import 'package:provider/provider.dart';
+import '../../providers/matching_provider.dart';
 
-class PaymentSuccessScreen extends StatelessWidget {
+class PaymentSuccessScreen extends StatefulWidget {
   final String itemName;
   final int amount;
   final String tid;
@@ -16,12 +18,17 @@ class PaymentSuccessScreen extends StatelessWidget {
     required this.tid,
   }) : super(key: key);
 
+  @override
+  State<PaymentSuccessScreen> createState() => _PaymentSuccessScreenState();
+}
+
+class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
   // 결제 취소 처리
-  void _cancelPayment(BuildContext context) async {
+  void _cancelPayment() async {
     try {
       await PaymentService.requestPaymentCancel(
-        tid: tid,
-        cancelAmount: amount,
+        tid: widget.tid,
+        cancelAmount: widget.amount,
         cancelTaxFreeAmount: 0,
       );
 
@@ -35,7 +42,7 @@ class PaymentSuccessScreen extends StatelessWidget {
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context); // 다이얼로그 닫기
-                    _navigateToMatching(context); // 매칭 화면으로 이동
+                    _navigateToMatching(); // 매칭 화면으로 이동
                   },
                   child: const Text('확인'),
                 ),
@@ -50,13 +57,10 @@ class PaymentSuccessScreen extends StatelessWidget {
     }
   }
 
-  void _navigateToMatching(BuildContext context) {
-    // 현재 화면 스택을 모두 제거하고 매칭 화면으로 이동
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const MatchingScreen()),
-      (route) => false,
-    );
+  void _navigateToMatching() {
+    // 모든 화면을 제거하고 메인 화면으로 이동한 후 매칭 화면으로 이동
+    Navigator.of(context).popUntil((route) => route.isFirst); // 메인 화면까지 pop
+    Navigator.pushNamed(context, '/matching'); // 매칭 화면으로 이동
   }
 
   @override
@@ -76,55 +80,87 @@ class PaymentSuccessScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              '$itemName 결제가 완료되었습니다.',
+              '${widget.itemName} 결제가 완료되었습니다.',
               style: const TextStyle(fontSize: 18),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
-            Text('결제 금액: ${amount}원', style: const TextStyle(fontSize: 16)),
-            const SizedBox(height: 32),
-
-            // 👉 버튼 두 개 가로로 배치
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (_) => PaymentHistoryListScreen(memberId: userId),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.receipt_long),
-                  label: const Text('결제 내역 보기'),
-                ),
-                const SizedBox(width: 20),
-                ElevatedButton.icon(
-                  onPressed: () => _cancelPayment(context),
-                  icon: const Icon(Icons.cancel),
-                  label: const Text('결제 취소'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.red,
-                  ),
-                ),
-              ],
+            Text(
+              '결제 금액: ${widget.amount}원',
+              style: const TextStyle(fontSize: 16),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => _navigateToMatching(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-              ),
-              child: const Text(
-                '매칭 목록으로 이동',
-                style: TextStyle(fontSize: 16, color: Colors.white),
+            const SizedBox(height: 32),
+            // 버튼 컨테이너
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  // 상단 버튼들
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (_) => PaymentHistoryListScreen(
+                                      memberId: userId,
+                                    ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.receipt_long, size: 20),
+                          label: const Text('결제 내역'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _cancelPayment,
+                          icon: const Icon(Icons.cancel, size: 20),
+                          label: const Text('결제 취소'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // 매칭 목록 버튼
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _navigateToMatching,
+                      icon: const Icon(Icons.list, size: 20),
+                      label: const Text('매칭 목록으로 이동'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
