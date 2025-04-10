@@ -16,6 +16,7 @@ import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:frontend/services/auth_helper.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   final int chatRoomId;
@@ -259,7 +260,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
         // 채팅 메시지가 있으면 마지막 메시지 시간 저장
         if (_chatRoom!.messages.isNotEmpty) {
-          _lastMessageTime = _chatRoom!.messages.last.createdAt;
+          _lastMessageTime = _chatRoom!.messages.first.createdAt;
           debugPrint(
             '📩 메시지 ${_chatRoom!.messages.length}개 로드됨, 마지막 메시지 시간: $_lastMessageTime',
           );
@@ -331,8 +332,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       debugPrint('✅ 메시지 전송 성공: ${sentMessage.messageId}');
 
       setState(() {
-        // 메시지 목록에 추가 (맨 앞에 추가)
-        _chatRoom!.messages.insert(0, sentMessage);
+        // 메시지 목록에 추가 (맨 끝에 추가)
+        _chatRoom!.messages.add(sentMessage);
         _lastMessageTime = sentMessage.createdAt;
         // 메시지를 보낼 때는 항상 자동 스크롤 활성화
         _shouldAutoScroll = true;
@@ -640,7 +641,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       );
 
       setState(() {
-        _chatRoom!.messages.insert(0, message);
+        _chatRoom!.messages.add(message);
         _lastMessageTime = message.createdAt;
         _shouldAutoScroll = true;
         _selectedImages.clear();
@@ -864,7 +865,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   Widget _buildMessageList() {
     final messages = _chatRoom!.messages.toList();
-    final reversedMessages = List<ChatMessage>.from(messages.reversed);
 
     return Stack(
       children: [
@@ -877,16 +877,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             top: 8,
             bottom: 8,
           ),
-          itemCount: reversedMessages.length,
+          itemCount: messages.length,
           itemBuilder: (context, index) {
-            final message = reversedMessages[index];
+            final message = messages[index];
             final isMine = message.memberId == _currentUserId;
 
             final bool showDate =
                 index == 0 ||
                 !_isSameDay(
-                  reversedMessages[index].createdAt,
-                  reversedMessages[index - 1].createdAt,
+                  messages[index].createdAt,
+                  messages[index - 1].createdAt,
                 );
 
             return Column(
@@ -1021,13 +1021,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                         ),
                       ],
                     ),
-                    child: Text(
-                      message.messageContent,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: isMine ? Colors.white : Colors.black87,
-                      ),
-                    ),
+                    child: _buildMessageContent(message, isMine),
                   ),
 
                   if (!isMine)
@@ -1048,6 +1042,107 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         ],
       ),
     );
+  }
+
+  // 메시지 내용에 따라 적절한 위젯을 반환하는 메서드
+  Widget _buildMessageContent(ChatMessage message, bool isMine) {
+    // 이미지 메시지인지 확인
+    final bool isImageMessage =
+        message.messageType == 'IMAGE' ||
+        (message.messageContent.contains('http') &&
+            (message.messageContent.contains('.jpg') ||
+                message.messageContent.contains('.jpeg') ||
+                message.messageContent.contains('.png') ||
+                message.messageContent.contains('.gif')));
+
+    if (isImageMessage) {
+      // 기본 이미지 URL은 메시지 내용
+      String imageUrl = message.messageContent;
+
+      // 이미지 URL 리스트가 있는 경우 첫 번째 URL 사용
+      if (message.imageUrls != null && message.imageUrls!.isNotEmpty) {
+        imageUrl = message.imageUrls!.first;
+        debugPrint('✅ 이미지 URL 찾음: $imageUrl');
+      }
+      // 없는 경우 메시지 내용에서 URL 추출
+      else if (message.messageType == 'IMAGE' ||
+          message.messageContent.contains('http')) {
+        final urlPattern = RegExp(
+          r'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)',
+        );
+        final matches = urlPattern.allMatches(message.messageContent);
+
+        if (matches.isNotEmpty) {
+          imageUrl = matches.first.group(0)!;
+          debugPrint('✅ 메시지에서 URL 추출: $imageUrl');
+        } else if (message.messageContent.contains('이미지')) {
+          debugPrint('🔍 이미지 메시지인데 URL을 찾을 수 없음: ${message.messageContent}');
+        }
+      }
+
+      // 디버깅 로그
+      debugPrint('🖼️ 이미지 메시지 표시: $imageUrl');
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.network(
+              imageUrl,
+              width: 200,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  width: 200,
+                  height: 150,
+                  alignment: Alignment.center,
+                  child: CircularProgressIndicator(
+                    value:
+                        loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null,
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                debugPrint('❌ 이미지 로드 오류: $error');
+                return Container(
+                  width: 200,
+                  height: 100,
+                  alignment: Alignment.center,
+                  color: Colors.grey[300],
+                  child: const Text('이미지를 불러올 수 없습니다'),
+                );
+              },
+            ),
+          ),
+          if (message.messageContent.isNotEmpty &&
+              !message.messageContent.contains('http'))
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                message.messageContent,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: isMine ? Colors.white : Colors.black87,
+                ),
+              ),
+            ),
+        ],
+      );
+    } else {
+      // 일반 텍스트 메시지
+      return Text(
+        message.messageContent,
+        style: TextStyle(
+          fontSize: 15,
+          color: isMine ? Colors.white : Colors.black87,
+        ),
+      );
+    }
   }
 
   Widget _buildMessageInput() {
@@ -1546,8 +1641,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   // 인증 토큰 가져오기
   Future<String> _getAuthToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token') ?? '';
+    final token = await AuthHelper.getJwtToken();
+    if (token == null) {
+      throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+    }
+    return token;
   }
 
   void _showMoreOptions() {

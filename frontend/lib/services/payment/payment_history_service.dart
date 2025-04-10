@@ -4,11 +4,20 @@ import '../../models/user_payment.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../auth_helper.dart';
 
 class PaymentService {
-  final String? jwtToken;
+  // JWT 토큰 직접 사용 대신 헬퍼 통해 가져오기
+  final String baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://localhost:8080';
 
-  PaymentService({this.jwtToken});
+  PaymentService();
+
+  // 인증 토큰 가져오기
+  Future<String?> _getToken() async {
+    return await AuthHelper.getJwtToken();
+  }
 
   /// ✅ 결제 내역 조회 API
   Future<List<Payment>> getPaymentHistory() async {
@@ -57,12 +66,17 @@ class PaymentService {
     }
     // 🔄 API 요청 실행
     try {
-      final baseUrl = dotenv.env['API_BASE_URL'];
+      final token = await _getToken();
+
+      if (token == null) {
+        throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+      }
+
       final response = await http.get(
         Uri.parse('$baseUrl/payments/history'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $jwtToken',
+          'Authorization': 'Bearer $token',
         },
       );
 
@@ -82,12 +96,17 @@ class PaymentService {
   /// ✅ 결제 상세 내역 조회 API
   Future<Payment?> getPaymentDetail(String paymentId) async {
     try {
-      final baseUrl = dotenv.env['API_BASE_URL'];
+      final token = await _getToken();
+
+      if (token == null) {
+        throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+      }
+
       final response = await http.get(
         Uri.parse('$baseUrl/payments/$paymentId'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $jwtToken',
+          'Authorization': 'Bearer $token',
         },
       );
 

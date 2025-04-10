@@ -7,6 +7,7 @@ import 'package:frontend/models/chat_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/models/plan/plan_list_model.dart';
 import 'package:frontend/models/plan/plan_schedule_model.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ChatService {
   final String baseUrl = ApiConfig.baseUrl;
@@ -15,6 +16,8 @@ class ChatService {
 
   // 채팅방 ID와 매칭 ID의 매핑을 저장하는 정적 맵
   static final Map<int, int> _chatRoomToMatchIdMap = {};
+
+  final _secureStorage = const FlutterSecureStorage();
 
   // 매핑 저장 메서드
   static void saveChatRoomMatchIdMapping(int chatRoomId, int matchId) {
@@ -82,13 +85,12 @@ class ChatService {
 
   // 인증 토큰 가져오기
   Future<String?> _getAuthToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwtToken');
+    final token = await _secureStorage.read(key: 'jwt_token');
 
     // 디버깅을 위해 토큰 존재 여부 출력
     debugPrint('토큰 존재 여부: ${token != null}');
     if (token == null) {
-      debugPrint('경고: JWT 토큰이 SharedPreferences에 저장되어 있지 않습니다.');
+      debugPrint('경고: JWT 토큰이 SecureStorage에 저장되어 있지 않습니다.');
     }
 
     return token;

@@ -6,33 +6,21 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/notice/notice_model.dart';
+import 'api_util.dart';
 
 class NoticeApi {
   // .env 파일에서 API 기본 URL을 가져옵니다.
   static String get baseUrl => dotenv.env['API_BASE_URL'] ?? '';
   static const String apiPrefix = '/api/plan-notice';
 
-  // 인증 토큰 가져오기 (SharedPreferences)
+  // 인증 토큰 가져오기 (ApiUtil 사용)
   Future<String?> _getAuthToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwtToken');
-
-    // 디버깅을 위해 토큰 존재 여부 출력
-    debugPrint('토큰 존재 여부: ${token != null}');
-    if (token == null) {
-      debugPrint('경고: JWT 토큰이 SharedPreferences에 저장되어 있지 않습니다.');
-    }
-
-    return token;
+    return await ApiUtil.getJwtToken();
   }
 
-  // 토큰 유효성 검사
+  // 토큰 유효성 검사 (ApiUtil 사용)
   bool _validateToken(String? token) {
-    if (token == null || token.isEmpty) {
-      debugPrint('오류: 인증 토큰이 없습니다. 로그인이 필요합니다.');
-      return false;
-    }
-    return true;
+    return ApiUtil.validateToken(token);
   }
 
   /// 공지사항 생성하기
@@ -46,7 +34,7 @@ class NoticeApi {
     }
 
     final url = Uri.parse('$baseUrl$apiPrefix/create/$planId');
-    
+
     debugPrint('공지사항 생성 API 호출: $url');
     debugPrint('요청 본문: ${jsonEncode(notice.toJson())}');
 
@@ -64,7 +52,9 @@ class NoticeApi {
       debugPrint('응답 본문: ${response.body}');
 
       if (response.statusCode == 201) {
-        return NoticeModel.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+        return NoticeModel.fromJson(
+          jsonDecode(utf8.decode(response.bodyBytes)),
+        );
       } else {
         throw Exception(
           '공지사항 생성에 실패했습니다: ${response.statusCode}, ${response.body}',
@@ -86,15 +76,13 @@ class NoticeApi {
     }
 
     final url = Uri.parse('$baseUrl$apiPrefix/list/$planId');
-    
+
     debugPrint('공지사항 조회 API 호출: $url');
 
     try {
       final response = await http.get(
         url,
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       debugPrint('응답 코드: ${response.statusCode}');
@@ -124,7 +112,7 @@ class NoticeApi {
     }
 
     final url = Uri.parse('$baseUrl$apiPrefix/update/$planNoticeId');
-    
+
     debugPrint('공지사항 수정 API 호출: $url');
     debugPrint('요청 본문: ${jsonEncode(notice.toJson())}');
 
@@ -142,7 +130,9 @@ class NoticeApi {
       debugPrint('응답 본문: ${response.body}');
 
       if (response.statusCode == 200) {
-        return NoticeModel.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+        return NoticeModel.fromJson(
+          jsonDecode(utf8.decode(response.bodyBytes)),
+        );
       } else {
         throw Exception(
           '공지사항 수정에 실패했습니다: ${response.statusCode}, ${response.body}',
@@ -164,15 +154,13 @@ class NoticeApi {
     }
 
     final url = Uri.parse('$baseUrl$apiPrefix/delete/$planNoticeId');
-    
+
     debugPrint('공지사항 삭제 API 호출: $url');
 
     try {
       final response = await http.delete(
         url,
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       debugPrint('응답 코드: ${response.statusCode}');

@@ -3,14 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/config/api_config.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../auth_helper.dart';
 
 class MatchingCreateService {
   final String baseUrl = ApiConfig.baseUrl;
 
   // API 요청에 사용될 토큰 가져오기
   Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('jwtToken');
+    return await AuthHelper.getJwtToken();
   }
 
   Future<Map<String, dynamic>> createMatching({

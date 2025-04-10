@@ -24,6 +24,7 @@ import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 import 'providers/matching_provider.dart';
 import 'services/invitation/deep_link_service.dart';
 import 'providers/review_provider.dart';
+import 'screens/splash/splash_screen.dart';
 
 void main() async {
   // Flutter 엔진 초기화
@@ -87,31 +88,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _checkOnboarding();
     });
 
-    // 앱 시작 시 자동 로그인 시도
-WidgetsBinding.instance.addPostFrameCallback((_) async {
-  if (_navigatorKey.currentContext != null) {
-    try {
-      final appProvider = Provider.of<AppProvider>(
-        _navigatorKey.currentContext!,
-        listen: false,
-      );
-      await appProvider.initializeApp();
-
-      // 여기에 초대 토큰 확인 메서드 추가
-      await _checkPendingInvitation(_navigatorKey.currentContext!);
-
-      // 자동 로그인 성공 시 홈 화면으로 이동
-      if (appProvider.isLoggedIn && _navigatorKey.currentContext != null) {
-        Navigator.pushReplacementNamed(
-          _navigatorKey.currentContext!,
-          '/home',
-        );
-      }
-    } catch (e) {
-      print('앱 프로바이더 초기화 오류: $e');
-    }
-  }
-});
+    // 자동 로그인 및 초대 토큰 확인은 이제 SplashScreen에서 처리합니다.
   }
 
   Future<void> _checkOnboarding() async {
@@ -181,13 +158,7 @@ WidgetsBinding.instance.addPostFrameCallback((_) async {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         navigatorKey: _navigatorKey,
-        home: Builder(
-          builder: (context) {
-            return _showOnboarding
-                ? const OnboardingScreen()
-                : const LoginScreen();
-          },
-        ),
+        home: const SplashScreen(),
         routes: AppRoutes.routes,
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
@@ -199,36 +170,35 @@ WidgetsBinding.instance.addPostFrameCallback((_) async {
     );
   }
 
- // 저장된 초대 토큰 확인
-Future<void> _checkPendingInvitation(BuildContext context) async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('pendingInvitationToken');
-    print('저장된 초대 토큰 확인: $token');
+  // 저장된 초대 토큰 확인
+  Future<void> _checkPendingInvitation(BuildContext context) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('pendingInvitationToken');
+      print('저장된 초대 토큰 확인: $token');
 
-    if (token != null && token.isNotEmpty) {
-      // 사용자 로그인 상태 확인
- final appProvider = Provider.of<AppProvider>(context, listen: false);
-  final isLoggedIn = appProvider.isLoggedIn;
-      
-      if (isLoggedIn) {
-        // 로그인 상태인 경우에만 토큰 삭제 및 초대 화면으로 이동
-        await prefs.remove('pendingInvitationToken');
+      if (token != null && token.isNotEmpty) {
+        // 사용자 로그인 상태 확인
+        final appProvider = Provider.of<AppProvider>(context, listen: false);
+        final isLoggedIn = appProvider.isLoggedIn;
 
-        // 조금 지연 후 초대 화면으로 이동 (로그인 화면 로딩 후)
-        Future.delayed(const Duration(seconds: 1), () {
-          if (context.mounted) {
-            print('초대 화면으로 이동: $token');
-            Navigator.of(context).pushNamed(
-              '/group/invitation', 
-              arguments: {'token': token}
-            );
-          }
-        });
+        if (isLoggedIn) {
+          // 로그인 상태인 경우에만 토큰 삭제 및 초대 화면으로 이동
+          await prefs.remove('pendingInvitationToken');
+
+          // 조금 지연 후 초대 화면으로 이동 (로그인 화면 로딩 후)
+          Future.delayed(const Duration(seconds: 1), () {
+            if (context.mounted) {
+              print('초대 화면으로 이동: $token');
+              Navigator.of(
+                context,
+              ).pushNamed('/group/invitation', arguments: {'token': token});
+            }
+          });
+        }
       }
+    } catch (e) {
+      print('초대 토큰 확인 중 오류: $e');
     }
-  } catch (e) {
-    print('초대 토큰 확인 중 오류: $e');
   }
-}
 }
