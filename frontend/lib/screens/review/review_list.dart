@@ -29,6 +29,7 @@ class ReviewList extends StatefulWidget {
 
 class _ReviewListState extends State<ReviewList> {
   Future<List<Review>>? reviewData;
+  final Set<String> expandedReviewIds = {};
   String? accessToken;
   int memberId = 0;
 
@@ -67,6 +68,16 @@ class _ReviewListState extends State<ReviewList> {
       reviews.sort((a, b) => b.date.compareTo(a.date));
       Provider.of<ReviewProvider>(context, listen: false).setReviews(reviews);
       return reviews;
+    });
+  }
+
+  void _toggleExpanded(String reviewId) {
+    setState(() {
+      if (expandedReviewIds.contains(reviewId)) {
+        expandedReviewIds.remove(reviewId);
+      } else {
+        expandedReviewIds.add(reviewId);
+      }
     });
   }
 
@@ -202,10 +213,8 @@ class _ReviewListState extends State<ReviewList> {
                             ),
                           ),
                           Text(
-                            "${review.visitCount}번째 방문 | ${_formatDate(
-                                review.date)}",
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.grey),
+                            _formatDate(review.date),
+                            style: const TextStyle(fontSize: 12, color: AppColors.mediumGray),
                           ),
                           if (review.memberId == memberId)
                             GestureDetector(
@@ -235,17 +244,24 @@ class _ReviewListState extends State<ReviewList> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Text(
-                        review.content,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 14),
+                      GestureDetector(
+                        onTap: () => _toggleExpanded(review.id),
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 4.0),
+                          child: Text(
+                            review.content,
+                            maxLines: expandedReviewIds.contains(review.id) ? null : 2,
+                            overflow: expandedReviewIds.contains(review.id) ? TextOverflow.visible : TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      // 변경된 이미지 처리
-                      _buildReviewImage(review),
-                      if (review.imageUrls.isNotEmpty)
+                      const SizedBox(height: 10),
+                      if (review.imageUrls.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _buildReviewImage(review),
                         const SizedBox(height: 12),
+                      ],
                       Consumer<ReviewProvider>(
                         builder: (context, provider, _) {
                           final currentReview = provider.getReview(review.id);

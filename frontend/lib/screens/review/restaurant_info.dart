@@ -55,7 +55,7 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Row(
               children: [
-                const Icon(Icons.credit_card, size: 18, color: Colors.grey),
+                const Icon(Icons.credit_card, size: 18, color: AppColors.mediumGray),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -67,7 +67,7 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
                       ),
                       Text(
                         '${_calculateTotalCount(widget.data.avgAmount)}명의 사용자가 제공한 정보',
-                        style: const TextStyle(fontSize: 13, color: Colors.grey),
+                        style: const TextStyle(fontSize: 13, color: AppColors.mediumGray),
                       ),
                     ],
                   ),
@@ -79,7 +79,7 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
                     child: Icon(
                       _isPriceExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                       size: 20,
-                      color: Colors.grey,
+                      color: AppColors.mediumGray,
                     ),
                   ),
                 )
@@ -102,7 +102,7 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.verylightGray,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.grey.shade300),
                   ),
@@ -225,7 +225,7 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
 
     if (allImages.isEmpty) {
       return Image.asset(
-        "assets/images/rice.png",
+        "assets/images/default_image.png",
         width: double.infinity,
         height: 200,
         fit: BoxFit.cover,
@@ -240,7 +240,7 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
             allImages[0],
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) {
-              return Image.asset("assets/images/rice.png", fit: BoxFit.cover);
+              return Image.asset("assets/images/default_image.png", fit: BoxFit.cover);
             },
           ),
         ),
@@ -304,27 +304,23 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
 
 // 이미지를 중앙 크롭하여 균일하게 표시하는 헬퍼 메서드
   Widget _buildCroppedImage(String url) {
-    return ClipRRect( // ✅ 둥근 모서리 추가
+    return ClipRRect(
       borderRadius: BorderRadius.circular(6),
       child: Container(
         width: double.infinity,
         height: double.infinity,
-        child: FittedBox(
+        child: FadeInImage.assetNetwork(
+          placeholder: 'assets/images/default_image.png',
+          image: url,
           fit: BoxFit.cover,
-          alignment: Alignment.center,
-          child: Image.network(
-            url,
-            errorBuilder: (context, error, stackTrace) {
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset("assets/images/rice.png", fit: BoxFit.cover),
-              );
-            },
-          ),
+          imageErrorBuilder: (context, error, stackTrace) {
+            return Image.asset('assets/images/default_image.png', fit: BoxFit.cover);
+          },
         ),
       ),
     );
   }
+
 
   Widget _buildOpeningStatus(Map<String, String> hours) {
     final now = DateTime.now();
@@ -405,12 +401,14 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
                 style: TextStyle(
                   color: isToday ? AppColors.primaryDark : AppColors.darkGray,
                   fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 13,
+                  fontSize: 12,
+                  fontFamily: 'Anemone_air',
                 ),
               ),
               TextSpan(
                 text: time,
-                style: const TextStyle(fontSize: 13, color: AppColors.darkGray),
+                style: const TextStyle(fontSize: 12, color: AppColors.darkGray,
+                  fontFamily: 'Anemone_air',),
               )
             ],
           ),
@@ -439,6 +437,7 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
       ),
     );
   }
+
 
   void _showImageDialog(BuildContext context, String? url) {
     if (url == null || url.isEmpty) return;
