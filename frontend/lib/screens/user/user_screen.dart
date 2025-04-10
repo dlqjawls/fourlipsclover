@@ -11,6 +11,7 @@ import 'widgets/payment_history.dart';
 import 'widgets/tags_section.dart';
 import 'user_journey.dart';
 import '../../config/theme.dart';
+import '../../widgets/toast_bar.dart';
 // import '../../models/user_model.dart';
 
 class UserScreen extends StatefulWidget {
@@ -137,9 +138,7 @@ class _UserScreenState extends State<UserScreen> {
                         // 로딩 다이얼로그 닫기
                         Navigator.pop(context);
 
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text('로그아웃 실패: $e')));
+                        ToastBar.clover('로그아웃 실패');
                       }
                     },
                     child: const Text(

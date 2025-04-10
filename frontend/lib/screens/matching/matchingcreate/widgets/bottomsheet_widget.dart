@@ -146,15 +146,21 @@ class _MatchingConfirmBottomSheetState
       'request': widget.request,
       'startDate': widget.startDate,
       'endDate': widget.endDate,
-      // 그룹 정보 명시적으로 추가
-      'groupId': widget.selectedGroup?.groupId ?? 1, // 그룹이 없을 경우 1으로 설정 (기본값)
+      // 그룹 정보 명시적으로 추가 ('나혼자 산다'는 -1로 설정)
+      'groupId':
+          widget.selectedGroup?.name == '나혼자 산다'
+              ? -1
+              : (widget.selectedGroup?.groupId ?? 0),
       'selectedGroup':
           widget.selectedGroup != null
               ? {
-                'groupId': widget.selectedGroup!.groupId,
+                'groupId':
+                    widget.selectedGroup!.name == '나혼자 산다'
+                        ? -1
+                        : widget.selectedGroup!.groupId,
                 'name': widget.selectedGroup!.name,
               }
-              : {'groupId': 1, 'name': '나혼자 산다'}, // null일 경우에도 객체 제공
+              : {'groupId': -1, 'name': '나혼자 산다'}, // null일 경우에도 객체 제공
     };
   }
 
@@ -182,6 +188,14 @@ class _MatchingConfirmBottomSheetState
         '승인 요청 그룹: ${widget.selectedGroup!.name} (ID: ${widget.selectedGroup!.groupId})',
       );
 
+      // '나혼자 산다' 그룹인 경우 groupId를 -1로 설정
+      final int groupIdForApprove =
+          widget.selectedGroup!.name == '나혼자 산다'
+              ? -1
+              : widget.selectedGroup!.groupId;
+
+      debugPrint('승인 요청에 사용할 실제 groupId: $groupIdForApprove');
+
       await _matchingApproveService.approveMatching(
         tid: paymentData['tid']!,
         pgToken: result['pg_token'],
@@ -190,7 +204,7 @@ class _MatchingConfirmBottomSheetState
         tagIds: widget.tagIds,
         regionId: widget.regionId,
         guideMemberId: widget.guide['memberId'],
-        groupId: widget.selectedGroup!.groupId, // 그룹 ID 전달
+        groupId: groupIdForApprove, // 수정된 그룹 ID 전달
         transportation: widget.selectedTransport ?? '',
         foodPreference: widget.selectedFoodCategory ?? '',
         tastePreference: widget.selectedTaste ?? '',

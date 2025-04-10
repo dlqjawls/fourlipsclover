@@ -15,13 +15,21 @@ class MyConsumptionPatternScreen extends StatelessWidget {
       backgroundColor: AppColors.verylightGray,
       appBar: AppBar(
         scrolledUnderElevation: 0,
-        title: const Text('나의 프로필'),
-        centerTitle: true,
-        backgroundColor: AppColors.verylightGray,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
         ),
+        title: const Text(
+          '나의 소비 패턴',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),

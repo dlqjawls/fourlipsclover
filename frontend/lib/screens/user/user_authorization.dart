@@ -5,22 +5,25 @@ import 'package:frontend/config/theme.dart';
 import 'package:frontend/providers/auth_provider.dart';
 import 'package:frontend/screens/user/auth_widgets/location_status_card.dart';
 import 'package:frontend/services/local_certification_service.dart';
+import 'package:frontend/services/user_service.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:frontend/widgets/toast_bar.dart';
 
 class UserAuthorizationScreen extends StatefulWidget {
-  final String memberId;  // String에서 int로 변경
+  final String memberId; // String에서 int로 변경
 
-  const UserAuthorizationScreen({
-    Key? key,
-    required this.memberId,
-  }) : super(key: key);
+  const UserAuthorizationScreen({Key? key, required this.memberId})
+    : super(key: key);
 
   @override
-  State<UserAuthorizationScreen> createState() => _UserAuthorizationScreenState();
+  State<UserAuthorizationScreen> createState() =>
+      _UserAuthorizationScreenState();
 }
 
 class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
   late AuthProvider _authProvider;
-  final LocalCertificationService _certificationService = LocalCertificationService();
+  final LocalCertificationService _certificationService =
+      LocalCertificationService();
 
   @override
   void initState() {
@@ -38,21 +41,17 @@ class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
 
   Future<void> _handleLocationCheck() async {
     await _authProvider.getCurrentLocation(context);
-    
+
     if (_authProvider.currentPosition != null) {
       try {
         await _authProvider.createLocalCertification(widget.memberId);
         if (!mounted) return;
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('현지인 인증이 완료되었습니다!')),
-        );
+
+        ToastBar.clover('현지인 인증이 완료되었습니다!');
         Navigator.pop(context, true);
       } catch (e) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('인증 실패: $e')),
-        );
+        ToastBar.clover('인증 실패');
       }
     }
   }
@@ -62,22 +61,22 @@ class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
     return Scaffold(
       backgroundColor: AppColors.verylightGray,
       appBar: AppBar(
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text(
-          '현지인 인증',
+          '지역 인증하기',
           style: TextStyle(
-            fontSize: 20,
-            color: AppColors.darkGray,
+            color: Colors.black,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
-        backgroundColor: AppColors.verylightGray,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.darkGray),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context, false),
-        ),
       ),
       body: SafeArea(
         child: Padding(
@@ -85,12 +84,13 @@ class _UserAuthorizationScreenState extends State<UserAuthorizationScreen> {
           child: Center(
             child: SingleChildScrollView(
               child: Consumer<AuthProvider>(
-                builder: (context, auth, _) => LocationStatusCard(
-                  currentPosition: auth.currentPosition,
-                  message: auth.locationMessage,
-                  isLoading: auth.isLoading,
-                  onPressed: _handleLocationCheck,
-                ),
+                builder:
+                    (context, auth, _) => LocationStatusCard(
+                      currentPosition: auth.currentPosition,
+                      message: auth.locationMessage,
+                      isLoading: auth.isLoading,
+                      onPressed: _handleLocationCheck,
+                    ),
               ),
             ),
           ),

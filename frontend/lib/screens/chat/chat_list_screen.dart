@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:frontend/models/chat_model.dart';
 import 'package:frontend/services/chat_service.dart';
-import 'package:frontend/screens/chat/chat_room_screen.dart';
 import 'package:frontend/config/theme.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'chat_room_screen.dart';
+import 'package:frontend/widgets/toast_bar.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({Key? key}) : super(key: key);
@@ -105,8 +107,9 @@ class _ChatListScreenState extends State<ChatListScreen>
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
+      scrolledUnderElevation: 0,
+      backgroundColor: Colors.transparent,
       elevation: 0,
-      backgroundColor: Colors.white,
       title:
           _isSearchMode
               ? TextField(
@@ -119,10 +122,11 @@ class _ChatListScreenState extends State<ChatListScreen>
                 autofocus: true,
               )
               : const Text(
-                '여행 채팅',
+                '채팅',
                 style: TextStyle(
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Colors.black,
                 ),
               ),
       centerTitle: true,
@@ -152,9 +156,7 @@ class _ChatListScreenState extends State<ChatListScreen>
     return FloatingActionButton(
       onPressed: () {
         // TODO: 새로운 채팅방 생성 기능 추가
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('새 채팅방은 매칭을 통해 생성됩니다')));
+        ToastBar.clover('새 채팅방은 매칭을 통해 생성됩니다');
       },
       backgroundColor: AppColors.primary,
       child: const Icon(Icons.chat, color: Colors.white),
@@ -323,17 +325,7 @@ class _ChatListScreenState extends State<ChatListScreen>
       ),
       confirmDismiss: (direction) async {
         // 실제로는 여기서 알림 설정을 토글하는 로직 구현
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${chatRoom.name} 채팅방 알림이 꺼졌습니다'),
-            action: SnackBarAction(
-              label: '취소',
-              onPressed: () {
-                // 알림 설정 원상복구 로직
-              },
-            ),
-          ),
-        );
+        ToastBar.clover('${chatRoom.name} 채팅방 알림이 꺼졌습니다');
         return false; // 항목을 삭제하지 않음
       },
       child: Material(
@@ -581,9 +573,7 @@ class _ChatListScreenState extends State<ChatListScreen>
                   title: const Text('알림 끄기'),
                   onTap: () {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${chatRoom.name} 채팅방 알림이 꺼졌습니다')),
-                    );
+                    ToastBar.clover('${chatRoom.name} 채팅방 알림이 꺼졌습니다');
                   },
                 ),
                 ListTile(
@@ -591,9 +581,7 @@ class _ChatListScreenState extends State<ChatListScreen>
                   title: const Text('채팅방 보관'),
                   onTap: () {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${chatRoom.name} 채팅방이 보관되었습니다')),
-                    );
+                    ToastBar.clover('${chatRoom.name} 채팅방이 보관되었습니다');
                   },
                 ),
                 if (chatRoom.isAdmin ?? false)
@@ -632,9 +620,7 @@ class _ChatListScreenState extends State<ChatListScreen>
                 onPressed: () {
                   Navigator.pop(context);
                   // TODO: 채팅방 나가기 API 호출
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('${chatRoom.name} 채팅방을 나갔습니다')),
-                  );
+                  ToastBar.clover('${chatRoom.name} 채팅방을 나갔습니다');
                   _loadChatRooms();
                 },
                 child: const Text('나가기', style: TextStyle(color: Colors.red)),
@@ -705,9 +691,7 @@ class _ChatListScreenState extends State<ChatListScreen>
           ElevatedButton.icon(
             onPressed: () {
               // TODO: 매칭 화면으로 이동하는 로직 추가
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('매칭 화면으로 이동합니다')));
+              ToastBar.clover('매칭 화면으로 이동합니다');
             },
             icon: const Icon(Icons.people_alt),
             label: const Text('매칭하러 가기'),

@@ -39,21 +39,21 @@ class UserReceipt extends StatelessWidget {
       backgroundColor: AppColors.verylightGray,
       appBar: AppBar(
         scrolledUnderElevation: 0,
-        backgroundColor: Colors.white,
-        centerTitle: true,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.darkGray),
-          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          '영수증',
+          '영수증 상세',
           style: TextStyle(
-            fontSize: 20,
+            color: Colors.black,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: AppColors.darkGray,
           ),
         ),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
         child: Padding(

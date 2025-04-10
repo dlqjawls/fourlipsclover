@@ -56,16 +56,22 @@ class _DataVizPageState extends State<DataVizPage> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      title: const Text(
-        '소비 패턴 분석',
-        style: TextStyle(color: AppColors.darkGray),
-      ),
-      backgroundColor: Colors.white,
+      scrolledUnderElevation: 0,
+      backgroundColor: Colors.transparent,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios, color: AppColors.darkGray),
-        onPressed: () => Navigator.pop(context),
+        icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+        onPressed: () => Navigator.of(context).pop(),
       ),
+      title: const Text(
+        '나의 소비 패턴',
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      centerTitle: true,
     );
   }
 

@@ -19,6 +19,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:frontend/services/auth_helper.dart';
 import 'package:frontend/screens/group_plan/bottomsheet/schedule/schedule_create_bottom_sheet.dart';
 import 'package:frontend/screens/group_plan/bottomsheet/plan/plan_create_bottom_sheet.dart';
+import 'package:frontend/widgets/toast_bar.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   final int chatRoomId;
@@ -354,16 +355,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         _scrollToBottom();
       });
     } catch (e) {
-      debugPrint('🔴 메시지 전송 오류: $e');
-
-      setState(() {
-        // API 에러 로그 저장
-        _lastApiResponseLog = '메시지 전송 실패: $e';
-      });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('메시지 전송 중 오류가 발생했습니다: $e')));
+      print('메시지 전송 오류: $e');
+      ToastBar.clover('메시지 전송 중 오류가 발생했습니다: $e');
     }
   }
 
@@ -420,13 +413,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       debugPrint('🔴 계획 목록 로드 오류: $e');
 
       // 에러 메시지를 스낵바로 표시
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      ToastBar.clover(errorMessage);
     } finally {
       if (mounted) {
         setState(() {
@@ -470,12 +457,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
     if (_availablePlans.isEmpty) {
       // 계획이 없는 경우 메시지 표시
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('사용 가능한 계획이 없습니다.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      ToastBar.clover('사용 가능한 계획이 없습니다.');
       return;
     }
 
@@ -531,9 +513,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       }
     } catch (e) {
       debugPrint('이미지 선택 중 오류 발생: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('이미지 선택 중 오류가 발생했습니다')));
+      ToastBar.clover('이미지 선택 중 오류가 발생했습니다');
     }
   }
 
@@ -656,9 +636,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       });
     } catch (e) {
       debugPrint('이미지 전송 중 오류 발생: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('이미지 전송 중 오류가 발생했습니다: $e')));
+      ToastBar.clover('이미지 전송 중 오류가 발생했습니다: $e');
     }
   }
 
@@ -672,6 +650,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       child: Scaffold(
         resizeToAvoidBottomInset: true,
         appBar: AppBar(
+          scrolledUnderElevation: 0,
           title:
               _chatRoom != null
                   ? Text(
@@ -694,13 +673,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               tooltip: '채팅방 인원 목록',
               onPressed: _showChatMembers,
             ),
+
             // 디버그 정보 버튼 (개발 환경에서만 표시)
-            if (_isDebugMode)
-              IconButton(
-                icon: const Icon(Icons.bug_report),
-                tooltip: '디버그 정보',
-                onPressed: _showDebugInfo,
-              ),
             IconButton(
               icon: const Icon(Icons.more_vert),
               onPressed: _showMoreOptions,
@@ -717,9 +691,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   // 채팅방 멤버 목록을 보여주는 함수
   void _showChatMembers() {
     if (_chatRoom == null || _chatRoom!.members.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('멤버 정보를 불러올 수 없습니다.')));
+      ToastBar.clover('멤버 정보를 불러올 수 없습니다.');
       return;
     }
 
@@ -1265,12 +1237,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('먼저 계획을 생성해야 멤버를 초대할 수 있습니다.'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        ToastBar.clover('사용 가능한 계획이 없습니다.');
         debugPrint('⚠️ 초대 불가: 계획이 없음');
         return;
       }
@@ -1331,12 +1298,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       });
 
       if (availableMembers.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('그룹에 멤버가 없습니다.'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        ToastBar.clover('그룹에 멤버가 없습니다.');
         debugPrint('⚠️ 초대 불가: 그룹에 멤버 없음');
         return;
       }
@@ -1348,9 +1310,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         _isLoading = false;
       });
       debugPrint('🔴 멤버 초대 과정 오류: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('멤버 목록을 불러오는데 실패했습니다: $e')));
+      ToastBar.clover('멤버 목록을 불러오는데 실패했습니다: $e');
     }
   }
 
@@ -1416,12 +1376,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
 
     if (!hasInvitableMembers) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('모든 그룹 멤버가 이미 초대되어 있습니다.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      ToastBar.clover('모든 그룹 멤버가 이미 초대되어 있습니다.');
       return;
     }
 
@@ -1546,12 +1501,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
     // 여전히 matchId가 없으면 오류 메시지 표시
     if (inviteMatchId == null || inviteMatchId == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('매칭 정보를 찾을 수 없습니다. 채팅방 목록에서 다시 시도해주세요.'),
-          duration: Duration(seconds: 3),
-        ),
-      );
+      ToastBar.clover('매칭 정보를 찾을 수 없습니다. 채팅방 목록에서 다시 시도해주세요.');
       debugPrint('⚠️ matchId를 찾을 수 없음: 초대 실패');
       return;
     }
@@ -1600,21 +1550,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         } catch (e) {
           debugPrint('🔴 계획에 멤버 추가 중 오류: $e');
           // 채팅방 초대는 성공했으므로 계획 추가 실패는 경고만 표시
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('멤버 초대는 성공했으나 계획에 추가하지 못했습니다: $e'),
-              duration: const Duration(seconds: 3),
-            ),
-          );
+          ToastBar.clover('멤버 초대는 성공했으나 계획에 추가하지 못했습니다: $e');
         }
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('선택한 멤버를 초대했습니다.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      ToastBar.clover('선택한 멤버를 초대했습니다.');
 
       // 채팅방 정보 다시 로드
       await _loadChatRoom();
@@ -1634,9 +1574,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         debugPrint('멤버 정보 새로고침 중 오류: $e');
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('멤버 초대에 실패했습니다: $e')));
+      ToastBar.clover('멤버 초대에 실패했습니다: $e');
       debugPrint('🔴 멤버 초대 실패: $e');
     } finally {
       setState(() {
@@ -1726,9 +1664,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     }
                   } catch (e) {
                     if (mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text('채팅방 나가기 실패: $e')));
+                      ToastBar.clover('채팅방 나가기 실패: $e');
                     }
                   }
                 },
@@ -1750,9 +1686,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   // API 응답 로그를 보여주는 함수
   void _showApiResponseLog() {
     if (_lastApiResponseLog == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('API 응답 로그가 없습니다')));
+      ToastBar.clover('API 응답 로그가 없습니다');
       return;
     }
 
@@ -2102,9 +2036,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   // 일정 추가 바텀시트 표시
   void _showAddScheduleBottomSheet() {
     if (_selectedPlan == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('먼저 여행 계획을 선택해주세요.')));
+      ToastBar.clover('먼저 여행 계획을 선택해주세요.');
       return;
     }
 
@@ -2130,9 +2062,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void _showEditScheduleBottomSheet(PlanSchedule schedule) {
     // TODO: 일정 수정 구현
     // 현재는 아직 구현되지 않은 기능이라 토스트 메시지만 표시
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('일정 수정 기능은 곧 지원될 예정입니다.')));
+    ToastBar.clover('일정 수정 기능은 곧 지원될 예정입니다.');
   }
 
   // 일정 삭제 확인 다이얼로그 표시
@@ -2179,13 +2109,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       // 일정 목록 새로고침
       await _loadPlanSchedules();
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('일정이 삭제되었습니다.')));
+      ToastBar.clover('일정이 삭제되었습니다.');
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('일정 삭제 중 오류가 발생했습니다: $e')));
+      ToastBar.clover('일정 삭제 중 오류가 발생했습니다: $e');
     } finally {
       setState(() {
         _isLoadingSchedules = false;
@@ -2220,23 +2146,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 ),
                 child: Column(
                   children: [
-                    // 드래그 핸들
-                    Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(top: 12, bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const Text(
-                      '새 여행 계획 만들기',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    // Padding(
+                    //   padding: const EdgeInsets.only(top: 16, bottom: 8),
+                    //   child: const Text(
+                    //     '새 여행 계획 만들기',
+                    //     style: TextStyle(
+                    //       fontSize: 18,
+                    //       fontWeight: FontWeight.bold,
+                    //     ),
+                    //   ),
+                    // ),
                     Expanded(
                       child: PlanCreateBottomSheet(groupId: widget.groupId),
                     ),
@@ -2257,9 +2176,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void _showEditPlanDialog(PlanList plan) {
     // TODO: 여행 계획 수정 구현
     // 현재는 아직 구현되지 않은 기능이라 토스트 메시지만 표시
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('여행 계획 수정 기능은 곧 지원될 예정입니다.')));
+    ToastBar.clover('여행 계획 수정 기능은 곧 지원될 예정입니다.');
   }
 
   // 여행 계획 삭제 확인 다이얼로그 표시
@@ -2306,13 +2223,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       // 여행 계획 목록 새로고침
       await _loadAvailablePlans();
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('여행 계획이 삭제되었습니다.')));
+      ToastBar.clover('여행 계획이 삭제되었습니다.');
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('여행 계획 삭제 중 오류가 발생했습니다: $e')));
+      ToastBar.clover('여행 계획 삭제 중 오류가 발생했습니다: $e');
     } finally {
       setState(() {
         _isLoading = false;

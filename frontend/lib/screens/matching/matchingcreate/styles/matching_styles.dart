@@ -5,19 +5,20 @@ class MatchingStyles {
   // AppBar 스타일
   static PreferredSize buildAppBar(BuildContext context, String title) {
     return PreferredSize(
-      preferredSize: Size.fromHeight(56.0),
+      preferredSize: const Size.fromHeight(56.0),
       child: AppBar(
-        backgroundColor: Colors.white,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: AppColors.primary),
-          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           title,
-          style: TextStyle(
-            color: AppColors.darkGray,
-            fontSize: 20,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
