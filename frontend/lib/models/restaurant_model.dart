@@ -177,6 +177,9 @@ class ReviewResponse {
   final int dislikedCount;
   final bool? userLiked;
   final bool? userDisliked;
+  final bool? isLocal;
+  final String? localGrade;
+
 
   ReviewResponse({
     this.reviewId,
@@ -191,10 +194,12 @@ class ReviewResponse {
     required this.dislikedCount,
     this.userLiked,
     this.userDisliked,
-
+    this.isLocal,
+    this.localGrade,
   });
 
   factory ReviewResponse.fromJson(Map<String, dynamic> json) {
+    final local = json['localCertificationResponse'];
     return ReviewResponse(
       reviewId: json['reviewId'],
       reviewer:
@@ -217,6 +222,8 @@ class ReviewResponse {
       dislikedCount: json['dislikedCount'] ?? 0,
       userLiked: json['userLiked'],
       userDisliked: json['userDisliked'],
+        isLocal: local != null && local['certificated'] == true,
+        localGrade: local != null ? local['localGrade'] : null,
     );
   }
 

@@ -129,6 +129,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           child: Scaffold(
             backgroundColor: AppColors.background,
             appBar: AppBar(
+              scrolledUnderElevation: 0,
               backgroundColor: AppColors.background,
               elevation: 0,
               centerTitle: true,
