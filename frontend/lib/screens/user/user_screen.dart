@@ -49,83 +49,39 @@ class _UserScreenState extends State<UserScreen> {
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // 프로필 섹션
                 CloverProfileSection(profile: userProfile),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+
+                // 통계 섹션
                 StatisticsSection(profile: userProfile),
                 const SizedBox(height: 16),
+
+                // 프로필 버튼
                 const ActionButtons(),
                 const SizedBox(height: 16),
-                if (userProfile.planResponses.isNotEmpty)
-                  PlanSection(plans: userProfile.planResponses),
-                InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const UserJourneyScreen(),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.eco, color: AppColors.primary, size: 24),
-                            const SizedBox(width: 8),
-                            const Text(
-                              '진행중인 여정',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.darkGray,
-                              ),
-                            ),
-                            const Spacer(),
-                            Icon(
-                              Icons.arrow_forward_ios,
-                              color: AppColors.mediumGray,
-                              size: 16,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          '현재 진행중인 여정을 확인해보세요',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.mediumGray,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
+
+                // 신뢰도 점수
                 TrustScoreIndicator(trustScore: userProfile.trustScore),
                 const SizedBox(height: 16),
-                PaymentHistory(payments: userProfile.recentPayments),
-                if (userProfile.tags.isNotEmpty) ...[
-                  const SizedBox(height: 16),
+
+                // 내 태그
+                if (userProfile.tags.isNotEmpty)
                   TagsSection(tags: userProfile.tags),
-                ],
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
+
+                // 결제 내역
+                PaymentHistory(payments: userProfile.recentPayments),
+                const SizedBox(height: 16),
+
+                // 내 계획
+                if (userProfile.planResponses.isNotEmpty)
+                  PlanSection(plans: userProfile.planResponses),
+                const SizedBox(height: 24),
+
+                // 로그아웃 버튼
                 Center(
                   child: TextButton(
                     onPressed: () async {

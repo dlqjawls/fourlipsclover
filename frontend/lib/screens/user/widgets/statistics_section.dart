@@ -12,7 +12,29 @@ class StatisticsSection extends StatelessWidget {
     if (rank is num) {
       level = rank.toInt();
     } else if (rank is String) {
-      level = int.tryParse(rank) ?? 1;
+      // 숫자 형태의 문자열인 경우
+      if (int.tryParse(rank) != null) {
+        level = int.parse(rank);
+      }
+      // ONE, TWO, THREE, FOUR 형태의 문자열인 경우
+      else {
+        switch (rank.toUpperCase()) {
+          case 'ONE':
+            level = 1;
+            break;
+          case 'TWO':
+            level = 2;
+            break;
+          case 'THREE':
+            level = 3;
+            break;
+          case 'FOUR':
+            level = 4;
+            break;
+          default:
+            level = 1;
+        }
+      }
     } else {
       level = 1;
     }
@@ -45,6 +67,34 @@ class StatisticsSection extends StatelessWidget {
     );
   }
 
+  String _formatRankDisplay(dynamic rank) {
+    if (rank is num) {
+      return 'Lv.${rank.toInt()}';
+    } else if (rank is String) {
+      // 숫자 형태의 문자열인 경우
+      if (int.tryParse(rank) != null) {
+        return 'Lv.$rank';
+      }
+      // ONE, TWO, THREE, FOUR 형태의 문자열인 경우
+      else {
+        switch (rank.toUpperCase()) {
+          case 'ONE':
+            return 'Lv.1';
+          case 'TWO':
+            return 'Lv.2';
+          case 'THREE':
+            return 'Lv.3';
+          case 'FOUR':
+            return 'Lv.4';
+          default:
+            return 'Lv.1';
+        }
+      }
+    } else {
+      return 'Lv.1';
+    }
+  }
+
   Widget _buildStatItem(
     String label,
     String? value,
@@ -58,7 +108,7 @@ class StatisticsSection extends StatelessWidget {
             : Icon(icon, color: AppColors.primary, size: 24),
         const SizedBox(height: 8),
         Text(
-          isRank ? 'Lv.${value ?? "1"}' : (value ?? '미정'),
+          isRank ? _formatRankDisplay(value) : (value ?? '미정'),
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 4),

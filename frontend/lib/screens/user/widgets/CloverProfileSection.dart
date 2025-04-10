@@ -126,7 +126,7 @@ class _CloverProfileSectionState extends State<CloverProfileSection> {
                 widget.profile.nickname,
                 style: TextStyle(
                   fontSize: 20,
-                  color: AppColors.primary,
+                  color: AppColors.darkGray,
                   fontWeight: FontWeight.bold,
                 ),
               ),
