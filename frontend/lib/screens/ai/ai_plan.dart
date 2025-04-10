@@ -25,7 +25,7 @@ class AIPlanScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const PaymentHistoryListScreen(memberId: '3963528811'),
+                    builder: (_) => const PaymentHistoryListScreen(), // memberId 제거!
                   ),
                 );
               },

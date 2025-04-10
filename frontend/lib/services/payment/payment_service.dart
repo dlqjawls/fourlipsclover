@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../models/payment_history.dart';
+import '../auth_helper.dart';
 
 class PaymentInitData {
   final String tid;
@@ -24,7 +25,7 @@ class PaymentService {
     return '$url/api/payment';
   }
 
-  // 결제 준비 요청
+  /// 결제 준비 요청
   static Future<PaymentInitData> requestPaymentReady({
     required String userId,
     required String itemName,
@@ -38,21 +39,13 @@ class PaymentService {
       'totalAmount': '$totalAmount',
     };
 
-    final url = Uri.parse('$baseUrl/ready').replace(
-        queryParameters: queryParams);
-
-    print('[PaymentService] 결제 준비 요청 URL: $url');
+    final url = Uri.parse('$baseUrl/ready').replace(queryParameters: queryParams);
 
     final response = await http.post(url);
 
-    print('[PaymentService] 응답 코드: ${response.statusCode}');
-    print('[PaymentService] 응답 바디: ${response.body}');
-
     if (response.statusCode == 200) {
       final body = jsonDecode(response.body);
-
-      final redirectUrl = body['next_redirect_mobile_url'] ??
-          body['next_redirect_app_url'];
+      final redirectUrl = body['next_redirect_mobile_url'] ?? body['next_redirect_app_url'];
       final tid = body['tid'];
       final orderId = body['orderId'];
 
@@ -60,17 +53,13 @@ class PaymentService {
         throw Exception('응답에 필수 값 누락');
       }
 
-      return PaymentInitData(
-        tid: tid,
-        orderId: orderId,
-        redirectUrl: redirectUrl,
-      );
+      return PaymentInitData(tid: tid, orderId: orderId, redirectUrl: redirectUrl);
     } else {
       throw Exception('결제 준비 실패: ${response.statusCode}');
     }
   }
 
-  // 결제 승인 요청
+  /// 결제 승인 요청
   static Future<void> requestPaymentApprove({
     required String tid,
     required String pgToken,
@@ -86,20 +75,15 @@ class PaymentService {
       'amount': '$amount',
     };
 
-    final url = Uri.parse('$baseUrl/approve').replace(
-        queryParameters: queryParams);
-
+    final url = Uri.parse('$baseUrl/approve').replace(queryParameters: queryParams);
     final response = await http.post(url);
-
-    print('[PaymentService] 승인 요청 URL: $url');
-    print('[PaymentService] 승인 응답: ${response.body}');
 
     if (response.statusCode != 200) {
       throw Exception('결제 승인 실패: ${response.statusCode}');
     }
   }
 
-  // 결제 취소 요청
+  /// 결제 취소 요청
   static Future<void> requestPaymentCancel({
     required String tid,
     required int cancelAmount,
@@ -112,14 +96,8 @@ class PaymentService {
       'cancelTaxFreeAmount': '$cancelTaxFreeAmount',
     };
 
-    final url = Uri.parse('$baseUrl/cancel').replace(
-        queryParameters: queryParams);
-
-    print('[PaymentService] 취소 요청 URL: $url');
-
+    final url = Uri.parse('$baseUrl/cancel').replace(queryParameters: queryParams);
     final response = await http.post(url);
-
-    print('[PaymentService] 취소 응답: ${response.body}');
 
     if (response.statusCode != 200) {
       throw Exception('결제 취소 실패: ${response.statusCode}');
@@ -131,25 +109,44 @@ class PaymentService {
     required String memberId,
   }) async {
     final url = Uri.parse('$baseUrl/$memberId');
+    print('Fetching payment history from: $url');
 
-    Map<String, String> headers = {
+    final response = await http.get(url, headers: {
       'Content-Type': 'application/json; charset=UTF-8',
       'Accept': 'application/json; charset=UTF-8',
-    };
+    });
 
-    final response = await http.get(url, headers: headers);
-
-    print('[결제내역] 요청 URL: $url');
-    print('[결제내역] 응답 코드: ${response.statusCode}');
-    print('[결제내역] 응답 바디: ${response.body}');
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
-      print('[결제내역] 받아온 데이터 개수: ${data.length}');
       return data.map((json) => PaymentHistory.fromJson(json)).toList();
     } else {
       throw Exception('결제 내역 조회 실패: ${response.statusCode}');
     }
   }
 
+
+  /// TID 기반 결제 상태 조회 API
+  static Future<String?> getPaymentStatusByTid(String tid) async {
+    final token = await AuthHelper.getJwtToken();
+
+    if (token == null) {
+      throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+    }
+
+    final url = Uri.parse('$baseUrl/status/$tid');
+    final response = await http.get(url, headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    });
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['status'];
+    } else {
+      throw Exception('결제 상태 조회 실패: ${response.statusCode}');
+    }
+  }
 }

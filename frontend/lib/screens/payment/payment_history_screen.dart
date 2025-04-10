@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../../../models/payment_history.dart';
 import '../../services/payment/payment_service.dart';
 import 'widget/payment_history_item.dart';
+import 'package:provider/provider.dart';
+import '../../providers/app_provider.dart';
+import '../../widgets/toast_bar.dart';
 
 class PaymentHistoryListScreen extends StatefulWidget {
-  final String memberId;
-  const PaymentHistoryListScreen({Key? key, required this.memberId}) : super(key: key);
+  const PaymentHistoryListScreen({Key? key}) : super(key: key);
 
   @override
   _PaymentHistoryListScreenState createState() => _PaymentHistoryListScreenState();
@@ -13,17 +15,30 @@ class PaymentHistoryListScreen extends StatefulWidget {
 
 class _PaymentHistoryListScreenState extends State<PaymentHistoryListScreen> {
   late Future<List<PaymentHistory>> _futurePaymentHistory;
+  bool _isInitialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    _futurePaymentHistory = PaymentService.fetchPaymentHistory(memberId: widget.memberId);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (!_isInitialized) {
+      final memberId = Provider.of<AppProvider>(context, listen: false).user?.id.toString();
+
+      if (memberId != null) {
+        _futurePaymentHistory = PaymentService.fetchPaymentHistory(memberId: memberId);
+      } else {
+        _futurePaymentHistory = Future.value([]);
+      }
+
+      _isInitialized = true;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         title: const Text('결제 내역'),
         centerTitle: true,
       ),
@@ -36,7 +51,9 @@ class _PaymentHistoryListScreenState extends State<PaymentHistoryListScreen> {
           if (snapshot.hasError) {
             return Center(child: Text('오류: ${snapshot.error}'));
           }
-          final paymentList = snapshot.data!;
+          final paymentList = snapshot.data!..sort(
+                (a, b) => b.createdAt.compareTo(a.createdAt),
+          );
           return ListView.builder(
             itemCount: paymentList.length,
             itemBuilder: (context, index) {
@@ -46,20 +63,18 @@ class _PaymentHistoryListScreenState extends State<PaymentHistoryListScreen> {
                   try {
                     await PaymentService.requestPaymentCancel(
                       tid: paymentList[index].tid,
-                      // 결제 금액은 바로 amount를 사용합니다.
                       cancelAmount: paymentList[index].amount,
-                      cancelTaxFreeAmount: 0, // 예시로 0 처리
+                      cancelTaxFreeAmount: 0,
                     );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('결제가 취소되었습니다.')),
-                    );
+                    ToastBar.clover('결제가 취소되었습니다.');
                     setState(() {
-                      _futurePaymentHistory = PaymentService.fetchPaymentHistory(memberId: widget.memberId);
+                      final memberId = Provider.of<AppProvider>(context, listen: false).user?.id.toString();
+                      if (memberId != null) {
+                        _futurePaymentHistory = PaymentService.fetchPaymentHistory(memberId: memberId);
+                      }
                     });
                   } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('취소 오류: $e')),
-                    );
+                    ToastBar.clover('취소 중 오류가 발생했습니다.');
                   }
                 },
               );
