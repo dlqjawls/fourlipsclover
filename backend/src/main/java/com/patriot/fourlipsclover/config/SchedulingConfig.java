@@ -1,6 +1,7 @@
 package com.patriot.fourlipsclover.config;
 
 import com.patriot.fourlipsclover.locals.service.LocalCertificationService;
+import com.patriot.fourlipsclover.member.service.MemberService;
 import com.patriot.fourlipsclover.tag.service.TagService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,7 @@ public class SchedulingConfig {
 
 	private final LocalCertificationService localCertificationService;
 	private final TagService tagService;
+	private final MemberService memberService;
 
 	/**
 	 * 3개월마다 현지인 등급을 업데이트합니다. cron 표현식: 초 분 시 일 월 요일 "0 0 0 1 1,4,7,10 *": 1월, 4월, 7월, 10월 1일 자정에
@@ -33,5 +35,7 @@ public class SchedulingConfig {
 	@Scheduled(cron = "0 0 0 1 1,4,7,10 *")
 	public void uploadRestaurantDocument() {
 		tagService.uploadRestaurantDocument();
+		memberService.updateTrustScore();
+		
 	}
 }

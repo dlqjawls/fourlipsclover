@@ -3,6 +3,7 @@ package com.patriot.fourlipsclover.locals.controller;
 import com.patriot.fourlipsclover.locals.dto.request.LocalCertificationCreate;
 import com.patriot.fourlipsclover.locals.dto.response.LocalCertificationResponse;
 import com.patriot.fourlipsclover.locals.service.LocalCertificationService;
+import com.patriot.fourlipsclover.member.service.MemberService;
 import com.patriot.fourlipsclover.tag.service.TagService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class LocalCertificationController {
 
 	private final LocalCertificationService localCertificationService;
 	private final TagService tagService;
+	private final MemberService memberService;
 
 	@PostMapping("/{memberId}")
 	@Operation(summary = "지역인증 생성", description = "회원의 위치 정보를 기반으로 지역인증을 생성합니다")
@@ -34,6 +36,7 @@ public class LocalCertificationController {
 	public void updateLocalGrades() {
 		localCertificationService.updateLocalGrades();
 		tagService.uploadAllLocalCertificationsToElasticsearch();
+		memberService.updateTrustScore();
 	}
 
 
