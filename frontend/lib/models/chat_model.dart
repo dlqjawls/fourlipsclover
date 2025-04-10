@@ -89,12 +89,14 @@ class ChatRoomDetail {
   final String name;
   final List<ChatMessage> messages;
   final List<ChatMember> members;
+  final int matchId;
 
   ChatRoomDetail({
     required this.chatRoomId,
     required this.name,
     required this.messages,
     required this.members,
+    required this.matchId,
   });
 
   factory ChatRoomDetail.fromJson(Map<String, dynamic> json) {
@@ -109,6 +111,7 @@ class ChatRoomDetail {
           (json['members'] as List)
               .map((member) => ChatMember.fromJson(member))
               .toList(),
+      matchId: json['matchId'] ?? 0,
     );
   }
 }

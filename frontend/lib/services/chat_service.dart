@@ -13,6 +13,22 @@ class ChatService {
   // 디버그 모드 설정 (개발 환경에서만 true로 설정)
   final bool _isDebugMode = true;
 
+  // 채팅방 ID와 매칭 ID의 매핑을 저장하는 정적 맵
+  static final Map<int, int> _chatRoomToMatchIdMap = {};
+
+  // 매핑 저장 메서드
+  static void saveChatRoomMatchIdMapping(int chatRoomId, int matchId) {
+    _chatRoomToMatchIdMap[chatRoomId] = matchId;
+    debugPrint('💾 매핑 저장: 채팅방 ID $chatRoomId -> 매칭 ID $matchId');
+  }
+
+  // 매핑 조회 메서드
+  static int? getMatchIdForChatRoom(int chatRoomId) {
+    final matchId = _chatRoomToMatchIdMap[chatRoomId];
+    debugPrint('🔍 매핑 조회: 채팅방 ID $chatRoomId -> 매칭 ID ${matchId ?? "없음"}');
+    return matchId;
+  }
+
   // 요청 로깅 함수
   void _logRequest(
     String method,
@@ -110,7 +126,14 @@ class ChatService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
-        return data.map((json) => ChatRoom.fromJson(json)).toList();
+        final chatRooms = data.map((json) => ChatRoom.fromJson(json)).toList();
+
+        // 채팅방 ID와 매칭 ID 매핑 정보 저장
+        for (final room in chatRooms) {
+          saveChatRoomMatchIdMapping(room.chatRoomId, room.matchId);
+        }
+
+        return chatRooms;
       } else {
         throw Exception('채팅방 목록을 불러오는데 실패했습니다: ${response.statusCode}');
       }
@@ -263,6 +286,7 @@ class ChatService {
         throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
       }
 
+      // chatRoomId는 실제 API에서는 matchId로 사용됨
       final url = '$baseUrl/api/chat/invite/$chatRoomId';
       final headers = {
         'Content-Type': 'application/json',
@@ -408,11 +432,12 @@ class ChatService {
     }
   }
 
-  // 그룹의 인원 중 현재 plan에 소속되지 않은 member list 조회
+  // 그룹의 모든 인원을 조회하고 plan 및 채팅방 소속 여부를 표시
   Future<List<Map<String, dynamic>>> getAvailableMembers(
     int groupId,
-    int planId,
-  ) async {
+    int planId, {
+    int? chatRoomId,
+  }) async {
     try {
       final token = await _getAuthToken();
 
@@ -420,27 +445,105 @@ class ChatService {
         throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
       }
 
-      final url = '$baseUrl/api/group/$groupId/plan/$planId/available-members';
+      // 1. 그룹의 모든 멤버 조회
+      final groupUrl = '$baseUrl/api/group/group-detail/$groupId';
+      final planUrl = '$baseUrl/api/group/$groupId/plan/$planId';
+
+      // 채팅방 참여자 조회 URL (chatRoomId가 제공된 경우)
+      String? chatRoomUrl;
+      if (chatRoomId != null) {
+        chatRoomUrl = '$baseUrl/api/chat/room/$chatRoomId?offset=0&limit=1';
+      }
+
       final headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       };
 
-      _logRequest('GET', url, headers, null);
-
-      final response = await http.get(Uri.parse(url), headers: headers);
-
-      _logResponse(response, 'getAvailableMembers/$groupId/$planId');
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
-        return List<Map<String, dynamic>>.from(data);
-      } else {
-        throw Exception('가용 멤버 목록을 불러오는데 실패했습니다: ${response.statusCode}');
+      _logRequest('GET', groupUrl, headers, null);
+      _logRequest('GET', planUrl, headers, null);
+      if (chatRoomUrl != null) {
+        _logRequest('GET', chatRoomUrl, headers, null);
       }
+
+      // API 요청들
+      final groupResponse = await http.get(
+        Uri.parse(groupUrl),
+        headers: headers,
+      );
+      final planResponse = await http.get(Uri.parse(planUrl), headers: headers);
+
+      // 채팅방 정보 조회 (선택적)
+      http.Response? chatRoomResponse;
+      if (chatRoomUrl != null) {
+        chatRoomResponse = await http.get(
+          Uri.parse(chatRoomUrl),
+          headers: headers,
+        );
+      }
+
+      _logResponse(groupResponse, 'getGroupDetail/$groupId');
+      _logResponse(planResponse, 'getPlanDetail/$groupId/$planId');
+      if (chatRoomResponse != null) {
+        _logResponse(chatRoomResponse, 'getChatRoom/$chatRoomId');
+      }
+
+      // 응답 처리
+      if (groupResponse.statusCode != 200) {
+        throw Exception('그룹 정보를 불러오는데 실패했습니다: ${groupResponse.statusCode}');
+      }
+
+      if (planResponse.statusCode != 200) {
+        throw Exception('플랜 정보를 불러오는데 실패했습니다: ${planResponse.statusCode}');
+      }
+
+      // 그룹 및 플랜 데이터 파싱
+      final groupData = jsonDecode(utf8.decode(groupResponse.bodyBytes));
+      final planData = jsonDecode(utf8.decode(planResponse.bodyBytes));
+
+      // 채팅방 멤버 ID 집합 (chatRoomId가 제공된 경우)
+      Set<int> chatMemberIds = {};
+      if (chatRoomResponse != null && chatRoomResponse.statusCode == 200) {
+        final chatRoomData = jsonDecode(
+          utf8.decode(chatRoomResponse.bodyBytes),
+        );
+        final List<dynamic> chatMembers = chatRoomData['members'] ?? [];
+        chatMemberIds =
+            chatMembers.map<int>((member) => member['memberId'] as int).toSet();
+        debugPrint('👥 채팅방 참여자 수: ${chatMemberIds.length}명');
+      }
+
+      // 그룹 멤버 목록
+      final List<dynamic> groupMembers = groupData['members'] ?? [];
+
+      // 플랜 멤버 목록
+      final List<dynamic> planMembers = planData['members'] ?? [];
+
+      // 플랜 멤버 ID 목록 생성 (빠른 조회를 위해)
+      final Set<int> planMemberIds =
+          planMembers.map<int>((member) => member['memberId'] as int).toSet();
+
+      // 그룹 멤버 목록에 isInPlan 및 isInChat 속성 추가
+      final result =
+          groupMembers.map<Map<String, dynamic>>((member) {
+            final memberId = member['memberId'] as int;
+            final isInPlan = planMemberIds.contains(memberId);
+            final isInChat = chatMemberIds.contains(memberId);
+
+            return {
+              ...Map<String, dynamic>.from(member as Map),
+              'isInPlan': isInPlan,
+              'isInChat': isInChat,
+            };
+          }).toList();
+
+      return result;
     } catch (e) {
-      debugPrint('가용 멤버 목록 조회 중 오류 발생: $e');
-      throw Exception('가용 멤버 목록 조회 중 오류 발생: $e');
+      debugPrint('그룹/플랜/채팅방 멤버 목록 조회 중 오류 발생: $e');
+      throw Exception('그룹/플랜/채팅방 멤버 목록 조회 중 오류 발생: $e');
     }
   }
 
