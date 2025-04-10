@@ -118,58 +118,65 @@ class ReceiptWidget extends StatelessWidget {
                 // 구분선
                 _buildDottedLine(),
 
-                // 영수증 항목들
+                // 영수증 항목들 - 터치하면 바로 수정 바텀시트 열림
                 ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(), // 스크롤 비활성화
                   itemCount: settlement.expenses.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 4),
+                  separatorBuilder:
+                      (context, index) => const SizedBox(height: 4),
                   itemBuilder: (context, index) {
                     final expense = settlement.expenses[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '결제 #${expense.paymentApprovalId}',
-                                  style: TextStyle(
-                                    fontFamily: 'Anemone_air',
-                                    fontSize: 14,
-                                    color: AppColors.darkGray,
+                    return InkWell(
+                      onTap: () {
+                        // 직접 결제 항목 클릭 시 수정 바텀시트 열기
+                        _showExpenseEditBottomSheet(context, expense);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '결제 #${expense.paymentApprovalId}',
+                                    style: TextStyle(
+                                      fontFamily: 'Anemone_air',
+                                      fontSize: 14,
+                                      color: AppColors.darkGray,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  DateFormat(
-                                    'yyyy.MM.dd HH:mm',
-                                  ).format(expense.approvedAt),
-                                  style: TextStyle(
-                                    fontFamily: 'Anemone_air',
-                                    fontSize: 10,
-                                    color: AppColors.mediumGray,
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    DateFormat(
+                                      'yyyy.MM.dd HH:mm',
+                                    ).format(expense.approvedAt),
+                                    style: TextStyle(
+                                      fontFamily: 'Anemone_air',
+                                      fontSize: 10,
+                                      color: AppColors.mediumGray,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          Text(
-                            '${currencyFormat.format(expense.totalPayment)}',
-                            style: TextStyle(
-                              fontFamily: 'Anemone_air',
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.darkGray,
+                            Text(
+                              '${currencyFormat.format(expense.totalPayment)} 원',
+                              style: TextStyle(
+                                fontFamily: 'Anemone_air',
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.darkGray,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -197,7 +204,7 @@ class ReceiptWidget extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${currencyFormat.format(settlement.totalAmount)}',
+                        '${currencyFormat.format(settlement.totalAmount)} 원',
                         style: TextStyle(
                           fontFamily: 'Anemone_air',
                           fontSize: 16,
@@ -212,23 +219,44 @@ class ReceiptWidget extends StatelessWidget {
                 // 구분선
                 _buildDottedLine(),
 
-                // 바코드 (터치 가능)
+                // 바코드 (정산 요청 기능으로 변경)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: GestureDetector(
                     onTap: () {
-                      _showExpenseListBottomSheet(context);
+                      // 이제 바코드는 정산 요청 기능으로 변경
+                      _requestSettlement(context);
                     },
                     child: Column(
                       children: [
+                        // 바코드와 스캔 라인을 함께 표시하는 Stack
                         SizedBox(
                           height: 50,
                           width: 200,
-                          child: CustomPaint(painter: const BarcodePainter()),
+                          child: Stack(
+                            children: [
+                              // 기존 바코드를 확실하게 표시
+                              Positioned.fill(
+                                child: CustomPaint(
+                                  painter: const BarcodePainter(),
+                                ),
+                              ),
+
+                              // 스캔 라인 애니메이션 추가
+                              ScanningLine(
+                                isEnabled:
+                                    settlement.settlementStatus ==
+                                    SettlementStatus.PENDING,
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '터치하여 결제 내역 상세 보기',
+                          settlement.settlementStatus ==
+                                  SettlementStatus.PENDING
+                              ? '터치하여 정산 요청하기'
+                              : '정산 요청 완료',
                           style: TextStyle(
                             fontFamily: 'Anemone_air',
                             fontSize: 12,
@@ -266,216 +294,71 @@ class ReceiptWidget extends StatelessWidget {
     );
   }
 
-  // 결제 내역 상세 보기 바텀시트를 표시하는 메서드
-  void _showExpenseListBottomSheet(BuildContext context) {
+  // 결제 내역 수정 바텀시트 표시
+  void _showExpenseEditBottomSheet(BuildContext context, Expense expense) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          builder: (context, scrollController) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Column(
-                children: [
-                  // 드래그 핸들
-                  Container(
-                    margin: const EdgeInsets.only(top: 10),
-                    width: 40,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-
-                  // 헤더
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Text(
-                          '결제 내역 상세',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.darkGray,
-                          ),
-                        ),
-                        const Spacer(),
-                        TextButton.icon(
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                          icon: const Icon(Icons.close, size: 18),
-                          label: const Text('닫기'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.mediumGray,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // 결제 내역 리스트
-                  Expanded(
-                    child: ListView.separated(
-                      controller: scrollController,
-                      itemCount: settlement.expenses.length,
-                      separatorBuilder: (context, index) => const Divider(),
-                      itemBuilder: (context, index) {
-                        final expense = settlement.expenses[index];
-                        final currencyFormat = NumberFormat('#,###', 'ko_KR');
-
-                        return ListTile(
-                          title: Text(
-                            '결제 #${expense.paymentApprovalId}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.darkGray,
-                            ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                DateFormat(
-                                  'yyyy.MM.dd HH:mm',
-                                ).format(expense.approvedAt),
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              Text(
-                                '참여자: ${expense.expenseParticipants.map((p) => p.nickname).join(', ')}',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '${currencyFormat.format(expense.totalPayment)}원',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.edit,
-                                  color: AppColors.primary,
-                                ),
-                                onPressed: () {
-                                  // 바텀시트 닫기
-                                  Navigator.pop(context);
-
-                                  // ExpenseEditBottomSheet 호출
-                                  showModalBottomSheet(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    backgroundColor: Colors.transparent,
-                                    builder: (context) {
-                                      return ExpenseEditBottomSheet(
-                                        expense: expense,
-                                        planId: planId,
-                                        groupId: groupId,
-                                      );
-                                    },
-                                  ).then((_) {
-                                    // 편집 후 데이터 새로고침
-                                    if (onSettlementRequested != null) {
-                                      onSettlementRequested!();
-                                    }
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                          onTap: () {
-                            // 항목을 터치해도 편집 화면으로 이동
-                            Navigator.pop(context);
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (context) {
-                                return ExpenseEditBottomSheet(
-                                  expense: expense,
-                                  planId: planId,
-                                  groupId: groupId,
-                                );
-                              },
-                            ).then((_) {
-                              if (onSettlementRequested != null) {
-                                onSettlementRequested!();
-                              }
-                            });
-                          },
-                        );
-                      },
-                    ),
-                  ),
-
-                  // 하단 정산 정보
-                  if (settlement.settlementStatus == SettlementStatus.PENDING)
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _requestSettlement(context);
-                        },
-                        icon: const Icon(Icons.receipt_long),
-                        label: const Text('정산 요청하기'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            );
-          },
+        return ExpenseEditBottomSheet(
+          expense: expense,
+          planId: planId,
+          groupId: groupId,
         );
       },
-    );
+    ).then((_) {
+      // 편집 후 데이터 새로고침
+      if (onSettlementRequested != null) {
+        onSettlementRequested!();
+      }
+    });
   }
 
   // 정산 요청 메서드
   void _requestSettlement(BuildContext context) async {
+    // 이미 정산 요청이 된 경우 처리하지 않음
+    if (settlement.settlementStatus != SettlementStatus.PENDING) {
+      ToastBar.clover('이미 정산 요청이 완료되었습니다.');
+      return;
+    }
+
+    // 비용이 없으면 정산 요청 불가
+    if (settlement.expenses.isEmpty) {
+      ToastBar.clover('등록된 결제 내역이 없습니다.');
+      return;
+    }
+
     // 재확인 다이얼로그 표시
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('정산 요청 확인'),
-        content: const Text(
-          '모든 멤버에게 정산 요청을 보내시겠습니까?\n이 작업은 취소할 수 없습니다.',
-          style: TextStyle(height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('취소'),
-            style: TextButton.styleFrom(foregroundColor: AppColors.mediumGray),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('정산 요청 확인'),
+            content: const Text(
+              '모든 멤버에게 정산 요청을 보내시겠습니까?',
+              style: TextStyle(height: 1.5),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('취소'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.mediumGray,
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                ),
+                child: const Text(
+                  '확인',
+                  style: TextStyle(color: AppColors.background),
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('확인'),
-          ),
-        ],
-      ),
     );
 
     // 사용자가 취소한 경우

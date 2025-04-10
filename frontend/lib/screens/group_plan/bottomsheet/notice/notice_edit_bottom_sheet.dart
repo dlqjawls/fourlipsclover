@@ -400,8 +400,8 @@ Future<void> showNoticeEditBottomSheet({
                             );
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red.shade100,
-                            foregroundColor: Colors.red.shade700,
+                            backgroundColor: Colors.red.shade400,
+                            foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
