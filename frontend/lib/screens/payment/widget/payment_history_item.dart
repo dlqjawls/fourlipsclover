@@ -24,7 +24,9 @@ class PaymentHistoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCanceled = history.isCanceled;
+    final isApproved = history.status == 'APPROVED';
+    final isCanceled = history.status == 'CANCELED';
+
 
     return ListTile(
       title: Text(

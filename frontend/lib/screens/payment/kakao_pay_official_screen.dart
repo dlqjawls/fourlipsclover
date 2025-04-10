@@ -8,6 +8,7 @@ import 'payment_success_screen.dart';
 import '../../services/matching/matching_approve.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../widgets/toast_bar.dart';
 
 class KakaoPayOfficialScreen extends StatefulWidget {
   final Map<String, dynamic> matchData;
@@ -96,9 +97,7 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
       print("결제 준비 중 오류: $e");
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('결제 준비 중 오류가 발생했습니다: $e')));
+      ToastBar.clover('결제 준비 중 오류가 발생했습니다.');
       setState(() => isLoading = false);
     }
   }
@@ -230,9 +229,7 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
       print("JS URL 추출 중 오류: $e");
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('결제 처리 중 오류가 발생했습니다: $e')));
+      ToastBar.clover('결제 처리 중 오류가 발생했습니다');
     }
   }
 
@@ -248,11 +245,7 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
 
       if (!mounted) return;
 
-      // 결제 실패 알림 표시 후 화면 닫기
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('결제 실패: $errorMsg')));
-
+      ToastBar.clover('결제 실패');
       // 실패 정보를 가지고 화면 닫기
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
@@ -414,10 +407,7 @@ class _KakaoPayOfficialScreenState extends State<KakaoPayOfficialScreen> {
       print("매칭 정보: ${widget.matchingInfo}");
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('매칭 승인 중 오류가 발생했습니다: $e')));
-
+      ToastBar.clover('결제 처리 중 오류가 발생했습니다');
       // 오류 정보와 함께 화면 닫기
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
