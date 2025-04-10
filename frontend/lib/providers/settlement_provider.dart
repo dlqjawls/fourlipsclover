@@ -23,12 +23,16 @@ class SettlementProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
+  // 데이터 변경 추적 플래그
+  bool _dataChanged = false;
+
   // Getters
   Settlement? getSettlementForPlan(int planId) => _settlementCache[planId];
   SettlementRequest? getSettlementRequestForPlan(int planId) =>
       _settlementRequestCache[planId];
   bool get isLoading => _isLoading;
   String? get error => _error;
+  bool get hasDataChanged => _dataChanged;
 
   // 로딩 상태 설정
   void setLoading(bool loading) {
@@ -36,6 +40,18 @@ class SettlementProvider with ChangeNotifier {
       _isLoading = loading;
       notifyListeners();
     }
+  }
+
+  // 데이터 변경 상태 설정
+  void setDataChanged(bool value) {
+    _dataChanged = value;
+    notifyListeners();
+  }
+
+  // 데이터 변경 플래그 리셋
+  void resetDataChangedFlag() {
+    _dataChanged = false;
+    notifyListeners();
   }
 
   // 에러 메시지 초기화
@@ -50,6 +66,7 @@ class SettlementProvider with ChangeNotifier {
     try {
       await _settlementApi.createSettlement(planId);
       _error = null;
+      setDataChanged(true);
       return true;
     } catch (e) {
       _error = '정산 생성에 실패했습니다: $e';
@@ -92,6 +109,7 @@ class SettlementProvider with ChangeNotifier {
       _settlementRequestCache[planId] = request;
 
       _error = null;
+      setDataChanged(true);
       notifyListeners();
       return request;
     } catch (e) {
@@ -146,6 +164,7 @@ class SettlementProvider with ChangeNotifier {
       }
 
       _error = null;
+      setDataChanged(true);
       notifyListeners(); // 상태 변경 알림 추가
       return true;
     } catch (e) {
@@ -255,6 +274,9 @@ class SettlementProvider with ChangeNotifier {
       if (result == "COMPLETED") {
         await fetchSettlementDetail(planId);
       }
+
+      // 데이터 변경 플래그 설정
+      setDataChanged(true);
 
       _error = null;
       return true;

@@ -202,10 +202,27 @@ class SettlementApi {
       debugPrint('응답 코드: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
-        return data
-            .map((json) => SettlementSituationResponse.fromJson(json))
-            .toList();
+        final dynamic decodedData = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // 응답 타입 로깅
+        debugPrint('응답 데이터 타입: ${decodedData.runtimeType}');
+
+        // 단일 객체인 경우 (Map)
+        if (decodedData is Map<String, dynamic>) {
+          debugPrint('응답이 단일 객체입니다. 리스트로 변환합니다.');
+          return [SettlementSituationResponse.fromJson(decodedData)];
+        }
+        // 이미 리스트인 경우
+        else if (decodedData is List) {
+          debugPrint('응답이 리스트입니다. 객체를 변환합니다.');
+          return decodedData
+              .map((json) => SettlementSituationResponse.fromJson(json))
+              .toList();
+        }
+        // 예상치 못한 타입인 경우
+        else {
+          throw FormatException('예상치 못한 응답 형식: ${decodedData.runtimeType}');
+        }
       } else {
         throw Exception(
           '정산 현황 조회에 실패했습니다: ${response.statusCode}, ${response.body}',
