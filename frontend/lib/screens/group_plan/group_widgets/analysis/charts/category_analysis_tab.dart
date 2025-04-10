@@ -75,19 +75,33 @@ class CategoryAnalysisTab extends StatelessWidget {
                         height: 300,
                         child: SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              Expanded(
-                                flex: 6,
-                                child: _buildCategoryPieChart(data),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                flex: 4,
-                                child: _buildCategoryLegend(data),
-                              ),
-                            ],
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minWidth: MediaQuery.of(context).size.width,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  flex: 6,
+                                  fit: FlexFit.loose,
+                                  child: SizedBox(
+                                    width: 200, // 적절한 width 지정
+                                    child: _buildCategoryPieChart(data),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Flexible(
+                                  flex: 4,
+                                  fit: FlexFit.loose,
+                                  child: SizedBox(
+                                    width: 150, // 적절한 width 지정
+                                    child: _buildCategoryLegend(data),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -272,7 +286,7 @@ class CategoryAnalysisTab extends StatelessWidget {
           value: spending.toDouble(),
           title: percentage >= 5 ? '${percentage.toStringAsFixed(1)}%' : '',
           color: colors[colorIndex],
-          radius: 110,
+          radius: 100,
           titleStyle: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
