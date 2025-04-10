@@ -17,6 +17,7 @@ public class ExpenseResponse {
 
 	private Long expenseId;
 	private Long paymentApprovalId;
+	private String itemName;
 	private Integer totalPayment;
 	private LocalDateTime approvedAt;
 	private List<ExpenseParticipantResponse> expenseParticipants;

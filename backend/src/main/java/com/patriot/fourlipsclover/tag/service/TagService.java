@@ -21,7 +21,6 @@ import com.patriot.fourlipsclover.restaurant.repository.RestaurantImageRepositor
 import com.patriot.fourlipsclover.restaurant.repository.RestaurantJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewSentimentRepository;
 import com.patriot.fourlipsclover.restaurant.service.RestaurantRankingService;
-import com.patriot.fourlipsclover.restaurant.service.RestaurantService;
 import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
 import com.patriot.fourlipsclover.tag.dto.response.TagInfo;
 import com.patriot.fourlipsclover.tag.dto.response.TagListResponse;
@@ -222,21 +221,25 @@ public class TagService {
 							.build())
 					.collect(Collectors.toList());
 
-			int likeSentimentCount = reviewSentimentRepository.countByReview_RestaurantAndSentimentStatus(restaurant,
+			int likeSentimentCount = reviewSentimentRepository.countByReview_RestaurantAndSentimentStatus(
+					restaurant,
 					SentimentStatus.POSITIVE);
-			int dislikeSentimentCount = reviewSentimentRepository.countByReview_RestaurantAndSentimentStatus(restaurant,
+			int dislikeSentimentCount = reviewSentimentRepository.countByReview_RestaurantAndSentimentStatus(
+					restaurant,
 					SentimentStatus.NEGATIVE);
 
 			// 식당 이미지 조회 및 설정
-			List<String> restaurantImages = restaurantImageRepository.findByRestaurant(restaurant).stream().map(
-					RestaurantImage::getUrl).toList();
+			List<String> restaurantImages = restaurantImageRepository.findByRestaurant(restaurant)
+					.stream().map(
+							RestaurantImage::getUrl).toList();
 
 			// 가격 정보 실시간 계산
 			String avgAmountJson = calculateAvgAmountJson(restaurant.getRestaurantId());
 
 			// 랭킹 점수 조회
-			Double score = scoreMap.get(restaurant.getRestaurantId());
-
+			Double score =
+					Math.round(scoreMap.get(restaurant.getRestaurantId()) * 100000) / 100000.0
+							* 100;
 			RestaurantDocument restaurantDocument = RestaurantDocument.builder()
 					.id(restaurant.getKakaoPlaceId())
 					.restaurantId(restaurant.getRestaurantId())
@@ -271,7 +274,8 @@ public class TagService {
 	}
 
 	private String calculateAvgAmountJson(Integer restaurantId) {
-		List<VisitPayment> payments = visitPaymentRepository.findByRestaurantId_RestaurantId(restaurantId);
+		List<VisitPayment> payments = visitPaymentRepository.findByRestaurantId_RestaurantId(
+				restaurantId);
 
 		if (payments.isEmpty()) {
 			return null;
@@ -281,7 +285,9 @@ public class TagService {
 
 		// 1인당 평균 금액 계산 (결제 건수 기준)
 		for (VisitPayment payment : payments) {
-			if (payment.getVisitedPersonnel() <= 0) continue;
+			if (payment.getVisitedPersonnel() <= 0) {
+				continue;
+			}
 
 			Integer perPersonAmount = payment.getAmount() / payment.getVisitedPersonnel();
 			String range = calculatePriceRange(perPersonAmount);
@@ -319,16 +325,36 @@ public class TagService {
 	}
 
 	private String calculatePriceRange(Integer amount) {
-		if (amount <= 10000) return "1 ~ 10000";
-		if (amount <= 20000) return "10000 ~ 20000";
-		if (amount <= 30000) return "20000 ~ 30000";
-		if (amount <= 40000) return "30000 ~ 40000";
-		if (amount <= 50000) return "40000 ~ 50000";
-		if (amount <= 60000) return "50000 ~ 60000";
-		if (amount <= 70000) return "60000 ~ 70000";
-		if (amount <= 80000) return "70000 ~ 80000";
-		if (amount <= 90000) return "80000 ~ 90000";
-		if (amount <= 100000) return "90000 ~ 100000";
+		if (amount <= 10000) {
+			return "1 ~ 10000";
+		}
+		if (amount <= 20000) {
+			return "10000 ~ 20000";
+		}
+		if (amount <= 30000) {
+			return "20000 ~ 30000";
+		}
+		if (amount <= 40000) {
+			return "30000 ~ 40000";
+		}
+		if (amount <= 50000) {
+			return "40000 ~ 50000";
+		}
+		if (amount <= 60000) {
+			return "50000 ~ 60000";
+		}
+		if (amount <= 70000) {
+			return "60000 ~ 70000";
+		}
+		if (amount <= 80000) {
+			return "70000 ~ 80000";
+		}
+		if (amount <= 90000) {
+			return "80000 ~ 90000";
+		}
+		if (amount <= 100000) {
+			return "90000 ~ 100000";
+		}
 		return "100000 ~";
 	}
 }
