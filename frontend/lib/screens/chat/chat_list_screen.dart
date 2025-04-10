@@ -150,6 +150,7 @@ class _ChatListScreenState extends State<ChatListScreen>
     if (_chatRooms.isEmpty) return null;
 
     return FloatingActionButton(
+      heroTag: 'chatFab',
       onPressed: () {
         // TODO: 새로운 채팅방 생성 기능 추가
         ScaffoldMessenger.of(
