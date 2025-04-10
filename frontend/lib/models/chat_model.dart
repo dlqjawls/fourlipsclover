@@ -7,12 +7,26 @@ class ChatRoom {
   final int groupId;
   final int matchId;
 
+  // UI 개선을 위한 추가 속성
+  final String? lastMessage;
+  final DateTime? lastMessageTime;
+  final int? unreadCount;
+  final String? thumbnailUrl;
+  final bool? isActive;
+  final bool? isAdmin;
+
   ChatRoom({
     required this.chatRoomId,
     required this.name,
     required this.participantNum,
     required this.groupId,
     required this.matchId,
+    this.lastMessage,
+    this.lastMessageTime,
+    this.unreadCount,
+    this.thumbnailUrl,
+    this.isActive,
+    this.isAdmin,
   });
 
   factory ChatRoom.fromJson(Map<String, dynamic> json) {
@@ -22,6 +36,15 @@ class ChatRoom {
       participantNum: json['participantNum'],
       groupId: json['groupId'],
       matchId: json['matchId'],
+      lastMessage: json['lastMessage'],
+      lastMessageTime:
+          json['lastMessageTime'] != null
+              ? DateTime.parse(json['lastMessageTime'])
+              : null,
+      unreadCount: json['unreadCount'],
+      thumbnailUrl: json['thumbnailUrl'],
+      isActive: json['isActive'] ?? true,
+      isAdmin: json['isAdmin'] ?? false,
     );
   }
 }

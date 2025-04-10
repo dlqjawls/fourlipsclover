@@ -17,6 +17,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:frontend/services/auth_helper.dart';
+import 'package:frontend/screens/group_plan/bottomsheet/schedule/schedule_create_bottom_sheet.dart';
+import 'package:frontend/screens/group_plan/bottomsheet/plan/plan_create_bottom_sheet.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   final int chatRoomId;
@@ -62,6 +64,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   Timer? _schedulePollingTimer;
   bool _isLoadingPlans = false;
   bool _isLoadingSchedules = false;
+  bool _isScheduleViewExpanded = false;
 
   @override
   void initState() {
@@ -826,6 +829,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
     return Column(
       children: [
+        // 선택된 여행 계획 정보 표시
+        _buildPlanInfoCard(),
+
         // 채팅 메시지 목록
         Expanded(
           child:
@@ -1799,6 +1805,560 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('닫기'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  // 여행 계획 정보 카드
+  Widget _buildPlanInfoCard() {
+    if (_selectedPlan == null) {
+      return Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: InkWell(
+          onTap: _showPlanSelectionOrCreateDialog,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.add_circle, color: AppColors.primary),
+                const SizedBox(width: 8),
+                const Text(
+                  '여행 계획 추가',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      margin: const EdgeInsets.all(8),
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: AppColors.primary.withOpacity(0.5), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: _toggleScheduleView,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.flight_takeoff, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _selectedPlan!.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${DateFormat('yyyy년 M월 d일').format(_selectedPlan!.startDate)} ~ ${DateFormat('M월 d일').format(_selectedPlan!.endDate)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.refresh, size: 18),
+                        onPressed: _showPlanSelectionDialog,
+                        tooltip: '다른 여행 계획 선택',
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      Icon(
+                        _isScheduleViewExpanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        color: AppColors.primary,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // 일정 뷰 (접을 수 있는 부분)
+          if (_isScheduleViewExpanded) _buildScheduleView(),
+        ],
+      ),
+    );
+  }
+
+  // 일정 뷰
+  Widget _buildScheduleView() {
+    if (_isLoadingSchedules) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        // 일정 추가 버튼
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '일정 목록',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade700,
+                  fontSize: 15,
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: _showAddScheduleBottomSheet,
+                icon: const Icon(Icons.add, size: 14),
+                label: const Text('일정 추가'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: BorderSide(color: AppColors.primary, width: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  minimumSize: const Size(0, 32),
+                  textStyle: const TextStyle(fontSize: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        if (_planSchedules.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            alignment: Alignment.center,
+            child: Column(
+              children: [
+                Icon(Icons.event_busy, size: 50, color: Colors.grey.shade400),
+                const SizedBox(height: 8),
+                const Text(
+                  '아직 등록된 일정이 없습니다',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+          )
+        else
+          Container(
+            constraints: const BoxConstraints(maxHeight: 250),
+            child: _buildScheduleList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildScheduleList() {
+    // 날짜별로 일정 그룹화
+    Map<String, List<PlanSchedule>> schedulesByDate = {};
+    for (var schedule in _planSchedules) {
+      final dateStr = DateFormat('yyyy-MM-dd').format(schedule.visitAt);
+      if (!schedulesByDate.containsKey(dateStr)) {
+        schedulesByDate[dateStr] = [];
+      }
+      schedulesByDate[dateStr]!.add(schedule);
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const ClampingScrollPhysics(),
+      padding: const EdgeInsets.all(8),
+      itemCount: schedulesByDate.length,
+      itemBuilder: (context, index) {
+        final dateStr = schedulesByDate.keys.elementAt(index);
+        final schedules = schedulesByDate[dateStr]!;
+        final date = DateFormat('yyyy-MM-dd').parse(dateStr);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 16, top: 8, bottom: 4),
+              child: Text(
+                DateFormat('M월 d일 (E)', 'ko_KR').format(date),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            ...schedules
+                .map((schedule) => _buildScheduleItem(schedule, true))
+                .toList(),
+            const Divider(),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildScheduleItem(PlanSchedule schedule, bool showActions) {
+    final String timeStr = DateFormat('HH:mm').format(schedule.visitAt);
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      dense: true,
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          timeStr,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+            fontSize: 12,
+          ),
+        ),
+      ),
+      title: Text(
+        schedule.placeName ?? '알 수 없는 장소',
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+      ),
+      subtitle:
+          schedule.notes != null && schedule.notes!.isNotEmpty
+              ? Text(
+                schedule.notes!,
+                style: const TextStyle(fontSize: 12),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              )
+              : null,
+      trailing:
+          showActions
+              ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit, size: 16),
+                    onPressed: () => _showEditScheduleBottomSheet(schedule),
+                    padding: EdgeInsets.zero,
+                    tooltip: '일정 수정',
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.delete, size: 16),
+                    onPressed:
+                        () =>
+                            _showDeleteScheduleDialog(schedule.planScheduleId),
+                    padding: EdgeInsets.zero,
+                    tooltip: '일정 삭제',
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              )
+              : null,
+    );
+  }
+
+  // 일정 추가 바텀시트 표시
+  void _showAddScheduleBottomSheet() {
+    if (_selectedPlan == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('먼저 여행 계획을 선택해주세요.')));
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return ScheduleCreateBottomSheet(
+          groupId: widget.groupId,
+          planId: _selectedPlan!.planId,
+          initialDate: DateTime.now(),
+          onScheduleCreated: () {
+            // 일정 생성 후 목록 새로고침
+            _loadPlanSchedules();
+          },
+        );
+      },
+    );
+  }
+
+  // 일정 수정 바텀시트 표시
+  void _showEditScheduleBottomSheet(PlanSchedule schedule) {
+    // TODO: 일정 수정 구현
+    // 현재는 아직 구현되지 않은 기능이라 토스트 메시지만 표시
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('일정 수정 기능은 곧 지원될 예정입니다.')));
+  }
+
+  // 일정 삭제 확인 다이얼로그 표시
+  void _showDeleteScheduleDialog(int scheduleId) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('일정 삭제'),
+            content: const Text('정말로 이 일정을 삭제하시겠습니까?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _deleteSchedule(scheduleId);
+                },
+                child: const Text('삭제', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+    );
+  }
+
+  // 일정 삭제 처리
+  Future<void> _deleteSchedule(int scheduleId) async {
+    if (_selectedPlan == null) return;
+
+    try {
+      setState(() {
+        _isLoadingSchedules = true;
+      });
+
+      final planProvider = Provider.of<PlanProvider>(context, listen: false);
+      await planProvider.deletePlanSchedule(
+        widget.groupId,
+        _selectedPlan!.planId,
+        scheduleId,
+      );
+
+      // 일정 목록 새로고침
+      await _loadPlanSchedules();
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('일정이 삭제되었습니다.')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('일정 삭제 중 오류가 발생했습니다: $e')));
+    } finally {
+      setState(() {
+        _isLoadingSchedules = false;
+      });
+    }
+  }
+
+  // 새 여행 계획 생성 다이얼로그 표시
+  void _showCreatePlanDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          maxChildSize: 0.95,
+          minChildSize: 0.5,
+          builder: (_, controller) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+                child: Column(
+                  children: [
+                    // 드래그 핸들
+                    Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(top: 12, bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const Text(
+                      '새 여행 계획 만들기',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Expanded(
+                      child: PlanCreateBottomSheet(groupId: widget.groupId),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).then((_) {
+      // 여행 계획 목록 새로고침
+      _loadAvailablePlans();
+    });
+  }
+
+  // 여행 계획 수정 다이얼로그 표시
+  void _showEditPlanDialog(PlanList plan) {
+    // TODO: 여행 계획 수정 구현
+    // 현재는 아직 구현되지 않은 기능이라 토스트 메시지만 표시
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('여행 계획 수정 기능은 곧 지원될 예정입니다.')));
+  }
+
+  // 여행 계획 삭제 확인 다이얼로그 표시
+  void _showDeletePlanDialog(int planId) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('여행 계획 삭제'),
+            content: const Text('정말로 이 여행 계획을 삭제하시겠습니까?\n모든 일정 데이터도 함께 삭제됩니다.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _deletePlan(planId);
+                },
+                child: const Text('삭제', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+    );
+  }
+
+  // 여행 계획 삭제 처리
+  Future<void> _deletePlan(int planId) async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final planProvider = Provider.of<PlanProvider>(context, listen: false);
+      await planProvider.deletePlan(widget.groupId, planId);
+
+      setState(() {
+        _selectedPlan = null;
+        _planSchedules = [];
+        _isScheduleViewExpanded = false;
+      });
+
+      // 여행 계획 목록 새로고침
+      await _loadAvailablePlans();
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('여행 계획이 삭제되었습니다.')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('여행 계획 삭제 중 오류가 발생했습니다: $e')));
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _toggleScheduleView() {
+    setState(() {
+      _isScheduleViewExpanded = !_isScheduleViewExpanded;
+
+      // 펼칠 때 일정 데이터 로드
+      if (_isScheduleViewExpanded &&
+          _selectedPlan != null &&
+          _planSchedules.isEmpty) {
+        _loadPlanSchedules();
+      }
+    });
+  }
+
+  // 여행 계획 선택 또는 생성 다이얼로그
+  void _showPlanSelectionOrCreateDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('여행 계획'),
+            content: const Text('여행 계획을 선택하거나 새로 만들 수 있습니다.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showPlanSelectionDialog();
+                },
+                child: const Text('기존 계획 선택'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showCreatePlanDialog();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('새 계획 만들기'),
               ),
             ],
           ),
