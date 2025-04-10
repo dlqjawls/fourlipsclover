@@ -19,7 +19,9 @@ import com.patriot.fourlipsclover.mypage.service.MypageImageService;
 import com.patriot.fourlipsclover.payment.repository.PaymentApprovalRepository;
 import com.patriot.fourlipsclover.plan.entity.PlanMember;
 import com.patriot.fourlipsclover.plan.repository.PlanMemberRepository;
+import com.patriot.fourlipsclover.restaurant.dto.request.LikeStatus;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewJpaRepository;
+import com.patriot.fourlipsclover.restaurant.repository.ReviewLikeJpaRepository;
 import com.patriot.fourlipsclover.tag.dto.response.RestaurantTagResponse;
 import com.patriot.fourlipsclover.tag.service.TagService;
 import java.time.LocalDate;
@@ -47,6 +49,7 @@ public class MemberService {
 	private final LocalCertificationRepository localCertificationRepository;
 	private final PlanMemberRepository planMemberRepository;
 	private final MypageImageService mypageImageService;
+	private final ReviewLikeJpaRepository reviewLikeJpaRepository;
 
 	public JwtResponse processKakaoLoginAndGetToken(String accessToken) {
 		String userInfo = kakaoAuthService.getUserInfo(accessToken);
@@ -148,5 +151,42 @@ public class MemberService {
 		response.setPlanResponses(mypagePlanResponses);
 		response.setBadgeName("클로버");
 		return response;
+	}
+
+	@Transactional
+	public void updateTrustScore() {
+		List<Member> members = memberRepository.findAll();
+		for (Member member : members) {
+
+			// 리뷰 수 조회
+			int reviewCount = reviewJpaRepository.countByMember_MemberId(member.getMemberId());
+
+			// 누적 좋아요 수 조회 (서비스에 맞는 repository 메소드 필요)
+			int likeCount = reviewLikeJpaRepository.countByMember_MemberIdAndLikeStatus(
+					member.getMemberId(), LikeStatus.LIKE);
+
+			// 신뢰도 점수 계산
+			int trustScore = calculateTrustScore(reviewCount, likeCount);
+
+			// 신뢰도 점수 업데이트
+			member.setTrustScore(trustScore);
+			memberRepository.save(member);
+		}
+
+	}
+
+	private int calculateTrustScore(int reviewCount, int likeCount) {
+		if (reviewCount >= 100 && likeCount >= 300) {
+			return 5; // 리뷰 100회 이상
+		} else if (reviewCount >= 20 && likeCount >= 100) {
+			return 4; // 리뷰 20회 이상 + 누적 좋아요 100회
+		} else if (reviewCount >= 10 && likeCount >= 30) {
+			return 3; // 리뷰 10회 이상 + 누적 좋아요 30회
+		} else if (reviewCount >= 5) {
+			return 2; // 리뷰 5회
+		} else if (reviewCount >= 1) {
+			return 1; // 리뷰 1회 + GPS 인증
+		}
+		return 0; // 기본값
 	}
 }

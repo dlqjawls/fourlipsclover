@@ -49,6 +49,37 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
         /// ✅ 대표 + 서브 이미지
         _buildImageLayout(widget.imageUrl, filteredImages),
 
+        /// ✅ 태그
+        if (tags.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: tags.map<Widget>((tag) {
+                final tagName = tag['tagName']?.toString().replaceAll(' ', '') ?? '';
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.verylightGray,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Text(
+                    '#$tagName',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF4A4A4A),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          )
+        else
+          const SizedBox(height: 4), // 태그 없을 때 이미지와 영업시간 사이 여백 보정
+
         /// ✅ 평균 가격대 + 그래프 - 데이터가 있을 때만 표시
         if (hasAvgPriceData)
           Padding(
@@ -90,37 +121,6 @@ class _RestaurantInfoState extends State<RestaurantInfo> {
         /// 가격대 그래프 (토글 시 표시)
         if (hasAvgPriceData && _isPriceExpanded)
           _buildPriceGraph(widget.data.avgAmount),
-        /// ✅ 태그
-        if (tags.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: tags.map<Widget>((tag) {
-                final tagName = tag['tagName']?.toString().replaceAll(' ', '') ?? '';
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.verylightGray,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Text(
-                    '#$tagName',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF4A4A4A),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          )
-        else
-          const SizedBox(height: 4), // 태그 없을 때 이미지와 영업시간 사이 여백 보정
-
 
         /// ✅ 영업시간 요약 + 전체 보기 토글
         Padding(
