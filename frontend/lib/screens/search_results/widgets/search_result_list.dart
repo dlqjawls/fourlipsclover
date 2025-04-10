@@ -328,12 +328,27 @@ class _SearchResultListState extends State<SearchResultList> {
                               ),
                               SizedBox(height: 4),
                               // 점수 표시 추가
-                              Text(
-                                "${(restaurant.score ?? 0.0).toStringAsFixed(0)}점",
-                                style: TextStyle(
-                                  fontFamily: 'Anemone',
-                                  fontSize: 12,
-                                  color: AppColors.primary,
+                              RichText(
+                                text: TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text:
+                                          "${(restaurant.score ?? 0.0).toStringAsFixed(0)}",
+                                      style: TextStyle(
+                                        fontFamily: 'Anemone',
+                                        fontSize: 14,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: " 점",
+                                      style: TextStyle(
+                                        fontFamily: 'Anemone_air',
+                                        fontSize: 14,
+                                        color: AppColors.darkGray,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],

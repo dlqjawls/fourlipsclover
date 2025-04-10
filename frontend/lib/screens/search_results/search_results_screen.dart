@@ -424,16 +424,6 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                                     ),
                                   ),
                                   SizedBox(width: 8),
-                                  // 공유 버튼
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.share,
-                                      color: AppColors.darkGray,
-                                    ),
-                                    onPressed: () {
-                                      // 공유 기능 구현
-                                    },
-                                  ),
                                 ],
                               ),
                             ],
@@ -457,13 +447,6 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                                       .toList(),
                             ),
                           ),
-
-                        // 필터 태그
-                        SearchFilterTags(
-                          selectedFilter: _selectedFilter,
-                          onFilterChanged: _handleFilterChanged,
-                          locationName: _currentQuery,
-                        ),
 
                         // 구분선
                         Divider(

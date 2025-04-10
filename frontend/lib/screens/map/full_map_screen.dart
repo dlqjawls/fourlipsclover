@@ -182,7 +182,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
       builder: (BuildContext context) {
         // 화면 높이의 1/3 정도의 크기로 설정
         return FractionallySizedBox(
-          heightFactor: 0.3, // 화면 높이의 30%
+          heightFactor: 0.31, // 화면 높이의 30%
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -194,6 +194,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
             child: RestaurantBottomSheet(
               restaurant: restaurant,
               onRouteButtonPressed: _drawRouteToRestaurant,
+              currentPosition: _locationService.currentPosition,
             ),
           ),
         );
