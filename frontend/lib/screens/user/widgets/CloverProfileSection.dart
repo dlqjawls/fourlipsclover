@@ -87,6 +87,7 @@ class _CloverProfileSectionState extends State<CloverProfileSection> {
                       }
                     }
                   },
+                  borderRadius: BorderRadius.circular(90),
                   child: ClipOval(
                     child: Image.network(
                       widget.profile.profileUrl ?? '',

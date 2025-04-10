@@ -1,12 +1,68 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/config/api_config.dart';
 import 'package:frontend/models/chat_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/models/plan/plan_list_model.dart';
+import 'package:frontend/models/plan/plan_schedule_model.dart';
 
 class ChatService {
   final String baseUrl = ApiConfig.baseUrl;
+  // 디버그 모드 설정 (개발 환경에서만 true로 설정)
+  final bool _isDebugMode = true;
+
+  // 요청 로깅 함수
+  void _logRequest(
+    String method,
+    String url,
+    Map<String, String>? headers,
+    dynamic body,
+  ) {
+    if (!_isDebugMode) return;
+
+    debugPrint('🌐 API 요청: $method $url');
+    if (headers != null) {
+      debugPrint('📋 헤더: ${headers.toString()}');
+    }
+    if (body != null) {
+      debugPrint('📦 요청 본문: $body');
+    }
+  }
+
+  // 응답 로깅 함수
+  void _logResponse(http.Response response, String endpoint) {
+    if (!_isDebugMode) return;
+
+    final statusEmoji =
+        response.statusCode >= 200 && response.statusCode < 300 ? '✅' : '❌';
+
+    debugPrint('$statusEmoji API 응답: [${response.statusCode}] $endpoint');
+
+    // 응답 본문이 너무 길면 일부만 출력
+    try {
+      final responseBody = utf8.decode(response.bodyBytes);
+      final truncatedBody =
+          responseBody.length > 500
+              ? '${responseBody.substring(0, 500)}... (${responseBody.length - 500}자 더 있음)'
+              : responseBody;
+
+      debugPrint('📄 응답 본문: $truncatedBody');
+
+      // JSON 응답 분석 시도
+      try {
+        final decodedJson = jsonDecode(responseBody);
+        if (decodedJson is Map && decodedJson.containsKey('error')) {
+          debugPrint('🔴 에러 메시지: ${decodedJson['error']}');
+        }
+      } catch (e) {
+        debugPrint('❗ JSON 파싱 실패: $e');
+      }
+    } catch (e) {
+      debugPrint('❗ 응답 본문 디코딩 실패: $e');
+    }
+  }
 
   // 인증 토큰 가져오기
   Future<String?> _getAuthToken() async {
@@ -40,13 +96,17 @@ class ChatService {
         throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
       }
 
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/chat/rooms'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final url = '$baseUrl/api/chat/rooms';
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      _logRequest('GET', url, headers, null);
+
+      final response = await http.get(Uri.parse(url), headers: headers);
+
+      _logResponse(response, 'getChatRooms');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
@@ -73,15 +133,18 @@ class ChatService {
         throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
       }
 
-      final response = await http.get(
-        Uri.parse(
-          '$baseUrl/api/chat/room/$chatRoomId?offset=$offset&limit=$limit',
-        ),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final url =
+          '$baseUrl/api/chat/room/$chatRoomId?offset=$offset&limit=$limit';
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      _logRequest('GET', url, headers, null);
+
+      final response = await http.get(Uri.parse(url), headers: headers);
+
+      _logResponse(response, 'getChatRoom/$chatRoomId');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(
@@ -110,18 +173,27 @@ class ChatService {
         throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
       }
 
+      final url = '$baseUrl/api/chat/send/$chatRoomId';
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      final body = jsonEncode({
+        'type': 'TEXT',
+        'senderId': senderId,
+        'messageContent': messageContent,
+      });
+
+      _logRequest('POST', url, headers, body);
+
       final response = await http.post(
-        Uri.parse('$baseUrl/api/chat/send/$chatRoomId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'type': 'TEXT',
-          'senderId': senderId,
-          'messageContent': messageContent,
-        }),
+        Uri.parse(url),
+        headers: headers,
+        body: body,
       );
+
+      _logResponse(response, 'sendMessage/$chatRoomId');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(
@@ -150,20 +222,30 @@ class ChatService {
       }
 
       final formattedDate = after.toIso8601String();
-      final response = await http.get(
-        Uri.parse(
-          '$baseUrl/api/chat/$chatRoomId/messages?after=$formattedDate',
-        ),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final url = '$baseUrl/api/chat/$chatRoomId/messages?after=$formattedDate';
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
 
+      // 롱폴링은 너무 자주 로깅하면 로그가 과도하게 많이 쌓이므로 간소화
+      if (_isDebugMode) {
+        debugPrint('📨 새 메시지 확인: $url');
+      }
+
+      final response = await http.get(Uri.parse(url), headers: headers);
+
+      // 새 메시지가 있는 경우에만 로깅
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+        if (data.isNotEmpty && _isDebugMode) {
+          debugPrint('📬 새 메시지 ${data.length}개 수신: $chatRoomId');
+        }
         return data.map((json) => ChatMessage.fromJson(json)).toList();
       } else {
+        if (_isDebugMode) {
+          debugPrint('❌ 새 메시지 확인 실패: [${response.statusCode}] $chatRoomId');
+        }
         throw Exception('새 메시지를 불러오는데 실패했습니다: ${response.statusCode}');
       }
     } catch (e) {
@@ -173,7 +255,7 @@ class ChatService {
   }
 
   // 채팅방에 멤버 초대
-  Future<void> inviteMembers(int matchId, List<int> memberIds) async {
+  Future<void> inviteMembers(int chatRoomId, List<int> memberIds) async {
     try {
       final token = await _getAuthToken();
 
@@ -181,14 +263,23 @@ class ChatService {
         throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
       }
 
+      final url = '$baseUrl/api/chat/invite/$chatRoomId';
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      final body = jsonEncode({'memberIds': memberIds});
+
+      _logRequest('POST', url, headers, body);
+
       final response = await http.post(
-        Uri.parse('$baseUrl/api/chat/invite/$matchId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'memberIds': memberIds}),
+        Uri.parse(url),
+        headers: headers,
+        body: body,
       );
+
+      _logResponse(response, 'inviteMembers/$chatRoomId');
 
       if (response.statusCode != 200) {
         throw Exception('멤버 초대에 실패했습니다: ${response.statusCode}');
@@ -196,6 +287,413 @@ class ChatService {
     } catch (e) {
       debugPrint('멤버 초대 중 오류 발생: $e');
       throw Exception('멤버 초대 중 오류 발생: $e');
+    }
+  }
+
+  // 이미지 메시지 전송
+  Future<ChatMessage> sendImageMessage(
+    int chatRoomId,
+    String messageContent,
+    List<File> imageFiles,
+  ) async {
+    try {
+      final token = await _getAuthToken();
+
+      if (!_validateToken(token)) {
+        throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+      }
+
+      final url = '$baseUrl/api/chat/send/$chatRoomId/images';
+
+      debugPrint('🌄 이미지 메시지 전송: $url');
+      debugPrint('📷 이미지 개수: ${imageFiles.length}개');
+
+      // multipart/form-data 요청 생성
+      final request = http.MultipartRequest('POST', Uri.parse(url));
+
+      // 헤더 설정
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // 메시지 내용 추가
+      request.fields['messageContent'] = messageContent;
+
+      // 이미지 파일들 추가
+      for (var imageFile in imageFiles) {
+        request.files.add(
+          await http.MultipartFile.fromPath('images', imageFile.path),
+        );
+      }
+
+      // 요청 전송
+      debugPrint('📤 이미지 업로드 시작...');
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      _logResponse(response, 'sendImageMessage/$chatRoomId');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(
+          utf8.decode(response.bodyBytes),
+        );
+        return ChatMessage.fromJson(data);
+      } else {
+        throw Exception('이미지 메시지 전송에 실패했습니다: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('이미지 메시지 전송 중 오류 발생: $e');
+      throw Exception('이미지 메시지 전송 중 오류 발생: $e');
+    }
+  }
+
+  // 채팅방 나가기
+  Future<void> leaveChatRoom(int chatRoomId) async {
+    try {
+      final token = await _getAuthToken();
+
+      if (!_validateToken(token)) {
+        throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+      }
+
+      final url = '$baseUrl/api/chat/$chatRoomId/leave';
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      _logRequest('DELETE', url, headers, null);
+
+      final response = await http.delete(Uri.parse(url), headers: headers);
+
+      _logResponse(response, 'leaveChatRoom/$chatRoomId');
+
+      if (response.statusCode != 200) {
+        throw Exception('채팅방 나가기에 실패했습니다: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('채팅방 나가기 중 오류 발생: $e');
+      throw Exception('채팅방 나가기 중 오류 발생: $e');
+    }
+  }
+
+  // 그룹에 소속된 plan 목록 조회
+  Future<List<PlanList>> getGroupPlans(int groupId) async {
+    try {
+      final token = await _getAuthToken();
+
+      if (!_validateToken(token)) {
+        throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+      }
+
+      final url = '$baseUrl/api/group/$groupId/plan';
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      _logRequest('GET', url, headers, null);
+
+      final response = await http.get(Uri.parse(url), headers: headers);
+
+      _logResponse(response, 'getGroupPlans/$groupId');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+        return data.map((json) => PlanList.fromJson(json)).toList();
+      } else {
+        throw Exception('그룹의 계획 목록을 불러오는데 실패했습니다: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('그룹 계획 목록 조회 중 오류 발생: $e');
+      throw Exception('그룹 계획 목록 조회 중 오류 발생: $e');
+    }
+  }
+
+  // 그룹의 인원 중 현재 plan에 소속되지 않은 member list 조회
+  Future<List<Map<String, dynamic>>> getAvailableMembers(
+    int groupId,
+    int planId,
+  ) async {
+    try {
+      final token = await _getAuthToken();
+
+      if (!_validateToken(token)) {
+        throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+      }
+
+      final url = '$baseUrl/api/group/$groupId/plan/$planId/available-members';
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      _logRequest('GET', url, headers, null);
+
+      final response = await http.get(Uri.parse(url), headers: headers);
+
+      _logResponse(response, 'getAvailableMembers/$groupId/$planId');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+        return List<Map<String, dynamic>>.from(data);
+      } else {
+        throw Exception('가용 멤버 목록을 불러오는데 실패했습니다: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('가용 멤버 목록 조회 중 오류 발생: $e');
+      throw Exception('가용 멤버 목록 조회 중 오류 발생: $e');
+    }
+  }
+
+  // 채팅방 내에서 현지인이 기획서 작성
+  Future<Map<String, dynamic>> createGuideProposal(
+    Map<String, dynamic> proposalData,
+  ) async {
+    try {
+      final token = await _getAuthToken();
+
+      if (!_validateToken(token)) {
+        throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+      }
+
+      final url = '$baseUrl/api/match/guide/proposal';
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      final body = jsonEncode(proposalData);
+
+      _logRequest('POST', url, headers, body);
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      );
+
+      _logResponse(response, 'createGuideProposal');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final Map<String, dynamic> data = jsonDecode(
+          utf8.decode(response.bodyBytes),
+        );
+        return data;
+      } else {
+        throw Exception('기획서 작성에 실패했습니다: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('기획서 작성 중 오류 발생: $e');
+      throw Exception('기획서 작성 중 오류 발생: $e');
+    }
+  }
+
+  // planSchedule 생성
+  Future<PlanSchedule> createPlanSchedule(
+    int groupId,
+    int planId,
+    Map<String, dynamic> scheduleData,
+  ) async {
+    try {
+      final token = await _getAuthToken();
+
+      if (!_validateToken(token)) {
+        throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+      }
+
+      final url = '$baseUrl/api/group/$groupId/plan/$planId/schedule/create';
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      final body = jsonEncode(scheduleData);
+
+      _logRequest('POST', url, headers, body);
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      );
+
+      _logResponse(response, 'createPlanSchedule/$groupId/$planId');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final Map<String, dynamic> data = jsonDecode(
+          utf8.decode(response.bodyBytes),
+        );
+        return PlanSchedule.fromJson(data);
+      } else {
+        throw Exception('일정 생성에 실패했습니다: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('일정 생성 중 오류 발생: $e');
+      throw Exception('일정 생성 중 오류 발생: $e');
+    }
+  }
+
+  // planSchedule 목록 조회 (롱풀링 적용)
+  Future<List<PlanSchedule>> getPlanSchedules(int groupId, int planId) async {
+    try {
+      final token = await _getAuthToken();
+
+      if (!_validateToken(token)) {
+        throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+      }
+
+      final url = '$baseUrl/api/group/$groupId/plan/$planId/schedule';
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      // 롱폴링은 로그 축소
+      if (_isDebugMode) {
+        debugPrint('📅 일정 목록 조회: $url');
+      }
+
+      final response = await http.get(Uri.parse(url), headers: headers);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+        if (_isDebugMode) {
+          debugPrint('📅 일정 ${data.length}개 로드됨');
+        }
+        return data.map((json) => PlanSchedule.fromJson(json)).toList();
+      } else {
+        if (_isDebugMode) {
+          debugPrint('❌ 일정 목록 조회 실패: [${response.statusCode}]');
+        }
+        throw Exception('일정 목록을 불러오는데 실패했습니다: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('일정 목록 조회 중 오류 발생: $e');
+      throw Exception('일정 목록 조회 중 오류 발생: $e');
+    }
+  }
+
+  // planSchedule 상세 조회
+  Future<PlanSchedule> getPlanScheduleDetail(
+    int groupId,
+    int planId,
+    int scheduleId,
+  ) async {
+    try {
+      final token = await _getAuthToken();
+
+      if (!_validateToken(token)) {
+        throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+      }
+
+      final url =
+          '$baseUrl/api/group/$groupId/plan/$planId/schedule/$scheduleId';
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      _logRequest('GET', url, headers, null);
+
+      final response = await http.get(Uri.parse(url), headers: headers);
+
+      _logResponse(
+        response,
+        'getPlanScheduleDetail/$groupId/$planId/$scheduleId',
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(
+          utf8.decode(response.bodyBytes),
+        );
+        return PlanSchedule.fromJson(data);
+      } else {
+        throw Exception('일정 상세 정보를 불러오는데 실패했습니다: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('일정 상세 조회 중 오류 발생: $e');
+      throw Exception('일정 상세 조회 중 오류 발생: $e');
+    }
+  }
+
+  // planSchedule 수정 (방문 날짜 혹은 시간)
+  Future<PlanSchedule> updatePlanSchedule(
+    int groupId,
+    int planId,
+    int scheduleId,
+    Map<String, dynamic> updateData,
+  ) async {
+    try {
+      final token = await _getAuthToken();
+
+      if (!_validateToken(token)) {
+        throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+      }
+
+      final url =
+          '$baseUrl/api/group/$groupId/plan/$planId/schedule/update/$scheduleId';
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      final body = jsonEncode(updateData);
+
+      _logRequest('PUT', url, headers, body);
+
+      final response = await http.put(
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      );
+
+      _logResponse(response, 'updatePlanSchedule/$groupId/$planId/$scheduleId');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(
+          utf8.decode(response.bodyBytes),
+        );
+        return PlanSchedule.fromJson(data);
+      } else {
+        throw Exception('일정 수정에 실패했습니다: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('일정 수정 중 오류 발생: $e');
+      throw Exception('일정 수정 중 오류 발생: $e');
+    }
+  }
+
+  // planSchedule 삭제
+  Future<void> deletePlanSchedule(
+    int groupId,
+    int planId,
+    int scheduleId,
+  ) async {
+    try {
+      final token = await _getAuthToken();
+
+      if (!_validateToken(token)) {
+        throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
+      }
+
+      final url =
+          '$baseUrl/api/group/$groupId/plan/$planId/schedule/delete/$scheduleId';
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      _logRequest('DELETE', url, headers, null);
+
+      final response = await http.delete(Uri.parse(url), headers: headers);
+
+      _logResponse(response, 'deletePlanSchedule/$groupId/$planId/$scheduleId');
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception('일정 삭제에 실패했습니다: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('일정 삭제 중 오류 발생: $e');
+      throw Exception('일정 삭제 중 오류 발생: $e');
     }
   }
 }

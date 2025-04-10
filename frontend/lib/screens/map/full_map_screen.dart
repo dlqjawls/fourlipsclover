@@ -1,10 +1,11 @@
 // lib/screens/map/full_map_screen.dart
 import 'package:flutter/material.dart';
+import 'package:frontend/services/api/search_api.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import '../../providers/map_provider.dart';
 import '../../config/theme.dart';
-import '../../services/kakao_map_service.dart';
+import '../../services/kakao/kakao_map_service.dart';
 import '../../widgets/kakao_map_native_view.dart';
 import '../../widgets/custom_switch.dart';
 import '../../models/restaurant_model.dart';
@@ -84,12 +85,21 @@ class _FullMapScreenState extends State<FullMapScreen> {
         // GPS 버튼을 누르지 않아도 현재 위치 표시 (선택적)
         // _locationService.moveToCurrentLocation();
       }
-    });
 
-    // 라벨 클릭 이벤트 리스너 설정
-    KakaoMapPlatform.setLabelClickListener((String labelId) {
-      print('라벨 클릭됨: $labelId');
-      _handleLabelClick(labelId);
+      // 지연 후 라벨 클릭 이벤트 리스너 설정 (네이티브 구성요소 초기화 시간 확보)
+      Future.delayed(Duration(milliseconds: 1500), () {
+        try {
+          KakaoMapPlatform.setLabelClickListener((String labelId) {
+            print('라벨 클릭됨 (Flutter): $labelId');
+            if (mounted) {
+              _handleLabelClick(labelId);
+            }
+          });
+          print('라벨 클릭 리스너 설정 성공');
+        } catch (e) {
+          print('라벨 클릭 리스너 설정 실패: $e');
+        }
+      });
     });
   }
 
@@ -119,23 +129,43 @@ class _FullMapScreenState extends State<FullMapScreen> {
   }
 
   // 라벨 클릭 처리 메서드
-  void _handleLabelClick(String labelId) {
+  Future<void> _handleLabelClick(String labelId) async {
     print('라벨 클릭 처리: $labelId');
 
-    // 라벨 ID에 해당하는 가게 정보가 있는지 확인
-    if (_restaurantData.containsKey(labelId)) {
+    // 로딩 표시
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // API를 통해 레스토랑 상세 정보 가져오기
+      final restaurant = await RestaurantSearchApi.getRestaurantDetails(
+        labelId,
+      );
+
+      // 선택된 라벨 업데이트
       setState(() {
         _selectedLabelId = labelId;
+        _isLoading = false;
       });
 
       // 선택된 라벨이 지도 중앙에 오도록 지도 이동
-      final restaurant = _restaurantData[labelId]!;
-      _labelService.centerMapOnRestaurant(restaurant);
+      if (restaurant.y != null && restaurant.x != null) {
+        _labelService.centerMapOnRestaurant(restaurant);
+      }
 
       // 바텀 시트 표시
       _showRestaurantBottomSheet(context, restaurant);
-    } else {
-      print('해당 라벨의 정보를 찾을 수 없음: $labelId');
+    } catch (e) {
+      // 오류 처리
+      print('레스토랑 정보 가져오기 실패: $e');
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('레스토랑 정보를 가져오는데 실패했습니다.')));
     }
   }
 
@@ -183,88 +213,6 @@ class _FullMapScreenState extends State<FullMapScreen> {
     }
   }
 
-  // 지도 옵션 바텀시트
-  void _showMapOptions(BuildContext context, MapProvider mapProvider) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Container(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 라벨 표시 옵션 - CustomSwitch 사용
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '라벨 표시',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'Anemone_air',
-                            color: AppColors.darkGray,
-                          ),
-                        ),
-                        CustomSwitch(
-                          value: mapProvider.showLabels,
-                          onChanged: (value) {
-                            mapProvider.toggleLabels(value);
-                            setState(() {});
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // 위치 추적 토글
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '현재 위치 추적',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'Anemone_air',
-                            color: AppColors.darkGray,
-                          ),
-                        ),
-                        CustomSwitch(
-                          value: _locationService.isLocationTracking,
-                          onChanged: (value) {
-                            if (value) {
-                              _locationService.startLocationTracking();
-                              _locationService.moveToCurrentLocation();
-                            } else {
-                              _locationService.stopLocationTracking();
-                            }
-                            setState(() {}); // 바텀시트 UI 업데이트
-                            this.setState(() {}); // 메인 화면 UI 업데이트
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final mapProvider = Provider.of<MapProvider>(context);
@@ -307,15 +255,6 @@ class _FullMapScreenState extends State<FullMapScreen> {
                   icon: Icon(Icons.arrow_back, color: AppColors.darkGray),
                   onPressed: () => Navigator.pop(context),
                 ),
-                actions: [
-                  // 추가 옵션 버튼
-                  IconButton(
-                    icon: Icon(Icons.more_vert, color: AppColors.darkGray),
-                    onPressed: () {
-                      _showMapOptions(context, mapProvider);
-                    },
-                  ),
-                ],
                 systemOverlayStyle: SystemUiOverlayStyle.light,
               ),
       body: Stack(

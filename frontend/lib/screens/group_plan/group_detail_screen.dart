@@ -8,21 +8,22 @@ import '../../models/plan/plan_list_model.dart';
 import '../../providers/plan_provider.dart';
 import '../../providers/group_provider.dart';
 import '../../config/theme.dart';
-import 'bottomsheet/join_request_bottom_sheet.dart';
-import 'group_widgets/group_calendar.dart';
+import '../../widgets/toast_bar.dart';
+import 'bottomsheet/invitation/join_request_bottom_sheet.dart';
+import 'group_widgets/calendar/group_calendar.dart';
 import 'plan_widgets/empty_plan_view.dart';
 import 'plan_widgets/plan_list_view.dart';
-import 'bottomsheet/plan_create_bottom_sheet.dart';
-import 'bottomsheet/calendar_event_bottom_sheet.dart';
+import 'bottomsheet/plan/plan_create_bottom_sheet.dart';
+import 'bottomsheet/calendar/calendar_event_bottom_sheet.dart';
 import 'group_widgets/group_members_bar.dart';
 import 'group_widgets/group_edit_dialog.dart';
 import '../../models/plan/plan_model.dart';
 import '../../providers/user_provider.dart';
 import './plan_detail_screen.dart';
 import '../../widgets/clover_loading_spinner.dart';
-import '../../services/kakao_share_service.dart';
-import './group_widgets/group_invitation_dialog.dart';
-import 'plan_widgets/group_expenses_analysis_view.dart';
+import '../../services/kakao/kakao_share_service.dart';
+import 'group_widgets/invitation/group_invitation_dialog.dart';
+import 'group_widgets/analysis/group_expenses_analysis_view.dart';
 
 class GroupDetailScreen extends StatefulWidget {
   final Group group;
@@ -89,9 +90,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             _isLoadingDetail = false;
           });
           // 선택적으로 사용자에게 오류 메시지 표시
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('그룹 상세 정보를 불러오는데 실패했습니다.')));
+          ToastBar.clover('그룹 상세 정보 로드 실패');
         }
       }
     } catch (e) {
@@ -332,24 +331,14 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                                     );
 
                                 if (!success && mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('카카오톡 공유에 실패했습니다'),
-                                    ),
-                                  );
+                                  ToastBar.clover('카카오톡 공유 실패');
                                 }
                               },
                             ),
                       );
                     } else {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '초대 링크 생성 실패: ${groupProvider.error}',
-                            ),
-                          ),
-                        );
+                        ToastBar.clover('초대 링크 생성 실패');
                       }
                     }
                   } catch (e) {
@@ -358,9 +347,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                     });
 
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('초대 링크 생성 중 오류 발생: $e')),
-                      );
+                      ToastBar.clover('초대 링크 생성 실패패');
                     }
                   }
                 },
@@ -615,9 +602,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('가입 요청 목록을 불러오는데 실패했습니다: $e')));
+        ToastBar.clover('가입 요청 목록 로드 실패');
       }
     }
   }
@@ -719,16 +704,12 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
         if (mounted) {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('그룹이 삭제되었습니다.')));
+          ToastBar.clover('그룹이 삭제 되었습니다.');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('그룹 삭제 중 오류 발생: $e')));
+        ToastBar.clover('그룹 삭제 실패');
       }
     } finally {
       if (mounted) {

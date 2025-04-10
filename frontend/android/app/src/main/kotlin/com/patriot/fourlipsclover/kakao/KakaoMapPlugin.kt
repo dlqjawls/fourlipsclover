@@ -52,59 +52,60 @@ class KakaoMapPlugin(private val context: Context) {
     private var routeLineLayer: RouteLineLayer? = null
     private val routeLines = mutableMapOf<String, RouteLine>()
     private var handler = Handler(Looper.getMainLooper())
-    private lateinit var methodChannel: MethodChannel
+    
+    // 여기를 수정: lateinit을 nullable로 변경
+    private var methodChannel: MethodChannel? = null
     
     // KakaoMap 등록 및 초기화
-
-fun registerKakaoMap(map: KakaoMap) {
-    Log.d("KakaoMapPlugin", "registerKakaoMap 호출됨: ${map != null}")
-    
-    this.kakaoMap = map
-    
-    // LabelManager 초기화
-    try {
-        // 기존 방식으로 LabelManager 가져오기
-        this.labelManager = map.getLabelManager()
-        Log.d("KakaoMapPlugin", "LabelManager 초기화 성공: ${labelManager != null}")
-
-        // RouteLineManager 초기화
-        try {
-            this.routeLineManager = map.getRouteLineManager()
-            this.routeLineLayer = routeLineManager?.getLayer()
-            Log.d("KakaoMapPlugin", "RouteLineManager 초기화 성공: ${routeLineManager != null}")
-        } catch (e: Exception) {
-            Log.e("KakaoMapPlugin", "RouteLineManager 초기화 실패: ${e.message}")
-            e.printStackTrace()
-        }           
+    fun registerKakaoMap(map: KakaoMap) {
+        Log.d("KakaoMapPlugin", "registerKakaoMap 호출됨: ${map != null}")
         
-        // 커스텀 LabelLayer 생성
+        this.kakaoMap = map
+        
+        // LabelManager 초기화
         try {
-            // 기존 레이어가 있는지 확인
-            labelLayer = labelManager?.getLayer("customLabelLayer")
-            Log.d("KakaoMapPlugin", "기존 레이어 확인: ${labelLayer != null}")
+            // 기존 방식으로 LabelManager 가져오기
+            this.labelManager = map.getLabelManager()
+            Log.d("KakaoMapPlugin", "LabelManager 초기화 성공: ${labelManager != null}")
+
+            // RouteLineManager 초기화
+            try {
+                this.routeLineManager = map.getRouteLineManager()
+                this.routeLineLayer = routeLineManager?.getLayer()
+                Log.d("KakaoMapPlugin", "RouteLineManager 초기화 성공: ${routeLineManager != null}")
+            } catch (e: Exception) {
+                Log.e("KakaoMapPlugin", "RouteLineManager 초기화 실패: ${e.message}")
+                e.printStackTrace()
+            }           
             
-            // 없으면 새로 생성
-            if (labelLayer == null) {
-                val layerOptions = LabelLayerOptions.from("customLabelLayer")
-                    .setOrderingType(OrderingType.Rank)
-                    .setCompetitionUnit(CompetitionUnit.IconAndText)
-                    .setCompetitionType(CompetitionType.All)
-                    .setZOrder(5000)
+            // 커스텀 LabelLayer 생성
+            try {
+                // 기존 레이어가 있는지 확인
+                labelLayer = labelManager?.getLayer("customLabelLayer")
+                Log.d("KakaoMapPlugin", "기존 레이어 확인: ${labelLayer != null}")
                 
-                labelLayer = labelManager?.addLayer(layerOptions)
-                Log.d("KakaoMapPlugin", "커스텀 라벨 레이어 생성 성공: ${labelLayer != null}")
+                // 없으면 새로 생성
+                if (labelLayer == null) {
+                    val layerOptions = LabelLayerOptions.from("customLabelLayer")
+                        .setOrderingType(OrderingType.Rank)
+                        .setCompetitionUnit(CompetitionUnit.IconAndText)
+                        .setCompetitionType(CompetitionType.All)
+                        .setZOrder(5000)
+                    
+                    labelLayer = labelManager?.addLayer(layerOptions)
+                    Log.d("KakaoMapPlugin", "커스텀 라벨 레이어 생성 성공: ${labelLayer != null}")
+                }
+            } catch (e: Exception) {
+                Log.e("KakaoMapPlugin", "라벨 레이어 생성 실패: ${e.message}")
+                e.printStackTrace()
             }
         } catch (e: Exception) {
-            Log.e("KakaoMapPlugin", "라벨 레이어 생성 실패: ${e.message}")
+            Log.e("KakaoMapPlugin", "LabelManager 초기화 실패: ${e.message}")
             e.printStackTrace()
         }
-    } catch (e: Exception) {
-        Log.e("KakaoMapPlugin", "LabelManager 초기화 실패: ${e.message}")
-        e.printStackTrace()
+        
+        setupLabelClickListener(map)
     }
-    
-    setupLabelClickListener(map)
-}
     
     // 지도 중심 이동
     fun setMapCenter(latitude: Double, longitude: Double, zoomLevel: Int) {
@@ -531,12 +532,13 @@ fun registerKakaoMap(map: KakaoMap) {
         }
     }
     
-    // 메서드 채널 설정
+    // 메서드 채널 설정 - nullable 대응 코드로 변경
     fun setMethodChannel(channel: MethodChannel) {
         this.methodChannel = channel
+        Log.d("KakaoMapPlugin", "메서드 채널이 설정되었습니다")
     }
     
-    // 라벨 클릭 리스너 설정
+    // 라벨 클릭 리스너 설정 - 수정
     fun setupLabelClickListener(map: KakaoMap) {
         map.setOnLabelClickListener { kakaoMap, layer, label ->
             val clickedLabelId = labels.entries.find { it.value == label }?.key
@@ -544,12 +546,17 @@ fun registerKakaoMap(map: KakaoMap) {
             if (clickedLabelId != null) {
                 Log.d("KakaoMapPlugin", "라벨 클릭됨: $clickedLabelId")
                 
-                // Flutter로 이벤트 전송
+                // Flutter로 이벤트 전송 - null 체크 추가
                 try {
-                    val arguments = HashMap<String, Any>()
-                    arguments["labelId"] = clickedLabelId
-                    methodChannel.invokeMethod("onLabelClick", arguments)
-                    Log.d("KakaoMapPlugin", "Flutter로 라벨 클릭 이벤트 전송 성공")
+                    // methodChannel이 null이 아닌 경우에만 호출
+                    methodChannel?.let { channel ->
+                        val arguments = HashMap<String, Any>()
+                        arguments["labelId"] = clickedLabelId
+                        channel.invokeMethod("onLabelClick", arguments)
+                        Log.d("KakaoMapPlugin", "Flutter로 라벨 클릭 이벤트 전송 성공")
+                    } ?: run {
+                        Log.e("KakaoMapPlugin", "methodChannel이 초기화되지 않았습니다")
+                    }
                 } catch (e: Exception) {
                     Log.e("KakaoMapPlugin", "Flutter로 이벤트 전송 실패: ${e.message}")
                 }

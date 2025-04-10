@@ -219,14 +219,26 @@ public class ChatService {
     }
 
     @Transactional
-    // 이미지 메시지 저장
+// 이미지 메시지 저장
     public ChatMessageResponse sendImageMessage(Integer chatRoomId, Long senderId, String messageContent, List<MultipartFile> images) throws Exception {
-        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId).orElseThrow(() -> new IllegalArgumentException("Chat room not found"));
+        // 채팅방 및 발신자 정보 조회
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new IllegalArgumentException("Chat room not found"));
 
-        Member sender = memberRepository.findById(senderId).orElseThrow(() -> new IllegalArgumentException("Sender not found"));
+        Member sender = memberRepository.findById(senderId)
+                .orElseThrow(() -> new IllegalArgumentException("Sender not found"));
 
         // 이미지를 MinIO에 업로드하고 URL 반환
-        List<String> imageUrls = chatImageService.uploadImages(images);
+        List<String> imageUrls = chatImageService.uploadImages(images).stream()
+                .map(imageName -> {
+                    try {
+                        // 이미지 이름을 MinIO URL로 변환
+                        return chatImageService.getImageUrl(imageName);
+                    } catch (Exception e) {
+                        throw new RuntimeException("url 반환에 실패했습니다.", e);
+                    }
+                })
+                .collect(Collectors.toList());
 
         // 채팅 메시지 생성
         ChatMessage message = new ChatMessage();
@@ -237,6 +249,7 @@ public class ChatService {
         message.setImageUrls(imageUrls);  // 이미지 URL 저장
         message.setCreatedAt(LocalDateTime.now());
 
+        // 메시지 저장
         ChatMessage savedMessage = chatMessageRepository.save(message);
 
         // 생성된 메시지를 반환하면서, 이미지 URL도 포함

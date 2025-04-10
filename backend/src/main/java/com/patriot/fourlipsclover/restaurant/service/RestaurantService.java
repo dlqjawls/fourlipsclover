@@ -9,6 +9,8 @@ import com.patriot.fourlipsclover.exception.ReviewNotFoundException;
 import com.patriot.fourlipsclover.exception.UnauthorizedAccessException;
 import com.patriot.fourlipsclover.exception.UserNotFoundException;
 import com.patriot.fourlipsclover.image.service.ReviewImageService;
+import com.patriot.fourlipsclover.locals.mapper.LocalCertificationMapper;
+import com.patriot.fourlipsclover.locals.repository.LocalCertificationRepository;
 import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.repository.MemberJpaRepository;
 import com.patriot.fourlipsclover.payment.entity.DataSource;
@@ -41,13 +43,10 @@ import com.patriot.fourlipsclover.restaurant.repository.ReviewLikeJpaRepository;
 import com.patriot.fourlipsclover.restaurant.repository.ReviewSentimentRepository;
 import com.patriot.fourlipsclover.tag.service.TagService;
 import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -78,6 +77,8 @@ public class RestaurantService {
 	private final WebClient webClient;
 	private final ReviewSentimentRepository reviewSentimentRepository;
 	private final VisitPaymentRepository visitPaymentRepository;
+	private final LocalCertificationRepository localCertificationRepository;
+	private final LocalCertificationMapper localCertificationMapper;
 	@Value("${model.server.uri}")
 	private String MODEL_SERVER_URI;
 
@@ -103,7 +104,8 @@ public class RestaurantService {
 				.userId(reviewer.getMemberId())
 				.amount(reviewCreate.getAmount())
 				.visitedPersonnel(reviewCreate.getVisitedPersonnel())
-				.paidAt(reviewCreate.getPaidAt() != null ? reviewCreate.getPaidAt() : LocalDateTime.now())
+				.paidAt(reviewCreate.getPaidAt() != null ? reviewCreate.getPaidAt()
+						: LocalDateTime.now())
 				.dataSource(DataSource.member)
 				.createdAt(LocalDateTime.now())
 				.build();
@@ -113,6 +115,9 @@ public class RestaurantService {
 		String reviewTextSentiment = analyzeSentiment(review);
 		List<String> imageUrls = reviewImageService.uploadFiles(review, images);
 		ReviewResponse response = reviewMapper.toReviewImageDto(review, imageUrls);
+		localCertificationRepository.findByMember(reviewer).ifPresent(lc -> {
+			response.setLocalCertificationResponse(localCertificationMapper.toDto(lc));
+		});
 		response.setLikedCount(0);
 		response.setDislikedCount(0);
 		return response;
@@ -146,6 +151,7 @@ public class RestaurantService {
 	public ReviewResponse findById(Integer reviewId) {
 		Review review = reviewRepository.findById(reviewId)
 				.orElseThrow(() -> new ReviewNotFoundException(reviewId));
+		Member reviewer = review.getMember();
 		List<String> imageUrls = reviewImageService.getImageUrlsByReviewId(reviewId);
 		ReviewResponse response = reviewMapper.toReviewImageDto(review, imageUrls);
 		Long likedCount = reviewLikeJpaRepository.countByIdReviewIdAndLikeStatus(reviewId,
@@ -166,13 +172,17 @@ public class RestaurantService {
 			response.setUserLiked(false);
 			response.setUserDisliked(false);
 		}
+		localCertificationRepository.findByMember(reviewer).ifPresent(lc -> {
+			response.setLocalCertificationResponse(localCertificationMapper.toDto(lc));
+		});
 		return response;
 	}
 
 	private Member loadCurrentMember() {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (authentication == null || !authentication.isAuthenticated()) {
-			throw new UnauthorizedAccessException("인증되지 않은 사용자입니다.");
+		if (authentication == null || !authentication.isAuthenticated() ||
+				"anonymousUser".equals(authentication.getPrincipal())) {
+			return null;
 		}
 		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 		return userDetails.getMember();
@@ -189,6 +199,7 @@ public class RestaurantService {
 				.map(review -> {
 					Integer reviewId = review.getReviewId();
 					List<String> imageUrls = reviewImageService.getImageUrlsByReviewId(reviewId);
+					Member reviewer = review.getMember();
 					ReviewResponse response = reviewMapper.toReviewImageDto(review, imageUrls);
 
 					Long likedCount = reviewLikeJpaRepository.countByIdReviewIdAndLikeStatus(
@@ -209,6 +220,9 @@ public class RestaurantService {
 						response.setUserLiked(false);
 						response.setUserDisliked(false);
 					}
+					localCertificationRepository.findByMember(reviewer).ifPresent(lc -> {
+						response.setLocalCertificationResponse(localCertificationMapper.toDto(lc));
+					});
 					return response;
 				})
 				.toList();
@@ -264,60 +278,6 @@ public class RestaurantService {
 		return new ReviewDeleteResponse("리뷰를 삭제하였습니다.", reviewId);
 	}
 
-//	@Transactional(readOnly = true)
-//	public RestaurantResponse findRestaurantByKakaoPlaceId(String kakaoPlaceId) {
-//		if (Objects.isNull(kakaoPlaceId) || kakaoPlaceId.isBlank()) {
-//			throw new IllegalArgumentException("올바른 kakaoPlaceId 값을 입력하세요.");
-//		}
-//		Restaurant restaurant = restaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
-//				.orElseThrow(() -> new InvalidDataException("존재 하지 않는 식당입니다."));
-//
-//		RestaurantResponse restaurantResponse = restaurantMapper.toDto(restaurant);
-//
-//		List<RestaurantTagResponse> restaurantTagResponses = tagService.findRestaurantTagByRestaurantId(
-//				kakaoPlaceId);
-//		restaurantResponse.setTags(restaurantTagResponses);
-//
-//		// 식당 이미지 조회 및 설정
-//		List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(restaurant);
-//		restaurantResponse.setRestaurantImages(restaurantMapper.toRestaurantImageDtoList(restaurantImages));
-//
-//		// 가격 정보 실시간 계산
-//		String avgAmountJson = calculateAvgAmountJson(restaurant.getRestaurantId());
-//		restaurantResponse.setAvgAmount(avgAmountJson);
-//
-//		return restaurantResponse;
-//	}
-//
-//	@Transactional(readOnly = true)
-//	public List<RestaurantResponse> findNearbyRestaurants(Double latitude, Double longitude,
-//			Integer radius) {
-//		List<RestaurantResponse> response = new ArrayList<>();
-//		List<Restaurant> nearbyRestaurants = restaurantRepository.findNearbyRestaurants(
-//				latitude, longitude, radius);
-//
-//		for (Restaurant data : nearbyRestaurants) {
-//			RestaurantResponse restaurantResponse = restaurantMapper.toDto(data);
-//
-//			// 식당 이미지 조회 및 설정
-//			List<RestaurantImage> restaurantImages = restaurantImageRepository.findByRestaurant(
-//					data);
-//			restaurantResponse.setRestaurantImages(
-//					restaurantMapper.toRestaurantImageDtoList(restaurantImages));
-//
-//			// 태그 설정
-//			List<RestaurantTagResponse> tags = tagService.findRestaurantTagByRestaurantId(
-//					data.getKakaoPlaceId());
-//			restaurantResponse.setTags(tags);
-//
-//			// 가격 정보 실시간 계산
-//			String avgAmountJson = calculateAvgAmountJson(data.getRestaurantId());
-//			restaurantResponse.setAvgAmount(avgAmountJson);
-//
-//			response.add(restaurantResponse);
-//		}
-//		return response;
-//	}
 
 	@Transactional
 	public String like(Integer reviewId, ReviewLikeCreate request) {
@@ -451,52 +411,53 @@ public class RestaurantService {
 		});
 	}
 
-	private String calculateAvgAmountJson(Integer restaurantId) {
-		List<VisitPayment> payments = visitPaymentRepository.findByRestaurantId_RestaurantId(
-				restaurantId);
+	private String calculateAvgAmountJson(String kakaoPlaceId) {
+		// 카카오 PlaceId로 레스토랑 찾기
+		Restaurant restaurant = restaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
+				.orElseThrow(() -> new InvalidDataException("존재하지 않는 식당입니다."));
 
-		if (payments.isEmpty()) {
-			return "{\"avg\": \"정보 없음\", \"avgSection\": \"정보 없음\"}";
+		// 찾은 레스토랑의 ID로 결제 데이터 조회
+		List<VisitPayment> payments = visitPaymentRepository.findByRestaurantId_RestaurantId(restaurant.getRestaurantId());
+
+		// 유효한 결제 데이터만 필터링
+		List<VisitPayment> validPayments = payments.stream()
+				.filter(payment ->
+						payment.getVisitedPersonnel() != null &&
+								payment.getVisitedPersonnel() > 0 &&
+								payment.getAmount() != null &&
+								payment.getAmount() > 0)
+				.collect(Collectors.toList());
+
+		// 1인당 결제 금액 계산
+		List<Integer> perPersonAmounts = validPayments.stream()
+				.map(payment -> payment.getAmount() / payment.getVisitedPersonnel())
+				.collect(Collectors.toList());
+
+		if (perPersonAmounts.isEmpty()) {
+			return null;
 		}
 
-		Map<String, Integer> avgAmountInfo = new LinkedHashMap<>();
-		int totalPerPersonAmount = 0;
-		int validPaymentCount = 0;
+		// 가격대별 분포 계산
+		Map<String, Integer> priceRangeDistribution = new LinkedHashMap<>();
+		perPersonAmounts.forEach(amount -> {
+			String range = calculatePriceRange(amount);
+			priceRangeDistribution.merge(range, 1, Integer::sum);
+		});
 
-		// 1인당 평균 금액 계산 및 범위별 분포 집계
-		for (VisitPayment payment : payments) {
-			if (payment.getVisitedPersonnel() <= 0) {
-				continue;
-			}
+		// 평균 금액의 구간 계산
+		String avgAmountRange = calculatePriceRange(
+				(int) perPersonAmounts.stream()
+						.mapToInt(Integer::intValue)
+						.average()
+						.orElse(0)
+		);
 
-			Integer perPersonAmount = payment.getAmount() / payment.getVisitedPersonnel();
-			totalPerPersonAmount += perPersonAmount;
-			validPaymentCount++;
-
-			String range = calculatePriceRange(perPersonAmount);
-			// 결제 건수를 기준으로 +1씩 증가
-			avgAmountInfo.merge(range, 1, Integer::sum);
-		}
-
-		if (avgAmountInfo.isEmpty() || validPaymentCount == 0) {
-			return "{\"avg\": \"정보 없음\", \"avgSection\": \"정보 없음\"}";
-		}
-
-		// 정확한 평균 금액 계산
-		int exactAvg = totalPerPersonAmount / validPaymentCount;
-
-		// 가장 많은 분포의 범위 찾기
-		String avgPriceRange = avgAmountInfo.entrySet().stream()
-				.max(Comparator.comparing(Map.Entry::getValue))
-				.map(Map.Entry::getKey)
-				.orElse("정보 없음");
-
+		// 결과 맵 생성
 		Map<String, Object> result = new LinkedHashMap<>();
-		result.put("avg", exactAvg);
-		result.put("avgSection", avgPriceRange);
+		result.put("avg", avgAmountRange);
 
-		// 0이 아닌 값만 결과에 포함
-		avgAmountInfo.forEach((key, value) -> {
+		// 분포 정보 추가
+		priceRangeDistribution.forEach((key, value) -> {
 			if (value > 0) {
 				result.put(key, value);
 			}
@@ -507,7 +468,7 @@ public class RestaurantService {
 			return new ObjectMapper().writeValueAsString(result);
 		} catch (Exception e) {
 			log.error("Error converting avg amount to JSON", e);
-			return "{\"avg\": \"정보 없음\", \"avgSection\": \"정보 없음\"}";
+			return "{\"avg\": \"정보 없음\"}";
 		}
 	}
 
@@ -544,4 +505,5 @@ public class RestaurantService {
 		}
 		return "100000 ~";
 	}
+
 }

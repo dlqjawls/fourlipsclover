@@ -74,19 +74,28 @@ class _SearchResultListState extends State<SearchResultList> {
   }
 
   // 필터 적용된 결과 가져오기
+  // 필터 적용된 결과 가져오기
   List<RestaurantResponse> _getFilteredResults(
     List<RestaurantResponse> results,
   ) {
-    // 태그 검색 결과를 우선 보존
-    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
-    final hasTagSearch = searchProvider.selectedTagIds.isNotEmpty;
-
-    // 결과가 비어있거나 태그 검색을 수행한 경우에는 필터링 건너뛰기
-    if (results.isEmpty || hasTagSearch) {
+    // 결과가 비어있는 경우 빈 리스트 반환
+    if (results.isEmpty) {
       return List.from(results);
     }
 
-    return List.from(results);
+    // 디버깅: 각 결과의 score 출력
+    for (var result in results) {
+      print('Restaurant: ${result.placeName}, Score: ${result.score}');
+    }
+
+    // score 기준으로 정렬
+    final sortedResults = List<RestaurantResponse>.from(results)..sort((a, b) {
+      final scoreA = a.score ?? 0.0;
+      final scoreB = b.score ?? 0.0;
+      return scoreB.compareTo(scoreA); // 내림차순 정렬 (높은 점수가 먼저)
+    });
+
+    return sortedResults;
   }
 
   // 태그 정보를 기반으로 태그 위젯 생성 (박스 없이 텍스트만)
@@ -296,23 +305,38 @@ class _SearchResultListState extends State<SearchResultList> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // 랭킹 표시
-                          Container(
-                            width: 30,
-                            height: 30,
-                            decoration: BoxDecoration(
-                              color: AppColors.verylightGray,
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              "${index + 1}",
-                              style: TextStyle(
-                                fontFamily: 'Anemone',
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.darkGray,
+                          // 랭킹 표시와 점수 표시를 컬럼으로 배치
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: AppColors.verylightGray,
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  "${index + 1}",
+                                  style: TextStyle(
+                                    fontFamily: 'Anemone',
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.darkGray,
+                                  ),
+                                ),
                               ),
-                            ),
+                              SizedBox(height: 4),
+                              // 점수 표시 추가
+                              Text(
+                                "${(restaurant.score ?? 0.0).toStringAsFixed(0)}점",
+                                style: TextStyle(
+                                  fontFamily: 'Anemone',
+                                  fontSize: 12,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
                           ),
                           SizedBox(width: 10),
 
