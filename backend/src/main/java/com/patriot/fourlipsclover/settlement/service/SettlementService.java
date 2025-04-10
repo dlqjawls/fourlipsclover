@@ -9,7 +9,6 @@ import com.patriot.fourlipsclover.plan.entity.Plan;
 import com.patriot.fourlipsclover.plan.entity.PlanMember;
 import com.patriot.fourlipsclover.plan.repository.PlanMemberRepository;
 import com.patriot.fourlipsclover.plan.repository.PlanRepository;
-import com.patriot.fourlipsclover.restaurant.entity.SentimentStatus;
 import com.patriot.fourlipsclover.settlement.dto.response.ExpenseResponse;
 import com.patriot.fourlipsclover.settlement.dto.response.SettlementRequestResponse;
 import com.patriot.fourlipsclover.settlement.dto.response.SettlementResponse;
@@ -39,7 +38,6 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -212,29 +210,33 @@ public class SettlementService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<SettlementSituationResponse> settlementSituation(Integer planId) {
+	public SettlementSituationResponse settlementSituation(Integer planId) {
 		Settlement settlement = settlementRepository.findByPlan_PlanId(planId)
 				.orElseThrow(() -> new SettlementNotFoundException(planId));
 
 		List<SettlementTransaction> settlementTransactions = settlementTransactionRepository.findBySettlement(
 				settlement);
-		return settlementTransactionMapper.toSettlementResponses(
+		return settlementTransactionMapper.toSettlementResponse(settlement,
 				settlementTransactions);
 	}
 
 	@Transactional
 	public String completeTransaction(Integer planId, Long transactionId) {
-		SettlementTransaction settlementTransaction = settlementTransactionRepository.findById(transactionId).orElseThrow(
+		SettlementTransaction settlementTransaction = settlementTransactionRepository.findById(
+				transactionId).orElseThrow(
 				TransactionNotFoundException::new);
-		Settlement settlement = settlementRepository.findByPlan_PlanId(planId).orElseThrow(()-> new SettlementNotFoundException(planId));
+		Settlement settlement = settlementRepository.findByPlan_PlanId(planId)
+				.orElseThrow(() -> new SettlementNotFoundException(planId));
 		settlementTransaction.setTransactionStatus(TransactionStatus.COMPLETED);
 
 		settlementTransactionRepository.save(settlementTransaction);
 
-		int totalTransactionCount = settlementTransactionRepository.countAllBySettlement_Plan_PlanId(planId);
-		int transactionCompleteCount = settlementTransactionRepository.countAllBySettlement_Plan_PlanIdAndTransactionStatus(planId, TransactionStatus.COMPLETED);
+		int totalTransactionCount = settlementTransactionRepository.countAllBySettlement_Plan_PlanId(
+				planId);
+		int transactionCompleteCount = settlementTransactionRepository.countAllBySettlement_Plan_PlanIdAndTransactionStatus(
+				planId, TransactionStatus.COMPLETED);
 
-		if(totalTransactionCount == transactionCompleteCount){
+		if (totalTransactionCount == transactionCompleteCount) {
 			settlement.setSettlementStatus(SettlementStatus.COMPLETED);
 			return SettlementStatus.COMPLETED.name();
 		}
