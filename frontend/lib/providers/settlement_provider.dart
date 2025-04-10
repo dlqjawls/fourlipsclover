@@ -203,7 +203,7 @@ class SettlementProvider with ChangeNotifier {
 
   // 정산 상황 Getter
   List<SettlementSituationResponse>? getSettlementSituationForPlan(
-    int planId,
+    int planId
   ) => _settlementSituationCache[planId];
 
   // 정산 상황 조회
@@ -212,17 +212,21 @@ class SettlementProvider with ChangeNotifier {
   ) async {
     setLoading(true);
     try {
+      debugPrint('정산 현황 조회 API 호출: planId=$planId');
       final situations = await _settlementApi.getSettlementSituation(planId);
       debugPrint('정산 현황 조회 성공: planId=$planId, 건수=${situations.length}');
 
-      // 캐시 업데이트
       _settlementSituationCache[planId] = situations;
       _error = null;
       notifyListeners();
       return situations;
-    } catch (e) {
+    } on FormatException catch (e) {
+      debugPrint('파싱 오류 발생: $e');
+      throw e;
+    } catch (e, stackTrace) {
       _error = '정산 현황을 불러오는데 실패했습니다: $e';
       debugPrint(_error);
+      debugPrint('스택 트레이스: $stackTrace');
       return null;
     } finally {
       setLoading(false);

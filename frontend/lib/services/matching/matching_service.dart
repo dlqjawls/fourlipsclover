@@ -6,6 +6,10 @@ import '../../models/matching/matching_main_model.dart';
 import '../../models/matching/matching_detail.dart';
 import 'package:frontend/config/api_config.dart';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../auth_helper.dart';
+
 class MatchingService {
   static final MatchingService _instance = MatchingService._internal();
 
@@ -42,9 +46,9 @@ class MatchingService {
     }
   }
 
-  Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('jwtToken');
+  // 토큰 가져오기
+  static Future<String?> _getToken() async {
+    return await AuthHelper.getJwtToken();
   }
 
   Future<Map<String, int>> getMatchingCounts() async {

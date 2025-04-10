@@ -63,24 +63,34 @@ class Review {
       return 'http://43.203.123.220:9000/review-images/$url';
     }
 
+    int parseLocalGrade(String? grade) {
+      switch (grade?.toUpperCase()) {
+        case 'ONE': return 1;
+        case 'TWO': return 2;
+        case 'THREE': return 3;
+        case 'FOUR': return 4;
+        default: return 0;
+      }
+    }
+
     return Review(
-      id: response.reviewId.toString(),
-      restaurantId: response.restaurant!.kakaoPlaceId,
-      memberId: response.reviewer!.memberId,
-      username: response.reviewer!.nickname ?? '익명',
-      content: response.content,
-      imageUrl: imageUrl,
-      profileImageUrl: profileImageUrl ?? 'assets/default_profile.png',
-      visitCount: 1,
-      isLocal: false,
-      localRank: 0,
-      likes: response.likedCount,
-      dislikes: response.dislikedCount,
-      date: response.visitedAt ?? DateTime.now(),
-      menu: [],
-        isLiked: response.userLiked ?? false,
-        isDisliked: response.userDisliked ?? false,
-      imageUrls: response.reviewImageUrls.map((url) => normalizeUrl(url)).toList(),
+    id: response.reviewId.toString(),
+    restaurantId: response.restaurant!.kakaoPlaceId,
+    memberId: response.reviewer!.memberId,
+    username: response.reviewer!.nickname ?? '익명',
+    content: response.content,
+    imageUrl: imageUrl,
+    profileImageUrl: profileImageUrl ?? 'assets/default_profile.png',
+    visitCount: 1,
+    isLocal: response.isLocal ?? false,
+    localRank: parseLocalGrade(response.localGrade),
+    likes: response.likedCount,
+    dislikes: response.dislikedCount,
+    date: response.visitedAt ?? DateTime.now(),
+    menu: [],
+    isLiked: response.userLiked ?? false,
+    isDisliked: response.userDisliked ?? false,
+    imageUrls: response.reviewImageUrls.map((url) => normalizeUrl(url)).toList(),
     );
   }
 

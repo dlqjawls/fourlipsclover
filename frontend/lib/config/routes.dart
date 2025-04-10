@@ -6,6 +6,8 @@ import 'package:frontend/screens/auth/login_screen.dart';
 import 'package:frontend/screens/common/base_screen.dart';
 import 'package:frontend/screens/user/user_screen.dart';
 import 'package:frontend/screens/chat/chat_list_screen.dart'; // 채팅 목록 화면 import
+import 'package:frontend/screens/splash/splash_screen.dart'; // 스플래시 화면 import
+import 'package:frontend/screens/onboarding/onboarding_screen.dart'; // 온보딩 화면 import
 
 import 'package:frontend/screens/user/user_profile.dart';
 // import 'package:frontend/screens/user/my_consumption_pattern_screen.dart'; // MyConsumptionPatternScreen import 추가
@@ -21,6 +23,8 @@ import '../screens/payment/kakao_pay_official_screen.dart';
 
 class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
+    '/splash': (context) => const SplashScreen(), // 스플래시 화면
+    '/onboarding': (context) => const OnboardingScreen(), // 온보딩 화면
     '/journal': (context) => const BaseScreen(),
     '/ai_plan': (context) => const BaseScreen(),
     '/group': (context) => const BaseScreen(),

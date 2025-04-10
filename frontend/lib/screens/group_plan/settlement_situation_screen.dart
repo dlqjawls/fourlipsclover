@@ -30,11 +30,14 @@ class _SettlementSituationScreenState extends State<SettlementSituationScreen> {
   final currencyFormatter = NumberFormat('#,###', 'ko_KR');
   bool _isLoading = false;
 
-  @override
-  void initState() {
-    super.initState();
+@override
+void initState() {
+  super.initState();
+  // 직접 호출 대신 스케줄링
+  WidgetsBinding.instance.addPostFrameCallback((_) {
     _fetchData();
-  }
+  });
+}
 
   Future<void> _fetchData() async {
     setState(() {

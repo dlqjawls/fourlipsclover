@@ -6,12 +6,17 @@ import '../review/review_write.dart';
 import 'widgets/delete_confirmation_modal.dart';
 import '../../services/review_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/auth_helper.dart';
 
 class ReviewDetail extends StatefulWidget {
   final Review review;
   final String kakaoPlaceId;
 
-  const ReviewDetail({Key? key, required this.review, required this.kakaoPlaceId}) : super(key: key);
+  const ReviewDetail({
+    Key? key,
+    required this.review,
+    required this.kakaoPlaceId,
+  }) : super(key: key);
 
   @override
   _ReviewDetailState createState() => _ReviewDetailState();
@@ -31,10 +36,14 @@ class _ReviewDetailState extends State<ReviewDetail> {
   }
 
   Future<void> _loadAuthInfo() async {
+    // JWT 토큰 가져오기
+    final token = await AuthHelper.getJwtToken();
+
+    // 사용자 ID 가져오기
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("jwtToken");
     final userIdStr = prefs.getString("userId");
     final parsedId = int.tryParse(userIdStr ?? '');
+
     setState(() {
       accessToken = token;
       memberId = parsedId ?? 0;
@@ -69,10 +78,11 @@ class _ReviewDetailState extends State<ReviewDetail> {
     final updatedReview = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ReviewWriteScreen(
-          review: _review,
-          kakaoPlaceId: widget.kakaoPlaceId,
-        ),
+        builder:
+            (context) => ReviewWriteScreen(
+              review: _review,
+              kakaoPlaceId: widget.kakaoPlaceId,
+            ),
       ),
     );
 
@@ -115,22 +125,23 @@ class _ReviewDetailState extends State<ReviewDetail> {
                     _deleteReview();
                   }
                 },
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'edit',
-                    child: ListTile(
-                      leading: Icon(Icons.edit, color: AppColors.primary),
-                      title: Text("수정"),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: ListTile(
-                      leading: Icon(Icons.delete, color: Colors.redAccent),
-                      title: Text("삭제"),
-                    ),
-                  ),
-                ],
+                itemBuilder:
+                    (context) => [
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: ListTile(
+                          leading: Icon(Icons.edit, color: AppColors.primary),
+                          title: Text("수정"),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: ListTile(
+                          leading: Icon(Icons.delete, color: Colors.redAccent),
+                          title: Text("삭제"),
+                        ),
+                      ),
+                    ],
                 icon: const Icon(Icons.more_vert, color: Colors.black),
               ),
           ],
@@ -145,14 +156,19 @@ class _ReviewDetailState extends State<ReviewDetail> {
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundImage: _buildProfileImageProvider(_review.profileImageUrl),
+                    backgroundImage: _buildProfileImageProvider(
+                      _review.profileImageUrl,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_review.username, style: Theme.of(context).textTheme.bodyLarge),
+                        Text(
+                          _review.username,
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           "${_review.visitCount}번째 방문 | ${_formatDate(_review.date)}",
@@ -167,7 +183,10 @@ class _ReviewDetailState extends State<ReviewDetail> {
                         icon: Icon(
                           Icons.thumb_up,
                           size: 18,
-                          color: _review.isLiked ? AppColors.primary : AppColors.lightGray,
+                          color:
+                              _review.isLiked
+                                  ? AppColors.primary
+                                  : AppColors.lightGray,
                         ),
                         onPressed: () => _toggleLike("LIKE"),
                       ),
@@ -176,11 +195,17 @@ class _ReviewDetailState extends State<ReviewDetail> {
                         icon: Icon(
                           Icons.thumb_down,
                           size: 18,
-                          color: _review.isDisliked ? AppColors.primary : AppColors.lightGray,
+                          color:
+                              _review.isDisliked
+                                  ? AppColors.primary
+                                  : AppColors.lightGray,
                         ),
                         onPressed: () => _toggleLike("DISLIKE"),
                       ),
-                      Text('${_review.dislikes}', style: TextStyle(fontSize: 12)),
+                      Text(
+                        '${_review.dislikes}',
+                        style: TextStyle(fontSize: 12),
+                      ),
                     ],
                   ),
                 ],
@@ -235,7 +260,6 @@ class _ReviewDetailState extends State<ReviewDetail> {
       ),
     );
   }
-
 
   String _formatDate(DateTime date) {
     return "${date.month}.${date.day}";

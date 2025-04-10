@@ -97,26 +97,57 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset('assets/images/logo.png', width: 250, height: 250),
-              const SizedBox(height: 50),
-              const Text(
-                '네입클로버',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                '입안에 행운을 담다',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
+        child: Column(
+          children: [
+            const SizedBox(height: 100),
 
-              const SizedBox(height: 50),
-              Container(
-                width: 300,
-                height: 45,
+            // 상단 텍스트
+            const Text(
+              '환영합니다!',
+              style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 60),
+
+            // 이미지 (왼쪽으로 치우치게)
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 50.0),
+                  child: Image.asset(
+                    'assets/images/start.png',
+                    width: 600,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // 하단 텍스트
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24.0),
+              child: Text(
+                '입안에 행운을 담을\n 준비되셨나요?',
+                style: TextStyle(
+                  fontSize: 20,
+                  color: AppColors.darkGray,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+
+            const Spacer(),
+
+            // 하단 버튼
+            Padding(
+              padding: const EdgeInsets.only(bottom: 100.0),
+              child: Container(
+                width: 340,
+                height: 50,
                 decoration: BoxDecoration(
                   color: const Color(0xFFFEE500),
                   borderRadius: BorderRadius.circular(12),
@@ -147,75 +178,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-
-              // 여기부터 임시 홈 화면 이동 버튼
-              const SizedBox(height: 20),
-              Container(
-                width: 300,
-                height: 45,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      // 임시로 홈 화면으로 이동
-                      Navigator.pushReplacementNamed(context, '/home');
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: const Center(
-                      child: Text(
-                        '임시: 홈 화면으로 이동',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              // 여기까지 임시 홈 화면 이동 버튼
-              const SizedBox(height: 20),
-
-              // 여기부터 카카오페이 테스트 결제 버튼
-              Container(
-                width: 300,
-                height: 45,
-                decoration: BoxDecoration(
-                  color: Colors.deepPurple, // 원하는 색으로 변경 가능
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.pushReplacementNamed(
-                        context,
-                        '/kakaopay_official',
-                      ); //kakaopay_test
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: const Center(
-                      child: Text(
-                        '💳 카카오페이 테스트 결제',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // 여기까지 카카오페이 테스트 결제 버튼
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

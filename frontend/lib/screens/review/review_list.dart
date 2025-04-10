@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 import '../../models/review_model.dart';
-import '../review/review_write.dart';
 import '../../services/review_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/review_provider.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../providers/user_provider.dart';
 import 'package:frontend/utils/review_utils.dart';
-import 'package:frontend/screens/review/widgets/delete_confirmation_modal.dart';
 import '../review/widgets/review_options_modal.dart';
 import 'review_photo_gallery.dart';
+import '../../widgets/toast_bar.dart';
+
 
 class ReviewList extends StatefulWidget {
   final String restaurantId;
@@ -30,6 +29,7 @@ class ReviewList extends StatefulWidget {
 
 class _ReviewListState extends State<ReviewList> {
   Future<List<Review>>? reviewData;
+  final Set<String> expandedReviewIds = {};
   String? accessToken;
   int memberId = 0;
 
@@ -71,6 +71,16 @@ class _ReviewListState extends State<ReviewList> {
     });
   }
 
+  void _toggleExpanded(String reviewId) {
+    setState(() {
+      if (expandedReviewIds.contains(reviewId)) {
+        expandedReviewIds.remove(reviewId);
+      } else {
+        expandedReviewIds.add(reviewId);
+      }
+    });
+  }
+
   Future<void> _toggleLike(String reviewId, String likeStatus) async {
     final provider = Provider.of<ReviewProvider>(context, listen: false);
     final review = provider.getReview(reviewId);
@@ -78,12 +88,7 @@ class _ReviewListState extends State<ReviewList> {
     if (review == null) return;
 
     if (review.memberId == memberId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("다른 이용자의 리뷰에 반응을 남겨주세요"),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      ToastBar.clover("다른 이용자의 리뷰에 반응을 남겨주세요.");
       return;
     }
 
@@ -176,16 +181,40 @@ class _ReviewListState extends State<ReviewList> {
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text(review.username, style: Theme
-                                .of(context)
-                                .textTheme
-                                .bodyLarge),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  review.username,
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                ),
+                                if (review.isLocal == true)
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 2.0),
+                                        child: Text(
+                                          "현지인",
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.green[700],
+                                          ),
+                                        ),
+                                      ),
+                                      Image.asset(
+                                        'assets/images/level${review.localRank}.png',
+                                        width: 14,
+                                        height: 14,
+                                      ),
+                                    ],
+                                  ),
+                              ],
+                            ),
                           ),
                           Text(
-                            "${review.visitCount}번째 방문 | ${_formatDate(
-                                review.date)}",
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.grey),
+                            _formatDate(review.date),
+                            style: const TextStyle(fontSize: 12, color: AppColors.mediumGray),
                           ),
                           if (review.memberId == memberId)
                             GestureDetector(
@@ -215,16 +244,24 @@ class _ReviewListState extends State<ReviewList> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Text(
-                        review.content,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 14),
+                      GestureDetector(
+                        onTap: () => _toggleExpanded(review.id),
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 4.0),
+                          child: Text(
+                            review.content,
+                            maxLines: expandedReviewIds.contains(review.id) ? null : 2,
+                            overflow: expandedReviewIds.contains(review.id) ? TextOverflow.visible : TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      // 변경된 이미지 처리
-                      _buildReviewImage(review),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
+                      if (review.imageUrls.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _buildReviewImage(review),
+                        const SizedBox(height: 12),
+                      ],
                       Consumer<ReviewProvider>(
                         builder: (context, provider, _) {
                           final currentReview = provider.getReview(review.id);
@@ -240,12 +277,7 @@ class _ReviewListState extends State<ReviewList> {
                                 ),
                                 onPressed: () {
                                   if (currentReview.memberId == memberId) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text("다른 이용자의 리뷰에 반응을 남겨주세요."),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
+                                    ToastBar.clover("다른 이용자의 리뷰에 반응을 남겨주세요.");
                                   } else {
                                     _toggleLike(currentReview.id, "LIKE");
                                   }
@@ -262,12 +294,7 @@ class _ReviewListState extends State<ReviewList> {
                                 ),
                                 onPressed: () {
                                   if (currentReview.memberId == memberId) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text("다른 이용자의 리뷰에 반응을 남겨주세요."),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
+                                    ToastBar.clover("다른 이용자의 리뷰에 반응을 남겨주세요.");
                                   } else {
                                     _toggleLike(currentReview.id, "DISLIKE");
                                   }

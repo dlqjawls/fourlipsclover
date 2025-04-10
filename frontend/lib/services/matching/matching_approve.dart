@@ -3,16 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/config/api_config.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../auth_helper.dart';
 
 class MatchingApproveService {
   final String baseUrl = ApiConfig.baseUrl;
 
-  // API 요청에 사용될 토큰과 userId 가져오기
-  Future<Map<String, String?>> _getAuthInfo() async {
+  // API 요청에 사용될 토큰 가져오기
+  Future<String?> _getToken() async {
+    return await AuthHelper.getJwtToken();
+  }
+
+  // API 요청에 사용될 사용자 ID 가져오기
+  Future<String?> _getUserId() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwtToken');
-    final userId = prefs.getString('userId');
-    return {'token': token, 'userId': userId};
+    return prefs.getString('userId');
   }
 
   Future<Map<String, dynamic>> approveMatching({
@@ -32,9 +37,8 @@ class MatchingApproveService {
     required String endDate,
   }) async {
     try {
-      final authInfo = await _getAuthInfo();
-      final token = authInfo['token'];
-      final userId = authInfo['userId'];
+      final token = await _getToken();
+      final userId = await _getUserId();
 
       if (token == null) {
         throw Exception('인증 토큰이 없습니다. 로그인이 필요합니다.');
