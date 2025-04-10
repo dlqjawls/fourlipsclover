@@ -48,13 +48,19 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     restaurantData = RestaurantService.fetchRestaurantDetails(safeRestaurantId);
     reviews = ReviewService.fetchReviews(safeRestaurantId);
 
-    reviews.then((reviewList) {
-      final imageUrl = getRepresentativeImage(reviewList);
+    Future.wait([restaurantData, reviews]).then((results) {
+      final restaurant = results[0] as RestaurantResponse;
+      final reviewList = results[1] as List<Review>;
+
+      final hasImages = restaurant.restaurantImages != null && restaurant.restaurantImages!.isNotEmpty;
+      final imageUrl = hasImages ? null : getRepresentativeImage(reviewList);
+
       setState(() {
         representativeImageUrl = imageUrl;
       });
     });
   }
+
 
   void checkFavoriteStatus(int memberId) async {
     final favorites = await FavoriteService.getFavoriteRestaurantIds(memberId);
@@ -129,6 +135,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           child: Scaffold(
             backgroundColor: AppColors.background,
             appBar: AppBar(
+              scrolledUnderElevation: 0,
               backgroundColor: AppColors.background,
               elevation: 0,
               centerTitle: true,
@@ -179,23 +186,6 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                   ),
                   const Padding(
                     padding: EdgeInsets.only(top: 12.0),
-                    child: Divider(thickness: 6.5, color: AppColors.verylightGray, height: 24),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                    child: Text("메뉴", style: TextStyle(fontSize: 16)),
-                  ),
-                  if ((snapshot.data!.menu ?? []).isNotEmpty)
-                    MenuList(menu: snapshot.data!.menu!)
-                  else
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Text("메뉴 정보가 없습니다."),
-                      ),
-                    ),
-                  const Padding(
-                    padding: EdgeInsets.only(top: 16.0),
                     child: Divider(thickness: 6.5, color: AppColors.verylightGray, height: 24),
                   ),
                   ReviewList(

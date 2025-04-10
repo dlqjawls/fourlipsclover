@@ -9,6 +9,8 @@ import '../../config/theme.dart';
 import '../../providers/app_provider.dart';
 import '../../widgets/clover_loading_spinner.dart';
 import '../../screens/review/review_list.dart';
+import '../../widgets/toast_bar.dart';
+
 
 class ReviewWriteScreen extends StatefulWidget {
   final Review? review;
@@ -97,16 +99,12 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
     final visitorCountText = _visitorCountController.text.trim();
 
     if (content.isEmpty || content.length < 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("리뷰는 10자 이상 작성해주세요.")),
-      );
+        ToastBar.clover('리뷰는 10자 이상 작성해주세요.');
       return;
     }
 
     if (_visitedAt == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("방문일자를 선택해주세요.")),
-      );
+      ToastBar.clover('방문일자를 선택해주세요.');
       return;
     }
 
@@ -116,32 +114,24 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
 
     if (!isEditMode) {
       if (totalAmountText.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("결제금액을 입력해주세요.")),
-        );
+        ToastBar.clover('결제금액을 입력해주세요.');
         return;
       }
 
       if (visitorCountText.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("방문인원을 입력해주세요.")),
-        );
+        ToastBar.clover('방문인원을 입력해주세요.');
         return;
       }
 
       totalAmount = int.tryParse(totalAmountText);
       if (totalAmount == null || totalAmount <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("유효한 결제금액을 입력해주세요.")),
-        );
+        ToastBar.clover('유효한 결제금액을 입력해주세요.');
         return;
       }
 
       visitorCount = int.tryParse(visitorCountText);
       if (visitorCount == null || visitorCount <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("유효한 방문인원을 입력해주세요.")),
-        );
+        ToastBar.clover('유효한 방문인원을 입력해주세요.');
         return;
       }
     }
@@ -194,9 +184,7 @@ class _ReviewWriteScreenState extends State<ReviewWriteScreen> {
       Navigator.of(context).pop(createdOrUpdated);
 
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("오류 발생: $e")),
-      );
+      ToastBar.clover('리뷰 작성 중 오류가 발생했습니다.');
     } finally {
       setState(() => isSubmitting = false);
     }
