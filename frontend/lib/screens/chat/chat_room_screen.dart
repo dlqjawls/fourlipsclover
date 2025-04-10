@@ -11,8 +11,6 @@ import 'package:frontend/providers/plan_provider.dart';
 import 'package:frontend/models/plan/plan_model.dart';
 import 'package:frontend/models/plan/plan_schedule_model.dart';
 import 'package:frontend/models/plan/plan_list_model.dart';
-import 'package:frontend/screens/group_plan/plan_widgets/timeline_card.dart';
-import 'package:frontend/screens/group_plan/bottomsheet/schedule_detail_bottom_sheet.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:math';
 

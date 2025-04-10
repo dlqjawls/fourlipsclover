@@ -126,6 +126,10 @@ class _MatchingConfirmBottomSheetState
 
   // 매칭 정보 구성
   Map<String, dynamic> _buildMatchingInfo() {
+    debugPrint(
+      '선택된 그룹 정보: ${widget.selectedGroup?.name}, ID: ${widget.selectedGroup?.groupId}',
+    );
+
     return {
       'guide': {
         'id': widget.guide['id']?.toString() ?? '',
@@ -142,6 +146,15 @@ class _MatchingConfirmBottomSheetState
       'request': widget.request,
       'startDate': widget.startDate,
       'endDate': widget.endDate,
+      // 그룹 정보 명시적으로 추가
+      'groupId': widget.selectedGroup?.groupId ?? 1, // 그룹이 없을 경우 1으로 설정 (기본값)
+      'selectedGroup':
+          widget.selectedGroup != null
+              ? {
+                'groupId': widget.selectedGroup!.groupId,
+                'name': widget.selectedGroup!.name,
+              }
+              : {'groupId': 1, 'name': '나혼자 산다'}, // null일 경우에도 객체 제공
     };
   }
 
@@ -155,6 +168,20 @@ class _MatchingConfirmBottomSheetState
     if (result['pg_token'] != null) {
       debugPrint('PG Token 수신: ${result['pg_token']}');
 
+      // 그룹 확인
+      if (widget.selectedGroup == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('그룹 정보가 없어 매칭 승인을 완료할 수 없습니다.')),
+          );
+        }
+        return;
+      }
+
+      debugPrint(
+        '승인 요청 그룹: ${widget.selectedGroup!.name} (ID: ${widget.selectedGroup!.groupId})',
+      );
+
       await _matchingApproveService.approveMatching(
         tid: paymentData['tid']!,
         pgToken: result['pg_token'],
@@ -163,6 +190,7 @@ class _MatchingConfirmBottomSheetState
         tagIds: widget.tagIds,
         regionId: widget.regionId,
         guideMemberId: widget.guide['memberId'],
+        groupId: widget.selectedGroup!.groupId, // 그룹 ID 전달
         transportation: widget.selectedTransport ?? '',
         foodPreference: widget.selectedFoodCategory ?? '',
         tastePreference: widget.selectedTaste ?? '',
