@@ -9,7 +9,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import java.net.URI;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -76,10 +75,10 @@ public class SettlementController {
 			@ApiResponse(responseCode = "200", description = "정산 현황 조회 성공"),
 			@ApiResponse(responseCode = "404", description = "계획 또는 정산 정보를 찾을 수 없음")
 	})
-	public ResponseEntity<List<SettlementSituationResponse>> settlementSituation(
+	public ResponseEntity<SettlementSituationResponse> settlementSituation(
 			@Parameter(description = "계획 ID", required = true)
 			@PathVariable Integer planId) {
-		List<SettlementSituationResponse> response = settlementService.settlementSituation(planId);
+		SettlementSituationResponse response = settlementService.settlementSituation(planId);
 		return ResponseEntity.ok(response);
 	}
 
