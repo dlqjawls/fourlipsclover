@@ -8,6 +8,7 @@ import 'matching_local_resist.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:frontend/screens/chat/chat_room_screen.dart';
 import 'package:frontend/widgets/loading_overlay.dart';
+import 'package:frontend/widgets/toast_bar.dart'; // ToastBar import 추가
 
 class MatchingLocalListScreen extends StatefulWidget {
   const MatchingLocalListScreen({Key? key})
@@ -216,10 +217,21 @@ class _MatchingLocalListScreenState extends State<MatchingLocalListScreen>
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         scrolledUnderElevation: 0,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        backgroundColor: Colors.white,
-        title: const Text('가이드 기획서'),
+        title: const Text(
+          '여행 지역 목록',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
         bottom: TabBar(
           controller: _tabController,
           labelColor: AppColors.primary,
@@ -501,11 +513,7 @@ class _MatchingLocalListScreenState extends State<MatchingLocalListScreen>
                           }
                         } catch (e) {
                           if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('채팅방 이동 중 오류가 발생했습니다: $e'),
-                              ),
-                            );
+                            ToastBar.clover('채팅방 이동 중 오류가 발생했습니다');
                           }
                         }
                       },
@@ -591,10 +599,8 @@ class _MatchingLocalListScreenState extends State<MatchingLocalListScreen>
                         await _matchingService.rejectMatch(match.matchId);
                         if (!mounted) return;
 
-                        // 성공 메시지 표시
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('매칭을 거절했습니다.')),
-                        );
+                        // 토스트 메시지 표시
+                        ToastBar.clover('매칭을 거절했습니다');
 
                         // 매칭 목록 새로고침
                         setState(() {
@@ -602,9 +608,7 @@ class _MatchingLocalListScreenState extends State<MatchingLocalListScreen>
                         });
                       } catch (e) {
                         if (!mounted) return;
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text('매칭 거절 실패: $e')));
+                        ToastBar.clover('매칭 거절 실패');
                       }
                     },
                     icon: Icons.close,
@@ -618,15 +622,13 @@ class _MatchingLocalListScreenState extends State<MatchingLocalListScreen>
                         await _matchingService.confirmMatch(match.matchId);
                         await _loadMatches();
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('매칭이 수락되었습니다.')),
-                          );
+                          // 토스트 메시지 표시
+                          ToastBar.clover('매칭이 수락되었습니다');
                         }
                       } catch (e) {
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('매칭 수락 실패: $e')),
-                          );
+                          // 토스트 메시지 표시
+                          ToastBar.clover('매칭 수락 실패');
                         }
                       }
                     },

@@ -12,6 +12,7 @@ import 'package:frontend/widgets/loading_overlay.dart';
 import 'package:frontend/screens/chat/chat_room_screen.dart';
 import 'package:frontend/services/chat_service.dart';
 import 'package:frontend/models/chat_model.dart';
+import 'package:frontend/widgets/toast_bar.dart';
 
 class MatchingScreen extends StatefulWidget {
   const MatchingScreen({Key? key}) : super(key: key);
@@ -39,9 +40,7 @@ class _MatchingScreenState extends State<MatchingScreen>
       await context.read<MatchingProvider>().fetchMatches();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('데이터 로드 중 오류가 발생했습니다: $e')));
+        ToastBar.clover('데이터 로드 중 오류가 발생했습니다');
       }
     }
   }
@@ -259,6 +258,9 @@ class _MatchingScreenState extends State<MatchingScreen>
 
   void _navigateToChat(dynamic match) async {
     try {
+      // 채팅방 이동 전에 토스트 메시지 표시
+      ToastBar.clover('채팅방으로 이동합니다');
+
       final chatService = ChatService();
       final chatRooms = await chatService.getChatRooms();
 
@@ -289,9 +291,8 @@ class _MatchingScreenState extends State<MatchingScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('채팅방 이동 중 오류가 발생했습니다: $e')));
+        // 에러 발생 시 토스트 메시지로 표시
+        ToastBar.clover('채팅방 이동 중 오류가 발생했습니다');
       }
     }
   }

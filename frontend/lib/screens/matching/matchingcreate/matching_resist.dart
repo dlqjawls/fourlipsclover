@@ -635,7 +635,7 @@ class _MatchingResistScreenState extends State<MatchingResistScreen> {
                               _selectedGroup = item;
                               if (item == '나혼자 산다') {
                                 _selectedGroupObj = Group(
-                                  groupId: 0,
+                                  groupId: -1,
                                   name: '나혼자 산다',
                                   isPublic: true,
                                   description: '개인 사용자',

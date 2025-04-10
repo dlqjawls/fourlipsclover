@@ -10,21 +10,21 @@ class UserJourneyScreen extends StatelessWidget {
       backgroundColor: AppColors.verylightGray,
       appBar: AppBar(
         scrolledUnderElevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.darkGray),
-          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
         ),
-        centerTitle: true,
         title: const Text(
-          '진행중인 여정',
+          '나의 여행',
           style: TextStyle(
-            fontSize: 20,
+            color: Colors.black,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: AppColors.darkGray,
           ),
         ),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),

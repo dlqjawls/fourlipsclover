@@ -7,6 +7,11 @@ import '../../config/routes.dart';
 import '../../config/theme.dart'; // 테마 import 추가
 import '../../models/user_model.dart';
 import '../../services/user_service.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:frontend/screens/home/home_screen.dart';
+import 'package:frontend/services/auth_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:frontend/widgets/toast_bar.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -82,12 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
       debugPrint('로그인 오류: $error');
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('로그인에 실패했습니다: ${error.toString()}'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        ToastBar.clover('로그인에 실패했습니다');
       }
     }
   }
