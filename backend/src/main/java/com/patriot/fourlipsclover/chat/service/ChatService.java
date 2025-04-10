@@ -148,7 +148,7 @@ public class ChatService {
                 .orElseThrow(() -> new IllegalArgumentException("Chat room not found for chatRoomId: " + chatRoomId));
 
         // 채팅방에 소속된 메시지 목록을 슬라이딩 윈도우 방식으로 조회
-        List<ChatMessage> chatMessages = chatMessageRepository.findByChatRoom_ChatRoomIdOrderByCreatedAtDesc(chatRoomId, PageRequest.of(offset, limit));
+        List<ChatMessage> chatMessages = chatMessageRepository.findByChatRoom_ChatRoomIdOrderByCreatedAtAsc(chatRoomId, PageRequest.of(offset, limit));
 
         // 채팅방에 소속된 멤버 목록 조회
         List<ChatMember> chatMembers = chatMemberRepository.findByChatRoom_ChatRoomId(chatRoomId);
