@@ -1,7 +1,7 @@
 import 'package:intl/intl.dart';
 import 'dart:convert';
 
-/// 레스토랑 정보 모델
+// 레스토랑 정보 모델
 class RestaurantResponse {
   final int? restaurantId;
   final String kakaoPlaceId;

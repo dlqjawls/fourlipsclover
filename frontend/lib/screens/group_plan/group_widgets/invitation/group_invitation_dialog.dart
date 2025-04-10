@@ -96,17 +96,7 @@ class GroupInvitationDialog extends StatelessWidget {
 
           // 만료 정보
           if (expiryDate != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Text(
-                '이 링크는 ${_formatExpiryDate(expiryDate!)}에 만료됩니다',
-                style: TextStyle(
-                  fontFamily: 'Anemone_air',
-                  fontSize: 12,
-                  color: AppColors.mediumGray,
-                ),
-              ),
-            ),
+            Padding(padding: const EdgeInsets.only(bottom: 16)),
 
           // 공유 버튼
           Row(
