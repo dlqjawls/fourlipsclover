@@ -8,14 +8,19 @@ import co.elastic.clients.elasticsearch._types.query_dsl.FunctionScoreMode;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
+import com.patriot.fourlipsclover.group.entity.GroupMember;
+import com.patriot.fourlipsclover.group.repository.GroupMemberRepository;
 import com.patriot.fourlipsclover.locals.document.LocalsDocument;
 import com.patriot.fourlipsclover.locals.entity.LocalCertification;
 import com.patriot.fourlipsclover.locals.repository.LocalCertificationRepository;
 import com.patriot.fourlipsclover.locals.repository.LocalsElasticsearchRepository;
+import com.patriot.fourlipsclover.member.entity.Member;
 import com.patriot.fourlipsclover.member.entity.MemberReviewTag;
+import com.patriot.fourlipsclover.restaurant.document.RestaurantDocument;
 import com.patriot.fourlipsclover.restaurant.repository.RegionRepository;
 import com.patriot.fourlipsclover.tag.repository.MemberReviewTagRepository;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +36,7 @@ public class LocalsElasticsearchService {
 	private final LocalsElasticsearchRepository localsElasticsearchRepository;
 	private final ElasticsearchClient elasticsearchClient;
 	private final RegionRepository regionRepository;
+	private final GroupMemberRepository groupMemberRepository;
 
 	public List<LocalsDocument> recommendSimilarUsers(Long currentUserId, Integer regionId) {
 		List<String> tags = memberReviewTagRepository.findByMemberId(
@@ -98,6 +104,86 @@ public class LocalsElasticsearchService {
 		return response.hits().hits().stream()
 				.map(Hit::source)
 				.collect(Collectors.toList());
+	}
+	
+
+	/**
+	 * 그룹 ID를 기반으로 비슷한 식당을 추천합니다.
+	 *
+	 * @param groupId 그룹 ID
+	 * @return 추천된 식당 목록
+	 */
+	public List<RestaurantDocument> recommendSimilarRestaurants(Integer groupId) {
+		try {
+			// 그룹의 태그 정보 조회
+			List<Member> groupMembers = groupMemberRepository.findByGroup_GroupId(groupId).stream()
+					.map(GroupMember::getMember).toList();
+			List<String> groupTags = new ArrayList<>();
+			for (Member mem : groupMembers) {
+				List<String> memberTags = memberReviewTagRepository.findByMember(mem).stream()
+						.map(t -> t.getTag().getName())
+						.toList();
+				groupTags.addAll(memberTags);
+			}
+
+			if (groupTags.isEmpty()) {
+				return List.of();
+			}
+
+			SearchResponse<RestaurantDocument> response = elasticsearchClient.search(s -> s
+							.index("restaurants")
+							.query(q -> q.functionScore(fs -> {
+								// 기본 쿼리: 태그 매칭 (should 조건)
+								fs.query(qb -> qb.bool(b -> {
+									// 태그 리스트를 순회하며 각 태그에 대해 nested 쿼리 추가
+									for (String tag : groupTags) {
+										b.should(sh -> sh.nested(n -> n
+												.path("tags")
+												.query(nq -> nq.match(m -> m
+														.field("tags.tagName")
+														.query(tag)))
+												.scoreMode(Sum)
+										));
+									}
+									b.minimumShouldMatch("1");
+									return b;
+								}));
+
+								// 동적으로 태그별 function_score 구성
+								for (String tag : groupTags) {
+									fs.functions(f -> f
+											.filter(fq -> fq.nested(n -> n
+													.path("tags")
+													.query(nq -> nq.match(m -> m
+															.field("tags.tagName")
+															.query(tag)))
+											))
+											.scriptScore(ss -> ss.script(sc -> sc
+													.source("double score = 0; " +
+															"for (t in params._source.tags) { " +
+															"  if(t.tagName == params.tag_name) { " +
+															"    score += t.frequency * t.avgConfidence; " +
+															"  } " +
+															"} " +
+															"return score;")
+													.params("tag_name", JsonData.of(tag))
+											))
+									);
+								}
+
+								return fs.boostMode(FunctionBoostMode.Sum)
+										.scoreMode(FunctionScoreMode.Sum);
+							}))
+							.size(10),
+					RestaurantDocument.class
+			);
+
+			return response.hits().hits().stream()
+					.map(Hit::source)
+					.collect(Collectors.toList());
+		} catch (IOException e) {
+			throw new RuntimeException("유사 식당 추천 중 오류가 발생했습니다.", e);
+		}
 	}
 
 	/**
