@@ -31,6 +31,7 @@ class _ExpenseEditBottomSheetState extends State<ExpenseEditBottomSheet> {
   final currencyFormat = NumberFormat('#,###', 'ko_KR');
   List<Member>? _availableMembers;
   bool _isLoading = false;
+  late SettlementProvider _settlementProvider;
 
   @override
   void initState() {
@@ -41,7 +42,14 @@ class _ExpenseEditBottomSheetState extends State<ExpenseEditBottomSheet> {
       for (var participant in _participants)
         participant.memberId: 1.0 / _participants.length,
     };
-
+  }
+  
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Provider 참조를 didChangeDependencies에서 안전하게 가져옴
+    _settlementProvider = Provider.of<SettlementProvider>(context, listen: false);
+    
     // 사용 가능한 멤버 로드
     _loadAvailableMembers();
   }
@@ -57,17 +65,21 @@ class _ExpenseEditBottomSheetState extends State<ExpenseEditBottomSheet> {
 
       // 현재 참여자를 제외한 멤버 필터링
       final participantMemberIds = _participants.map((p) => p.memberId).toSet();
-      setState(() {
-        _availableMembers =
-            planDetail.members
-                .where(
-                  (member) => !participantMemberIds.contains(member.memberId),
-                )
-                .toList();
-      });
+      if (mounted) {
+        setState(() {
+          _availableMembers =
+              planDetail.members
+                  .where(
+                    (member) => !participantMemberIds.contains(member.memberId),
+                  )
+                  .toList();
+        });
+      }
     } catch (e) {
       debugPrint('사용 가능한 멤버 로드 중 오류: $e');
-      ToastBar.clover('멤버 정보 로드 실패');
+      if (mounted) {
+        ToastBar.clover('멤버 정보 로드 실패');
+      }
     }
   }
 
@@ -156,42 +168,68 @@ class _ExpenseEditBottomSheetState extends State<ExpenseEditBottomSheet> {
     );
   }
 
-  // 저장 메서드
+  // 저장 메서드 (오류 수정 버전)
   Future<void> _saveParticipants() async {
+    if (!mounted) return;
+    
     setState(() {
       _isLoading = true;
     });
 
-    final settlementProvider = Provider.of<SettlementProvider>(
-      context,
-      listen: false,
-    );
-
     try {
       // 참여자 ID 리스트 추출
       final memberIds = _participants.map((p) => p.memberId).toList();
+      
+      // 로컬 변수에 저장하여 나중에 접근
+      final planId = widget.planId;
+      final expenseId = widget.expense.expenseId;
+      
+      debugPrint('업데이트할 참여자 ID 목록: $memberIds');
+      debugPrint('expenseId: $expenseId, planId: $planId');
 
       // 참여자 업데이트 API 호출
-      final result = await settlementProvider.updateParticipants(
-        widget.expense.expenseId,
+      final result = await _settlementProvider.updateParticipants(
+        expenseId,
         memberIds,
       );
 
-      // 성공 시 정산 정보 다시 로드
-      await settlementProvider.fetchSettlementDetail(widget.planId);
-
-      // 성공 메시지
-      ToastBar.clover('참여자가 성공적으로 수정되었습니다.');
-
-      // 바텀시트 닫기
-      Navigator.of(context).pop();
+      if (result) {
+        // 명시적으로 결제 정보가 있는 planId에 대해 정산 정보 다시 로드
+        debugPrint('API 호출 성공, 정산 정보 갱신: planId=$planId');
+        
+        // 정산 정보 갱신 - mounted 체크 없이 완료 가능 (Provider에서 알아서 처리)
+        await _settlementProvider.fetchSettlementDetail(planId);
+        
+        // 성공 메시지
+        ToastBar.clover('참여자가 성공적으로 수정되었습니다.');
+        
+        // 바텀시트 닫기 전에 짧은 딜레이 추가
+        await Future.delayed(const Duration(milliseconds: 300));
+        
+        // mounted 체크 후 Navigator 조작
+        if (mounted) {
+          Navigator.of(context).pop(true); // 성공 결과 반환
+        }
+      } else {
+        // mounted 체크 후 오류 메시지 표시
+        if (mounted) {
+          ToastBar.clover('참여자 수정 실패');
+        }
+      }
     } catch (e) {
       // 에러 처리
-      ToastBar.clover('참여자 수정중 오류 발생 $e');
+      debugPrint('참여자 수정 중 오류 발생: $e');
+      // mounted 체크 후 오류 메시지 표시
+      if (mounted) {
+        ToastBar.clover('참여자 수정 중 오류 발생');
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      // mounted 체크 후 로딩 상태 변경
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
