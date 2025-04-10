@@ -13,6 +13,9 @@ import 'package:frontend/models/plan/plan_schedule_model.dart';
 import 'package:frontend/models/plan/plan_list_model.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:math';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   final int chatRoomId;
@@ -36,6 +39,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   List<File> _selectedImages = [];
 
   ChatRoomDetail? _chatRoom;
+  int? _matchId; // 매칭 ID 추가
   bool _isLoading = true;
   String? _errorMessage;
   int _currentUserId = 0; // 현재 로그인한 사용자 ID
@@ -250,6 +254,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
       setState(() {
         _chatRoom = chatRoomDetail;
+        _matchId = chatRoomDetail.matchId; // matchId 저장
         _isLoading = false;
 
         // 채팅 메시지가 있으면 마지막 메시지 시간 저장
@@ -267,10 +272,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           '👥 채팅방 멤버 ${_chatRoom!.members.length}명: ${_chatRoom!.members.map((m) => m.memberNickname).join(', ')}',
         );
 
+        // matchId 로깅 추가
+        debugPrint('🔗 매칭 ID: $_matchId');
+
         // API 응답 로그 저장
         _lastApiResponseLog =
             '채팅방 정보 로드 성공\n'
             '- 채팅방 ID: ${_chatRoom!.chatRoomId}\n'
+            '- 매칭 ID: $_matchId\n'
             '- 채팅방 이름: ${_chatRoom!.name}\n'
             '- 멤버 수: ${_chatRoom!.members.length}명\n'
             '- 메시지 수: ${_chatRoom!.messages.length}개';
@@ -1196,8 +1205,25 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       final availableMembers = await _chatService.getAvailableMembers(
         widget.groupId,
         _selectedPlan!.planId,
+        chatRoomId: widget.chatRoomId, // 채팅방 ID 전달
       );
-      debugPrint('👥 초대 가능한 멤버 ${availableMembers.length}명 조회됨');
+      debugPrint('👥 전체 멤버 ${availableMembers.length}명 조회됨');
+
+      // 초대 가능 여부 로깅
+      final int chatMembersCount =
+          availableMembers.where((m) => m['isInChat'] == true).length;
+      final int planMembersCount =
+          availableMembers.where((m) => m['isInPlan'] == true).length;
+      final int invitableMembersCount =
+          availableMembers
+              .where(
+                (m) => !(m['isInChat'] == true) && !(m['isInPlan'] == true),
+              )
+              .length;
+
+      debugPrint(
+        '👥 채팅방 참여 멤버: $chatMembersCount명, 계획 참여 멤버: $planMembersCount명, 초대 가능: $invitableMembersCount명',
+      );
 
       setState(() {
         _isLoading = false;
@@ -1206,11 +1232,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       if (availableMembers.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('초대할 수 있는 멤버가 없습니다.'),
+            content: Text('그룹에 멤버가 없습니다.'),
             duration: Duration(seconds: 2),
           ),
         );
-        debugPrint('⚠️ 초대 불가: 초대 가능한 멤버 없음');
+        debugPrint('⚠️ 초대 불가: 그룹에 멤버 없음');
         return;
       }
 
@@ -1282,6 +1308,22 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     // 선택된 멤버 ID 목록
     List<int> selectedMemberIds = [];
 
+    // 초대 가능한 멤버가 있는지 확인
+    final bool hasInvitableMembers = availableMembers.any(
+      (member) =>
+          !(member['isInPlan'] ?? false) && !(member['isInChat'] ?? false),
+    );
+
+    if (!hasInvitableMembers) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('모든 그룹 멤버가 이미 초대되어 있습니다.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder:
@@ -1299,32 +1341,69 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       final int memberId = member['memberId'] ?? 0;
                       final String nickname = member['nickname'] ?? '알 수 없음';
                       final String? profileUrl = member['profileUrl'];
+                      final bool isInPlan = member['isInPlan'] ?? false;
+                      final bool isInChat = member['isInChat'] ?? false;
                       final bool isSelected = selectedMemberIds.contains(
                         memberId,
                       );
 
+                      // 상태 메시지 결정
+                      String? statusMessage;
+                      Color? statusColor;
+                      if (isInChat) {
+                        statusMessage = '이미 채팅방에 참여 중';
+                        statusColor = Colors.green;
+                      } else if (isInPlan) {
+                        statusMessage = '이미 계획에 참여 중';
+                        statusColor = Colors.blue;
+                      }
+
                       return CheckboxListTile(
-                        value: isSelected,
-                        onChanged: (value) {
-                          setState(() {
-                            if (value == true) {
-                              selectedMemberIds.add(memberId);
-                            } else {
-                              selectedMemberIds.remove(memberId);
-                            }
-                          });
-                        },
+                        value: isInPlan || isInChat ? true : isSelected,
+                        onChanged:
+                            isInPlan || isInChat
+                                ? null // 이미 플랜이나 채팅방에 속한 멤버는 체크박스 비활성화
+                                : (value) {
+                                  setState(() {
+                                    if (value == true) {
+                                      selectedMemberIds.add(memberId);
+                                    } else {
+                                      selectedMemberIds.remove(memberId);
+                                    }
+                                  });
+                                },
                         title: Text(nickname),
+                        subtitle:
+                            statusMessage != null
+                                ? Text(
+                                  statusMessage,
+                                  style: TextStyle(
+                                    color: statusColor,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                )
+                                : null,
                         secondary: CircleAvatar(
                           backgroundImage:
-                              profileUrl != null
+                              profileUrl != null && profileUrl.isNotEmpty
                                   ? NetworkImage(profileUrl)
                                   : null,
                           child:
-                              profileUrl == null
-                                  ? Text(nickname.substring(0, 1))
+                              profileUrl == null || profileUrl.isEmpty
+                                  ? Text(
+                                    nickname.isNotEmpty
+                                        ? nickname.substring(0, 1)
+                                        : '?',
+                                  )
                                   : null,
                         ),
+                        // 이미 참여 중인 멤버는 배경색 강조
+                        tileColor:
+                            isInChat
+                                ? Colors.green.withOpacity(0.1)
+                                : isInPlan
+                                ? Colors.blue.withOpacity(0.1)
+                                : null,
                       );
                     },
                   ),
@@ -1355,12 +1434,79 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void _inviteSelectedMembers(List<int> memberIds) async {
     if (memberIds.isEmpty) return;
 
+    // matchId 확보 (채팅방 상세 정보에서 가져오거나, 매핑에서 검색)
+    int? inviteMatchId = _matchId;
+
+    // 저장된 matchId가 없으면 매핑에서 검색
+    if (inviteMatchId == null || inviteMatchId == 0) {
+      inviteMatchId = ChatService.getMatchIdForChatRoom(widget.chatRoomId);
+      debugPrint('🔄 매핑에서 matchId 검색: $inviteMatchId');
+    }
+
+    // 여전히 matchId가 없으면 오류 메시지 표시
+    if (inviteMatchId == null || inviteMatchId == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('매칭 정보를 찾을 수 없습니다. 채팅방 목록에서 다시 시도해주세요.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      debugPrint('⚠️ matchId를 찾을 수 없음: 초대 실패');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      await _chatService.inviteMembers(widget.chatRoomId, memberIds);
+      // 1. 채팅방에 멤버 초대 (matchId 사용)
+      debugPrint('👥 채팅방(매칭ID: $inviteMatchId) 멤버 초대 시작: ${memberIds.length}명');
+      await _chatService.inviteMembers(inviteMatchId, memberIds);
+
+      // 2. 동시에 계획에도 멤버 추가
+      if (_selectedPlan != null) {
+        debugPrint(
+          '📝 계획에 멤버 추가 시작: groupId=${widget.groupId}, planId=${_selectedPlan!.planId}, members=${memberIds.length}명',
+        );
+
+        try {
+          // 멤버 ID 목록으로 API 요청 데이터 구성
+          final addMemberRequests =
+              memberIds.map((memberId) => {"memberId": memberId}).toList();
+
+          // 계획에 멤버 추가 API 호출
+          final response = await http.post(
+            Uri.parse(
+              '${dotenv.env['API_BASE_URL']}/api/group/${widget.groupId}/plan/${_selectedPlan!.planId}/add-member',
+            ),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${await _getAuthToken()}',
+            },
+            body: jsonEncode(addMemberRequests),
+          );
+
+          if (response.statusCode == 200 || response.statusCode == 201) {
+            final result = jsonDecode(utf8.decode(response.bodyBytes));
+            final addedMembers = result['addedMembers'] ?? [];
+            debugPrint('✅ 계획에 ${addedMembers.length}명의 멤버가 추가됨');
+          } else {
+            debugPrint(
+              '⚠️ 계획에 멤버 추가 실패: ${response.statusCode}, ${response.body}',
+            );
+          }
+        } catch (e) {
+          debugPrint('🔴 계획에 멤버 추가 중 오류: $e');
+          // 채팅방 초대는 성공했으므로 계획 추가 실패는 경고만 표시
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('멤버 초대는 성공했으나 계획에 추가하지 못했습니다: $e'),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1371,15 +1517,37 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
       // 채팅방 정보 다시 로드
       await _loadChatRoom();
+
+      // 초대 성공 후 계획 멤버 정보 캐시 초기화 (다음 초대 시 최신 정보 로드되도록)
+      try {
+        // 이전에 조회된 멤버 정보 초기화 - 다음 번 초대 시 최신 정보 조회되도록
+        if (_selectedPlan != null) {
+          // 캐시 초기화를 위해 간단히 getAvailableMembers를 다시 호출
+          debugPrint('🔄 초대 후 멤버 정보 새로고침 - 다음 요청을 위한 준비');
+          await _chatService.getAvailableMembers(
+            widget.groupId,
+            _selectedPlan!.planId,
+          );
+        }
+      } catch (e) {
+        debugPrint('멤버 정보 새로고침 중 오류: $e');
+      }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('멤버 초대에 실패했습니다: $e')));
+      debugPrint('🔴 멤버 초대 실패: $e');
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
+  }
+
+  // 인증 토큰 가져오기
+  Future<String> _getAuthToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token') ?? '';
   }
 
   void _showMoreOptions() {
@@ -1504,6 +1672,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void _showDebugInfo() {
     String debugInfo = '''
 채팅방 ID: ${widget.chatRoomId}
+매칭 ID: $_matchId
 그룹 ID: ${widget.groupId}
 현재 사용자 ID: $_currentUserId
 메시지 개수: ${_chatRoom?.messages.length ?? 0}
