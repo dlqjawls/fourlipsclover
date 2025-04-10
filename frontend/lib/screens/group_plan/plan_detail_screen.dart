@@ -8,11 +8,12 @@ import '../../providers/plan_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../config/theme.dart';
 import '../../widgets/clover_loading_spinner.dart';
+import '../../widgets/toast_bar.dart';
 import 'plan_widgets/plan_members_bar.dart';
-import 'plan_widgets/plan_notice_board.dart';
-import 'plan_widgets/timeline_plan_schedule_view.dart';
-import 'plan_widgets/plan_settlement_view.dart';
-import 'bottomsheet/plan_member_management_sheet.dart';
+import 'plan_widgets/notice/plan_notice_board.dart';
+import 'plan_widgets/schedule/timeline_plan_schedule_view.dart';
+import 'plan_widgets/settlement/plan_settlement_view.dart';
+import 'bottomsheet/plan/plan_member_management_sheet.dart';
 import '../../config/theme.dart';
 
 class PlanDetailScreen extends StatefulWidget {
@@ -83,9 +84,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
           _isLoading = false;
         });
         // 오류 메시지 표시
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('계획 상세 정보를 불러오는데 실패했습니다: $e')));
+        ToastBar.clover('계획 상세정보 불러오기 실패');
       }
     }
   }
@@ -144,9 +143,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
             .toList();
 
     if (otherMembers.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('다른 멤버가 없어 총무 권한을 넘길 수 없습니다.')),
-      );
+      ToastBar.clover('다른 멤버가 없어 총무권한 이전 실패');
       return;
     }
 
@@ -214,18 +211,14 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
 
       // 성공 메시지 표시
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('총무 권한이 성공적으로 이전되었습니다.')));
+        ToastBar.clover('총무 권한 이전 완료');
 
         // 계획 정보 다시 로드
         _loadPlanDetail();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('총무 권한 이전에 실패했습니다: $e')));
+        ToastBar.clover('총무 권한 이전 실패');
       }
     } finally {
       if (mounted) {
@@ -324,9 +317,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
 
       // 계획 화면 종료하고 그룹 상세 화면으로 돌아가기
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('계획에서 나갔습니다.')));
+        ToastBar.clover('계획에서 나갔습니다.');
 
         // groupId를 사용하여 다시 Group 객체 가져오기
         Group? group;
@@ -354,9 +345,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('계획 나가기에 실패했습니다: $e')));
+        ToastBar.clover('계획 나가기 실패');
       }
     }
   }

@@ -2,9 +2,10 @@
 import 'package:intl/intl.dart';
 
 enum SettlementStatus {
-  PENDING,
-  COMPLETED,
-  CANCELLED
+  PENDING,     // 진행 중
+  IN_PROGRESS, // 정산 요청됨
+  COMPLETED,   // 완료됨
+  CANCELED    // 취소됨
 }
 
 class Settlement {
@@ -64,6 +65,23 @@ class Settlement {
     return '${dateFormat.format(startDate)} ~ ${dateFormat.format(endDate)}';
   }
 
+  // toJson 메서드 추가
+  Map<String, dynamic> toJson() {
+    return {
+      'settlementId': settlementId,
+      'planName': planName,
+      'planId': planId,
+      'treasurerName': treasurerName,
+      'treasurerId': treasurerId,
+      'settlementStatus': settlementStatus.toString().split('.').last,
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+      'expenseResponses': expenses.map((expense) => expense.toJson()).toList(),
+    };
+  }
+
   factory Settlement.fromJson(Map<String, dynamic> json) {
     return Settlement(
       settlementId: json['settlementId'],
@@ -98,6 +116,17 @@ class Expense {
     required this.approvedAt,
     required this.expenseParticipants,
   });
+
+  // toJson 메서드 추가
+  Map<String, dynamic> toJson() {
+    return {
+      'expenseId': expenseId,
+      'paymentApprovalId': paymentApprovalId,
+      'totalPayment': totalPayment,
+      'approvedAt': approvedAt.toIso8601String(),
+      'expenseParticipants': expenseParticipants.map((participant) => participant.toJson()).toList(),
+    };
+  }
 
   factory Expense.fromJson(Map<String, dynamic> json) {
     return Expense(
@@ -137,6 +166,17 @@ class ExpenseParticipant {
     required this.nickname,
     this.profileUrl,
   });
+
+  // toJson 메서드 추가
+  Map<String, dynamic> toJson() {
+    return {
+      'expenseParticipantId': expenseParticipantId,
+      'memberId': memberId,
+      'email': email,
+      'nickname': nickname,
+      'profileUrl': profileUrl,
+    };
+  }
 
   factory ExpenseParticipant.fromJson(Map<String, dynamic> json) {
     return ExpenseParticipant(

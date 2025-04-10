@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../models/payment_history.dart';
-import '../../services/payment_service.dart';
+import '../../services/payment/payment_service.dart';
 import 'widget/payment_history_item.dart';
 
 class PaymentHistoryListScreen extends StatefulWidget {

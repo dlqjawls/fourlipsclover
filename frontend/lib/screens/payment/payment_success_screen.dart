@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/payment_service.dart';
+import '../../services/payment/payment_service.dart';
 import 'payment_history_screen.dart';
 import '../../config/theme.dart';
 import '../../screens/matching/matching.dart';
