@@ -44,8 +44,12 @@ public class LocalCertification {
 	private LocalDateTime certificatedAt;
 	@Column
 	private LocalDateTime expiryAt;
-	
+
 	@Enumerated(value = EnumType.STRING)
 	@Column(nullable = false)
 	private LocalGrade localGrade;
+
+	public void updateGrade(LocalGrade newGrade) {
+		this.localGrade = newGrade;
+	}
 }

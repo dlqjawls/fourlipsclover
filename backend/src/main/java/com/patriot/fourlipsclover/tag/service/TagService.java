@@ -103,9 +103,7 @@ public class TagService {
 
 
 		}
-//		CompletableFuture.runAsync(() -> updateElasticsearchTags(review.getMember().getMemberId()));
 
-		updateElasticsearchTags(review.getMember().getMemberId());
 
 	}
 
@@ -147,8 +145,28 @@ public class TagService {
 				.collect(Collectors.toList());
 	}
 
+	@Transactional(readOnly = true)
+	public int uploadAllLocalCertificationsToElasticsearch() {
+		List<LocalCertification> allCertifications = localCertificationRepository.findAll();
+		int uploadedCount = 0;
 
-	private void updateElasticsearchTags(Long memberId) {
+		for (LocalCertification certification : allCertifications) {
+			try {
+				Long memberId = certification.getMember().getMemberId();
+				updateElasticsearchTags(memberId);
+				uploadedCount++;
+			} catch (Exception e) {
+				System.err.println(
+						"현지인 인증 인덱싱 실패: " + certification.getLocalCertificationId() + " - "
+								+ e.getMessage());
+			}
+		}
+
+		return uploadedCount;
+	}
+
+
+	public void updateElasticsearchTags(Long memberId) {
 		LocalCertification cert = localCertificationRepository.findByMember_MemberId(
 				memberId);
 		// 멤버 태그 정보 조회
@@ -180,6 +198,7 @@ public class TagService {
 		// Elasticsearch에 저장
 		localsElasticsearchRepository.save(localsDocument);
 	}
+
 	@Transactional(readOnly = true)
 	public int uploadRestaurantDocument() {
 		List<Restaurant> restaurants = restaurantJpaRepository.findAll();
@@ -214,7 +233,8 @@ public class TagService {
 						.document(restaurantDocument));
 				count++;
 			} catch (Exception e) {
-				System.err.println("레스토랑 인덱싱 실패: " + restaurant.getKakaoPlaceId() + " - " + e.getMessage());
+				System.err.println(
+						"레스토랑 인덱싱 실패: " + restaurant.getKakaoPlaceId() + " - " + e.getMessage());
 			}
 		}
 
