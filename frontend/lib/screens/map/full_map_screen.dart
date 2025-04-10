@@ -83,7 +83,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
       if (_mapInitialized) {
         _addLabelsToMap();
         // GPS 버튼을 누르지 않아도 현재 위치 표시 (선택적)
-        // _locationService.moveToCurrentLocation();
+        _locationService.moveToCurrentLocation();
       }
 
       // 지연 후 라벨 클릭 이벤트 리스너 설정 (네이티브 구성요소 초기화 시간 확보)

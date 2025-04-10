@@ -10,18 +10,18 @@ class LocationService {
   final BuildContext context;
   final MapProvider mapProvider;
   final String userLocationLabelId;
-  
+
   // 위치 추적 관련 변수
   StreamSubscription<Position>? _positionStreamSubscription;
   bool _isLocationTracking = false;
   Position? _currentPosition;
-  
+
   LocationService({
-    required this.context, 
+    required this.context,
     required this.mapProvider,
     this.userLocationLabelId = 'user_location_marker',
   });
-  
+
   bool get isLocationTracking => _isLocationTracking;
   Position? get currentPosition => _currentPosition;
 
@@ -45,9 +45,9 @@ class LocationService {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('위치 권한이 거부되었습니다.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('위치 권한이 거부되었습니다.')));
         return null;
       }
     }
@@ -68,9 +68,9 @@ class LocationService {
       return position;
     } catch (e) {
       print('위치 가져오기 오류: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('현재 위치를 가져오는데 실패했습니다.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('현재 위치를 가져오는데 실패했습니다.')));
       return null;
     }
   }
@@ -78,34 +78,44 @@ class LocationService {
   // 현재 위치 마커 추가
   Future<void> addUserLocationMarker(double latitude, double longitude) async {
     try {
+      print("사용자 위치 마커 추가 시작: lat=$latitude, lng=$longitude");
+
       bool markerExists = mapProvider.labels.any(
         (label) => label.id == userLocationLabelId,
       );
 
+      print("기존 마커 존재 여부: $markerExists");
+
       // Provider에서만 제거 (이미 있는 경우)
       if (markerExists) {
+        print("Provider에서 기존 마커 제거");
         mapProvider.removeLabel(userLocationLabelId);
       }
 
-      // 사용자 위치 마커 추가
-      await KakaoMapPlatform.addLabel(
-        labelId: userLocationLabelId,
-        latitude: latitude,
-        longitude: longitude,
-        text: null, // 텍스트 없음
-        imageAsset: 'swallow', // 현재 위치 마커 이미지
-        textSize: null,
-        alpha: 1.0,
-        rotation: 0.0,
-        zIndex: 10, // 다른 마커보다 위에 표시되도록 높은 zIndex 설정
-        isClickable: false, // 클릭 불가능하게 설정
-      );
+      // 사용자 위치 마커 추가 (네이티브)
+      try {
+        await KakaoMapPlatform.addLabel(
+          labelId: userLocationLabelId,
+          latitude: latitude,
+          longitude: longitude,
+          text: null,
+          imageAsset: 'swallow',
+          textSize: null,
+          alpha: 1.0,
+          rotation: 0.0,
+          zIndex: 10,
+          isClickable: false,
+        );
+        print("네이티브에 사용자 위치 마커 추가 성공");
+      } catch (e) {
+        print("네이티브에 사용자 위치 마커 추가 실패: $e");
+      }
 
       // Provider에도 추가
       mapProvider.addLabel(
         id: userLocationLabelId,
-        latitude: latitude,
-        longitude: longitude,
+        latitude: longitude,
+        longitude: latitude,
         text: null,
         imageAsset: 'swallow',
         textSize: null,
@@ -115,9 +125,9 @@ class LocationService {
         isClickable: false,
       );
 
-      print('사용자 위치 마커 추가됨: ($latitude, $longitude)');
+      print('사용자 위치 마커 추가 완료: ($latitude, $longitude)');
     } catch (e) {
-      print('사용자 위치 마커 추가 오류: $e');
+      print('사용자 위치 마커 추가 종합 오류: $e');
     }
   }
 
@@ -154,23 +164,69 @@ class LocationService {
     double longitude,
   ) async {
     try {
-      // 위치 마커 업데이트
-      await KakaoMapPlatform.updateLabelPosition(
-        labelId: userLocationLabelId,
-        latitude: latitude,
-        longitude: longitude,
-      );
+      // 먼저 라벨이 존재하는지 확인 (네이티브 측)
+      try {
+        await KakaoMapPlatform.updateLabelPosition(
+          labelId: userLocationLabelId,
+          latitude: latitude,
+          longitude: longitude,
+        );
 
-      // Provider 업데이트
-      mapProvider.updateLabelPosition(
-        userLocationLabelId,
-        latitude,
-        longitude,
-      );
+        // 네이티브에서 업데이트 성공하면 프로바이더도 업데이트
+        mapProvider.updateLabelPosition(
+          userLocationLabelId,
+          latitude,
+          longitude,
+        );
 
-      print('사용자 위치 마커 업데이트됨: ($latitude, $longitude)');
+        print('사용자 위치 마커 업데이트됨: ($latitude, $longitude)');
+      } catch (e) {
+        print('위치 업데이트 실패, 새 마커 추가 시도: $e');
+
+        // 업데이트 실패하면 새로 추가 시도
+        try {
+          // 프로바이더에서 먼저 제거 (있다면)
+          if (mapProvider.labels.any(
+            (label) => label.id == userLocationLabelId,
+          )) {
+            mapProvider.removeLabel(userLocationLabelId);
+          }
+
+          // 네이티브에 새 마커 추가
+          await KakaoMapPlatform.addLabel(
+            labelId: userLocationLabelId,
+            latitude: latitude,
+            longitude: longitude,
+            text: null,
+            imageAsset: 'swallow',
+            textSize: null,
+            alpha: 1.0,
+            rotation: 0.0,
+            zIndex: 10,
+            isClickable: false,
+          );
+
+          // 프로바이더에도 추가
+          mapProvider.addLabel(
+            id: userLocationLabelId,
+            latitude: longitude,
+            longitude: latitude,
+            text: null,
+            imageAsset: 'swallow',
+            textSize: null,
+            alpha: 1.0,
+            rotation: 0.0,
+            zIndex: 10,
+            isClickable: false,
+          );
+
+          print('새 사용자 위치 마커 추가됨: ($latitude, $longitude)');
+        } catch (addError) {
+          print('새 마커 추가 실패: $addError');
+        }
+      }
     } catch (e) {
-      print('사용자 위치 마커 업데이트 오류: $e');
+      print('사용자 위치 마커 처리 종합 오류: $e');
     }
   }
 
@@ -178,6 +234,8 @@ class LocationService {
   Future<void> moveToCurrentLocation() async {
     Position? position = await getCurrentLocation();
     if (position != null) {
+      print("현재 위치 가져옴: lat=${position.latitude}, lng=${position.longitude}");
+
       // 사용자 위치로 지도 이동
       await KakaoMapPlatform.setMapCenter(
         latitude: position.latitude,
@@ -185,16 +243,63 @@ class LocationService {
         zoomLevel: 16, // 적절한 줌 레벨
       );
 
-      // 사용자 위치 마커 표시
-      await addUserLocationMarker(position.latitude, position.longitude);
+      // 사용자 위치 마커 추가 (이 부분을 추가)
+      try {
+        // 네이티브에 마커 추가
+        await KakaoMapPlatform.addLabel(
+          labelId: userLocationLabelId,
+          latitude: position.latitude,
+          longitude: position.longitude,
+          text: null,
+          imageAsset: 'swallow',
+          textSize: null,
+          alpha: 1.0,
+          rotation: 0.0,
+          zIndex: 10,
+          isClickable: false,
+        );
+
+        // 프로바이더에도 추가
+        if (mapProvider.labels.any(
+          (label) => label.id == userLocationLabelId,
+        )) {
+          mapProvider.updateLabelPosition(
+            userLocationLabelId,
+            position.latitude,
+            position.longitude,
+          );
+        } else {
+          mapProvider.addLabel(
+            id: userLocationLabelId,
+            latitude: position.latitude,
+            longitude: position.longitude,
+            text: null,
+            imageAsset: 'swallow',
+            textSize: null,
+            alpha: 1.0,
+            rotation: 0.0,
+            zIndex: 10,
+            isClickable: false,
+          );
+        }
+
+        print(
+          '초기 사용자 위치 마커 추가됨: (${position.latitude}, ${position.longitude})',
+        );
+      } catch (e) {
+        print('초기 사용자 위치 마커 추가 오류: $e');
+      }
 
       // 위치 추적 시작 (아직 시작되지 않았다면)
       if (!_isLocationTracking) {
+        print("위치 추적 시작");
         startLocationTracking();
       }
+    } else {
+      print("현재 위치를 가져오지 못했습니다.");
     }
   }
-  
+
   // 서비스 정리
   void dispose() {
     stopLocationTracking();

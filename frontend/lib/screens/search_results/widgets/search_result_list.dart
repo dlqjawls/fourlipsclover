@@ -83,11 +83,6 @@ class _SearchResultListState extends State<SearchResultList> {
       return List.from(results);
     }
 
-    // 디버깅: 각 결과의 score 출력
-    for (var result in results) {
-      print('Restaurant: ${result.placeName}, Score: ${result.score}');
-    }
-
     // score 기준으로 정렬
     final sortedResults = List<RestaurantResponse>.from(results)..sort((a, b) {
       final scoreA = a.score ?? 0.0;

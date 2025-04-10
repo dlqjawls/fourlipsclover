@@ -31,13 +31,27 @@ Future<Map<String, RestaurantResponse>> addLabelsToMap({
   }
   
   try {
+    // 먼저 현재 라벨 상태 확인
+    bool hasUserLocationMarker = false;
+    double? userLat, userLng;
+    
+    // 사용자 위치 마커 정보 저장
+    for (var label in labels) {
+      if (label.id == userLocationLabelId) {
+        hasUserLocationMarker = true;
+        userLat = label.latitude;
+        userLng = label.longitude;
+        break;
+      }
+    }
+
     // 기존 라벨 모두 제거 (네이티브 레벨)
     await KakaoMapPlatform.clearLabels();
     
     // 모든 라벨을 네이티브에 추가
     for (var label in labels) {
       try {
-        // 사용자 위치 마커는 건너뛰기
+        // 사용자 위치 마커는 다른 라벨 추가 후에 별도로 추가할 것이므로 건너뛰기
         if (label.id == userLocationLabelId) continue;
         
         await KakaoMapPlatform.addLabel(
@@ -54,7 +68,6 @@ Future<Map<String, RestaurantResponse>> addLabelsToMap({
         );
         
         // 라벨이 RestaurantResponse 타입의 경우 가게 데이터에 저장
-        // 더 많은 데이터를 포함하도록 수정
         var restaurantInfo = RestaurantResponse(
           kakaoPlaceId: label.id,
           placeName: label.text,
@@ -79,6 +92,27 @@ Future<Map<String, RestaurantResponse>> addLabelsToMap({
         await Future.delayed(Duration(milliseconds: 50));
       } catch (e) {
         print('라벨 추가 오류: ${label.id} - $e');
+      }
+    }
+    
+    // 사용자 위치 마커가 있었다면 다시 추가
+    if (hasUserLocationMarker && userLat != null && userLng != null) {
+      try {
+        await KakaoMapPlatform.addLabel(
+          labelId: userLocationLabelId,
+          latitude: userLat,
+          longitude: userLng,
+          text: null,
+          imageAsset: 'swallow',
+          textSize: null,
+          alpha: 1.0,
+          rotation: 0.0,
+          zIndex: 10,
+          isClickable: false,
+        );
+        print('사용자 위치 마커 다시 추가됨');
+      } catch (e) {
+        print('사용자 위치 마커 다시 추가 오류: $e');
       }
     }
     
