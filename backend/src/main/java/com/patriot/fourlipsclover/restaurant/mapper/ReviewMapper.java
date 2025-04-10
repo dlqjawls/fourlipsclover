@@ -1,17 +1,25 @@
 package com.patriot.fourlipsclover.restaurant.mapper;
 
 import com.patriot.fourlipsclover.member.entity.Member;
+import com.patriot.fourlipsclover.payment.repository.VisitPaymentRepository;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewMemberResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewResponse;
 import com.patriot.fourlipsclover.restaurant.dto.response.ReviewRestaurantResponse;
 import com.patriot.fourlipsclover.restaurant.entity.Restaurant;
 import com.patriot.fourlipsclover.restaurant.entity.Review;
+
+import java.time.LocalDateTime;
 import java.util.List;
+
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class ReviewMapper {
+
+	private final VisitPaymentRepository visitPaymentRepository;
 
 	private ReviewRestaurantResponse toRestaurantResponse(Restaurant restaurant) {
 		return ReviewRestaurantResponse.builder().restaurantId(restaurant.getRestaurantId())
@@ -29,10 +37,14 @@ public class ReviewMapper {
 				.build();
 	}
 
-	public Review toEntity(ReviewCreate dto, Restaurant restaurant) {
+	public Review toEntity(ReviewCreate dto, Restaurant restaurant, Member member) {
 		return Review.builder()
 				.content(dto.getContent())
 				.restaurant(restaurant)
+				.member(member)
+				.visitedAt(dto.getVisitedAt())
+				.isDelete(false)
+				.createdAt(LocalDateTime.now())
 				.build();
 	}
 
@@ -60,4 +72,6 @@ public class ReviewMapper {
 				.reviewImageUrls(imageUrls)
 				.build();
 	}
+
+
 }

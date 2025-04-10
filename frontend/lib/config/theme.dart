@@ -10,6 +10,7 @@ class AppColors {
   // 레드
   static const Color red = Color(0xFFE63946);
   static const Color orange = Color(0xFFF9813A);
+  static const Color error = Color(0xFFE63946); // 에러 색상 (레드와 동일)
 
   // 회색 계열
   static const Color background = Color(0xFFFFFFFF);
@@ -18,13 +19,21 @@ class AppColors {
   static const Color mediumGray = Color(0xFFB7B7B7); // 중간 회색
   static const Color darkGray = Color(0xFF434343); // 진한 회색
 
-// 공지사항 메모 색상
-static const Color noticeMemoYellow = Color(0xFFFFFDE7); // Colors.yellow.shade100 
-static const Color noticeMemoRed = Color(0xFFFCE4EC);    // Colors.pink.shade100
-static const Color noticeMemoBlue = Color(0xFFE3F2FD);   // Colors.blue.shade100
-static const Color noticeMemoGreen = Color(0xFFE8F5E9);  // Colors.green.shade100
-static const Color noticeMemoOrange = Color(0xFFFFF3E0); // Colors.orange.shade100
-static const Color noticeMemoViolet = Color(0xFFF3E5F5); // Colors.purple.shade100
+  // 공지사항 메모 색상
+  static const Color noticeMemoYellow = Color(
+    0xFFFFFDE7,
+  ); // Colors.yellow.shade100
+  static const Color noticeMemoRed = Color(0xFFFCE4EC); // Colors.pink.shade100
+  static const Color noticeMemoBlue = Color(0xFFE3F2FD); // Colors.blue.shade100
+  static const Color noticeMemoGreen = Color(
+    0xFFE8F5E9,
+  ); // Colors.green.shade100
+  static const Color noticeMemoOrange = Color(
+    0xFFFFF3E0,
+  ); // Colors.orange.shade100
+  static const Color noticeMemoViolet = Color(
+    0xFFF3E5F5,
+  ); // Colors.purple.shade100
 }
 
 // 기본 텍스트 스타일

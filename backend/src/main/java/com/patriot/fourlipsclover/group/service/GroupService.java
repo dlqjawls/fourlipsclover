@@ -211,10 +211,10 @@ public class GroupService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GroupNotFoundException("그룹을 찾을 수 없습니다. id=" + groupId));
 
-        boolean isMember = groupMemberRepository.existsByGroup_GroupIdAndMember_MemberId(groupId, loggedInMemberId);
-        if (!isMember) {
-            throw new UnauthorizedAccessException("그룹에 속한 사용자만 접근할 수 있습니다.");
-        }
+//        boolean isMember = groupMemberRepository.existsByGroup_GroupIdAndMember_MemberId(groupId, loggedInMemberId);
+//        if (!isMember) {
+//            throw new UnauthorizedAccessException("그룹에 속한 사용자만 접근할 수 있습니다.");
+//        }
 
         List<GroupMember> groupMembers = groupMemberRepository.findByGroup_GroupId(groupId);
         List<Member> members = groupMembers.stream()
@@ -306,6 +306,24 @@ public class GroupService {
             guideRequestForm.setGroup(newGroup);
             guideRequestFormRepository.save(guideRequestForm);
         }
+    }
+
+    // groupId로 특정 그룹에 속한 멤버들의 ID를 반환
+    public List<Long> getMemberIdsByGroupId(Integer groupId, Long loggedInMemberId) {
+        List<GroupMember> groupMembers = groupMemberRepository.findByGroup_GroupId(groupId);
+
+
+        // 로그인한 사용자가 속한 그룹에 존재하지 않으면 예외 처리
+        boolean isMemberOfGroup = groupMembers.stream()
+                .anyMatch(groupMember -> groupMember.getId().getMemberId().equals(loggedInMemberId));
+        if (!isMemberOfGroup) {
+            throw new MemberNotFoundException("로그인한 사용자가 해당 그룹에 속하지 않습니다.");
+        }
+
+        // 멤버들의 memberId만 반환
+        return groupMembers.stream()
+                .map(groupMember -> groupMember.getId().getMemberId())
+                .collect(Collectors.toList());
     }
 
 }

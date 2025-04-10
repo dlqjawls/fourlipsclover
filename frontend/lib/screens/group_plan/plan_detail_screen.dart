@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/group/group_model.dart';
 import '../../models/plan/plan_model.dart';
 import '../../models/plan/plan_detail_model.dart';
+import '../../providers/group_provider.dart';
 import '../../providers/plan_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../config/theme.dart';
 import '../../widgets/clover_loading_spinner.dart';
+import '../../widgets/toast_bar.dart';
 import 'plan_widgets/plan_members_bar.dart';
-import 'plan_widgets/plan_notice_board.dart';
-import 'plan_widgets/timeline_plan_schedule_view.dart';
-import 'plan_widgets/plan_settlement_view.dart';
-import 'bottomsheet/plan_member_management_sheet.dart';
+import 'plan_widgets/notice/plan_notice_board.dart';
+import 'plan_widgets/schedule/timeline_plan_schedule_view.dart';
+import 'plan_widgets/settlement/plan_settlement_view.dart';
+import 'bottomsheet/plan/plan_member_management_sheet.dart';
+import '../../config/theme.dart';
 
 class PlanDetailScreen extends StatefulWidget {
   final Plan plan;
@@ -80,9 +84,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
           _isLoading = false;
         });
         // 오류 메시지 표시
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('계획 상세 정보를 불러오는데 실패했습니다: $e')));
+        ToastBar.clover('계획 상세정보 불러오기 실패');
       }
     }
   }
@@ -92,18 +94,18 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     if (userProvider.userProfile != null) {
       try {
-        return int.parse(userProvider.userProfile!.userId);
+        return userProvider.userProfile!.memberId;
       } catch (e) {
         debugPrint('userId를 정수로 변환하는 중 오류: $e');
       }
     }
     return 0; // 기본값
   }
-  
+
   // 멤버 관리 바텀시트 표시
   void _showMemberManagementSheet() {
     if (_planDetail == null) return;
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true, // 전체 화면 크기로 확장 가능
@@ -122,11 +124,230 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
       }
     });
   }
-  
+
   // 사용자가 총무인지 확인
   bool _isUserTreasurer() {
     final myUserId = _getMyUserId();
-    return myUserId == _currentPlan.treasurerId;
+    return myUserId == _planDetail?.treasurerId;
+  }
+
+  // 총무 위임 다이얼로그
+  void _showTransferTreasurerDialog() {
+    if (_planDetail == null) return;
+
+    final myUserId = _getMyUserId();
+    // 다른 멤버들 (현재 사용자 제외)
+    final otherMembers =
+        _planDetail!.members
+            .where((member) => member.memberId != myUserId)
+            .toList();
+
+    if (otherMembers.isEmpty) {
+      ToastBar.clover('다른 멤버가 없어 총무권한 이전 실패');
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('총무 위임'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: otherMembers.length,
+              itemBuilder: (context, index) {
+                final member = otherMembers[index];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.primary,
+                    backgroundImage:
+                        member.profileUrl != null
+                            ? NetworkImage(member.profileUrl!)
+                            : null,
+                    child:
+                        member.profileUrl == null
+                            ? Text(member.nickname.substring(0, 1))
+                            : null,
+                  ),
+                  title: Text(member.nickname),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _transferTreasurer(member.memberId.toInt());
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey, // 취소 버튼은 회색으로
+              ),
+              child: const Text('취소'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 총무 위임 실행
+  Future<void> _transferTreasurer(int newTreasurerId) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final planProvider = Provider.of<PlanProvider>(context, listen: false);
+
+      await planProvider.editTreasurer(
+        groupId: widget.groupId,
+        planId: _currentPlan.planId,
+        newTreasurerId: newTreasurerId,
+      );
+
+      // 성공 메시지 표시
+      if (mounted) {
+        ToastBar.clover('총무 권한 이전 완료');
+
+        // 계획 정보 다시 로드
+        _loadPlanDetail();
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastBar.clover('총무 권한 이전 실패');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // 계획 나가기 확인 다이얼로그
+  void _showLeavePlanDialog() {
+    final myUserId = _getMyUserId();
+    final isTreasurer = myUserId == _planDetail?.treasurerId;
+    final planProvider = Provider.of<PlanProvider>(context, listen: false);
+    final memberCount = planProvider.getPlanMemberCount(_currentPlan.planId);
+
+    String message;
+
+    if (isTreasurer && memberCount > 1) {
+      // 총무이고 다른 멤버가 있는 경우
+      message = '총무는 먼저 권한을 다른 멤버에게 넘긴 후 계획에서 나갈 수 있습니다. 총무 권한을 넘기시겠습니까?';
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('권한 이전 필요'),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.mediumGray,
+                ),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _showTransferTreasurerDialog();
+                },
+                style: TextButton.styleFrom(foregroundColor: AppColors.red),
+                child: const Text('권한 넘기기'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      // 일반 멤버이거나 총무이지만 혼자인 경우
+      message =
+          isTreasurer && memberCount == 1
+              ? '당신은 이 계획의. 마지막 멤버입니다. 나가시면 계획이 삭제됩니다. 정말 나가시겠습니까?'
+              : '계획에서 나가시겠습니까? 이 작업은 취소할 수 없습니다.';
+
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('계획 나가기'),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.mediumGray,
+                ),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _leavePlan();
+                },
+                style: TextButton.styleFrom(foregroundColor: AppColors.red),
+                child: const Text('나가기'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  // 계획 나가기 실행
+  Future<void> _leavePlan() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final planProvider = Provider.of<PlanProvider>(context, listen: false);
+      final groupProvider = Provider.of<GroupProvider>(context, listen: false);
+
+      await planProvider.leavePlan(widget.groupId, _currentPlan.planId);
+
+      // 계획 화면 종료하고 그룹 상세 화면으로 돌아가기
+      if (mounted) {
+        ToastBar.clover('계획에서 나갔습니다.');
+
+        // groupId를 사용하여 다시 Group 객체 가져오기
+        Group? group;
+        try {
+          group = groupProvider.groups.firstWhere(
+            (g) => g.groupId == widget.groupId,
+          );
+        } catch (e) {
+          // 그룹을 찾지 못한 경우
+          group = null;
+        }
+
+        if (group != null) {
+          // 모든 이전 화면을 제거하고 GroupDetailScreen 다시 로드
+          Navigator.of(
+            context,
+          ).pushReplacementNamed('/group_detail', arguments: {'group': group});
+        } else {
+          // 그룹을 찾을 수 없으면 그냥 이전 화면으로 돌아감
+          Navigator.of(context).pop(true);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ToastBar.clover('계획 나가기 실패');
+      }
+    }
   }
 
   @override
@@ -147,6 +368,57 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
         ),
         centerTitle: true,
         elevation: 0,
+        actions: [
+          // 더보기 메뉴 추가
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'transfer_treasurer') {
+                _showTransferTreasurerDialog();
+              } else if (value == 'leave_plan') {
+                _showLeavePlanDialog();
+              }
+            },
+            itemBuilder: (context) {
+              final myUserId = _getMyUserId();
+              final isTreasurer = myUserId == _planDetail?.treasurerId;
+
+              // 총무인 경우와 아닌 경우 메뉴 아이템을 다르게 구성
+              List<PopupMenuItem<String>> items = [];
+
+              if (isTreasurer) {
+                // 총무인 경우 '총무 위임' 메뉴 추가
+                items.add(
+                  const PopupMenuItem<String>(
+                    value: 'transfer_treasurer',
+                    child: Row(
+                      children: [
+                        Icon(Icons.swap_horiz, color: AppColors.primary),
+                        SizedBox(width: 8),
+                        Text('총무 위임'),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              // 모든 사용자에게 '계획 나가기' 메뉴 표시
+              items.add(
+                PopupMenuItem<String>(
+                  value: 'leave_plan',
+                  child: Row(
+                    children: [
+                      Icon(Icons.exit_to_app, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('계획 나가기', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              );
+
+              return items;
+            },
+          ),
+        ],
       ),
       body: LoadingOverlay(
         isLoading: _isLoading || isProviderLoading,
@@ -165,7 +437,10 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       isExpanded: _isMembersBarExpanded,
                       onToggle: _toggleMembersBar,
                       // 총무만 멤버 추가 가능하도록 설정
-                      onAddMember: _isUserTreasurer() ? _showMemberManagementSheet : null,
+                      onAddMember:
+                          _isUserTreasurer()
+                              ? _showMemberManagementSheet
+                              : null,
                     ),
 
                     // 상단 탭 버튼

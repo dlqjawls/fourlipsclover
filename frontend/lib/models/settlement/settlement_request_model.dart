@@ -1,10 +1,5 @@
 // lib/models/settlement/settlement_request_model.dart
-
-enum TransactionStatus {
-  PENDING,
-  COMPLETED,
-  CANCELLED
-}
+import 'transaction_types.dart';
 
 class SettlementRequest {
   final int settlementId;
@@ -26,9 +21,10 @@ class SettlementRequest {
       settlementId: json['settlementId'],
       planTitle: json['planTitle'],
       treasurer: TreasurerInfo.fromJson(json['treasurer']),
-      transactions: (json['settlementTransactionResponses'] as List)
-          .map((transaction) => SettlementTransaction.fromJson(transaction))
-          .toList(),
+      transactions:
+          (json['settlementTransactionResponses'] as List)
+              .map((transaction) => SettlementTransaction.fromJson(transaction))
+              .toList(),
       requestedDate: DateTime.parse(json['requestedDate']),
     );
   }
@@ -92,8 +88,9 @@ class SettlementTransaction {
       cost: json['cost'],
       payee: MemberInfo.fromJson(json['payee']),
       payer: MemberInfo.fromJson(json['payer']),
-      transactionStatus: TransactionStatus.values
-          .firstWhere((e) => e.toString().split('.').last == json['transactionStatus']),
+      transactionStatus: TransactionStatus.values.firstWhere(
+        (e) => e.toString().split('.').last == json['transactionStatus'],
+      ),
       createdAt: DateTime.parse(json['createdAt']),
       sentAt: json['sentAt'] != null ? DateTime.parse(json['sentAt']) : null,
     );

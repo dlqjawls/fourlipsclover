@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/widgets/clover_loading_spinner.dart';
 import '../../config/theme.dart';
 import '../../models/review_model.dart';
-import '../review/review_detail.dart';
-import '../review/review_write.dart';
 import '../../services/review_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../../providers/review_provider.dart';
+import 'package:provider/provider.dart';
+import '../../providers/app_provider.dart';
+import '../../providers/user_provider.dart';
+import 'package:frontend/utils/review_utils.dart';
+import '../review/widgets/review_options_modal.dart';
+import 'review_photo_gallery.dart';
+import '../../widgets/toast_bar.dart';
+
 
 class ReviewList extends StatefulWidget {
   final String restaurantId;
@@ -23,122 +28,127 @@ class ReviewList extends StatefulWidget {
 }
 
 class _ReviewListState extends State<ReviewList> {
-  late Future<List<Review>> reviewData;
+  Future<List<Review>>? reviewData;
+  final Set<String> expandedReviewIds = {};
   String? accessToken;
   int memberId = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadAuthInfo();
-    _fetchReviews();
-  }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final appProvider = Provider.of<AppProvider>(context, listen: false);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
 
-  Future<void> _loadAuthInfo() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userIdStr = prefs.getString('userId');
-    final parsedId = int.tryParse(userIdStr ?? '');
-    setState(() {
-      accessToken = prefs.getString("jwtToken");
-      memberId = parsedId ?? 0;
-    });
-  }
+      accessToken = appProvider.jwtToken;
+      memberId = userProvider.userProfile?.memberId ?? 0;
 
-  void _fetchReviews() {
-    setState(() {
-      reviewData = ReviewService.fetchReviews(widget.restaurantId).then((reviews) {
-        reviews.sort((a, b) => b.date.compareTo(a.date)); // 최신순 정렬
-        return reviews;
+      setState(() {
+        reviewData = ReviewService.fetchReviews(
+          widget.restaurantId,
+          accessToken: accessToken,
+        ).then((reviews) {
+          reviews.sort((a, b) => b.date.compareTo(a.date));
+          Provider.of<ReviewProvider>(context, listen: false).setReviews(reviews);
+          return reviews;
+        });
       });
     });
   }
 
-  Future<void> _toggleLike(Review review, String likeStatus) async {
-    if (review.memberId == memberId) return;
+
+  void _fetchReviews() {
+    final appProvider = Provider.of<AppProvider>(context, listen: false);
+    final token = appProvider.jwtToken;
+
+    reviewData = ReviewService.fetchReviews(
+      widget.restaurantId,
+      accessToken: token,
+    ).then((reviews) {
+      reviews.sort((a, b) => b.date.compareTo(a.date));
+      Provider.of<ReviewProvider>(context, listen: false).setReviews(reviews);
+      return reviews;
+    });
+  }
+
+  void _toggleExpanded(String reviewId) {
+    setState(() {
+      if (expandedReviewIds.contains(reviewId)) {
+        expandedReviewIds.remove(reviewId);
+      } else {
+        expandedReviewIds.add(reviewId);
+      }
+    });
+  }
+
+  Future<void> _toggleLike(String reviewId, String likeStatus) async {
+    final provider = Provider.of<ReviewProvider>(context, listen: false);
+    final review = provider.getReview(reviewId);
+
+    if (review == null) return;
+
+    if (review.memberId == memberId) {
+      ToastBar.clover("다른 이용자의 리뷰에 반응을 남겨주세요.");
+      return;
+    }
 
     try {
-      final message = await ReviewService.toggleLikeStatus(
+      await ReviewService.toggleLikeStatus(
         reviewId: int.parse(review.id),
         memberId: memberId,
         likeStatus: likeStatus,
         accessToken: accessToken!,
       );
 
-      setState(() {
-        if (likeStatus == "LIKE") {
-          review.isLiked = !review.isLiked;
-          review.likes += review.isLiked ? 1 : -1;
-          if (review.isDisliked) {
-            review.isDisliked = false;
-            review.dislikes -= 1;
-          }
-        } else {
-          review.isDisliked = !review.isDisliked;
-          review.dislikes += review.isDisliked ? 1 : -1;
-          if (review.isLiked) {
-            review.isLiked = false;
-            review.likes -= 1;
-          }
-        }
-      });
+      provider.toggleLike(reviewId, likeStatus);
     } catch (e) {
       print("❌ 좋아요/싫어요 처리 오류: $e");
     }
   }
 
+
   Future<void> _onReviewWritten() async {
-    final createdReview = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ReviewWriteScreen(kakaoPlaceId: widget.restaurantId),
-      ),
+    final createdReview = await showReviewBottomSheet(
+      context: context,
+      kakaoPlaceId: widget.restaurantId,
     );
 
-    if (createdReview != null && createdReview is Review) {
-      // 리뷰 상세로 바로 이동
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ReviewDetail(
-            review: createdReview,
-            restaurantId: widget.restaurantId,
-          ),
-        ),
-      );
-
-      // 리스트도 갱신
-      await Future.delayed(const Duration(milliseconds: 300));
+    if (createdReview != null) {
+      widget.onReviewUpdated();
       _fetchReviews();
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        /// ✅ 리뷰 제목 + 작성 버튼
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 2.0),
           child: Row(
             children: [
-              Text("리뷰", style: Theme.of(context).textTheme.titleMedium),
+              Text("리뷰", style: Theme
+                  .of(context)
+                  .textTheme
+                  .titleMedium),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.add, size: 24, color: AppColors.darkGray),
+                icon: const Icon(
+                    Icons.add, size: 24, color: AppColors.darkGray),
                 onPressed: _onReviewWritten,
               ),
             ],
           ),
         ),
 
-        /// ✅ 리뷰 리스트
-        FutureBuilder<List<Review>>(
+            reviewData == null
+            ? const SizedBox.shrink() // 또는 Container()도 OK
+        : FutureBuilder<List<Review>>(
           future: reviewData,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CloverLoadingSpinner());
+              return const SizedBox.shrink();
             } else if (snapshot.hasError) {
               return Center(child: Text("에러 발생: ${snapshot.error}"));
             } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -148,100 +158,163 @@ class _ReviewListState extends State<ReviewList> {
             final reviews = snapshot.data!;
 
             return Column(
-              children: reviews.asMap().entries.map<Widget>((entry) {
+              children: reviews
+                  .asMap()
+                  .entries
+                  .map<Widget>((entry) {
                 final index = entry.key;
                 final review = entry.value;
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 12.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      InkWell(
-                        onTap: review.memberId != memberId
-                            ? null
-                            : () async {
-                          final updated = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ReviewDetail(
-                                review: review,
-                                restaurantId: widget.restaurantId,
-                              ),
-                            ),
-                          );
-
-                          if (updated == true) {
-                            _fetchReviews(); // ✅ 무조건 다시 불러오기
-                          }
-                        },
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundImage: _buildProfileImageProvider(
+                                review.profileImageUrl),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                CircleAvatar(
-                                  radius: 20,
-                                  backgroundImage: _buildProfileImageProvider(review.profileImageUrl),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(review.username, style: Theme.of(context).textTheme.bodyLarge),
-                                ),
                                 Text(
-                                  "${review.visitCount}번째 방문 | ${_formatDate(review.date)}",
-                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                  review.username,
+                                  style: Theme.of(context).textTheme.bodyLarge,
                                 ),
+                                if (review.isLocal == true)
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 2.0),
+                                        child: Text(
+                                          "현지인",
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.green[700],
+                                          ),
+                                        ),
+                                      ),
+                                      Image.asset(
+                                        'assets/images/level${review.localRank}.png',
+                                        width: 14,
+                                        height: 14,
+                                      ),
+                                    ],
+                                  ),
                               ],
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              review.content,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                            const SizedBox(height: 8),
-                            _buildReviewImage(review.imageUrl, index),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.thumb_up,
-                                    size: 18,
-                                    color: review.isLiked ? AppColors.primary : AppColors.lightGray,
-                                  ),
-                                  onPressed: review.memberId == memberId
-                                      ? null
-                                      : () => _toggleLike(review, "LIKE"),
-                                ),
-                                Text('${review.likes}', style: const TextStyle(fontSize: 12)),
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.thumb_down,
-                                    size: 18,
-                                    color: review.isDisliked ? AppColors.primary : AppColors.lightGray,
-                                  ),
-                                  onPressed: review.memberId == memberId
-                                      ? null
-                                      : () => _toggleLike(review, "DISLIKE"),
-                                ),
-                                Text('${review.dislikes}', style: const TextStyle(fontSize: 12)),
-                              ],
-                            ),
-                            if (index < reviews.length - 1)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Divider(
-                                  color: Colors.grey[300],
-                                  thickness: 0.7,
-                                  height: 16,
+                          ),
+                          Text(
+                            _formatDate(review.date),
+                            style: const TextStyle(fontSize: 12, color: AppColors.mediumGray),
+                          ),
+                          if (review.memberId == memberId)
+                            GestureDetector(
+                              onTapDown: (details) {
+                                final tapPosition = details.globalPosition;
+                                showReviewOptionsModal(
+                                  context: context,
+                                  position: tapPosition,
+                                  review: review,
+                                  kakaoPlaceId: widget.restaurantId,
+                                  onReviewUpdated: () {
+                                    widget.onReviewUpdated();
+                                    _fetchReviews();
+                                  },
+                                );
+                              },
+                              behavior: HitTestBehavior.translucent, // 중요: 패딩도 터치로 인식되게
+                              child: Padding(
+                                padding: const EdgeInsets.all(12), // 터치 범위 확대
+                                child: Icon(
+                                  Icons.more_vert,
+                                  size: 20,
+                                  color: Colors.grey[600],
                                 ),
                               ),
-                          ],
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () => _toggleExpanded(review.id),
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 4.0),
+                          child: Text(
+                            review.content,
+                            maxLines: expandedReviewIds.contains(review.id) ? null : 2,
+                            overflow: expandedReviewIds.contains(review.id) ? TextOverflow.visible : TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 14),
+                          ),
                         ),
                       ),
+                      const SizedBox(height: 10),
+                      if (review.imageUrls.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _buildReviewImage(review),
+                        const SizedBox(height: 12),
+                      ],
+                      Consumer<ReviewProvider>(
+                        builder: (context, provider, _) {
+                          final currentReview = provider.getReview(review.id);
+                          if (currentReview == null) return SizedBox.shrink();
+                          return Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  Icons.thumb_up,
+                                  size: 18,
+                                  color: currentReview.isLiked ? AppColors
+                                      .primary : AppColors.lightGray,
+                                ),
+                                onPressed: () {
+                                  if (currentReview.memberId == memberId) {
+                                    ToastBar.clover("다른 이용자의 리뷰에 반응을 남겨주세요.");
+                                  } else {
+                                    _toggleLike(currentReview.id, "LIKE");
+                                  }
+                                },
+                              ),
+                              Text('${currentReview.likes}',
+                                  style: const TextStyle(fontSize: 12)),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.thumb_down,
+                                  size: 18,
+                                  color: currentReview.isDisliked ? AppColors
+                                      .primary : AppColors.lightGray,
+                                ),
+                                onPressed: () {
+                                  if (currentReview.memberId == memberId) {
+                                    ToastBar.clover("다른 이용자의 리뷰에 반응을 남겨주세요.");
+                                  } else {
+                                    _toggleLike(currentReview.id, "DISLIKE");
+                                  }
+                                },
+                              ),
+                              Text('${currentReview.dislikes}',
+                                  style: const TextStyle(fontSize: 12)),
+                            ],
+                          );
+                        },
+                      ),
+                      if (index < reviews.length - 1)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Divider(
+                            color: Colors.grey[300],
+                            thickness: 0.7,
+                            height: 16,
+                          ),
+                        ),
                     ],
                   ),
                 );
@@ -253,10 +326,8 @@ class _ReviewListState extends State<ReviewList> {
     );
   }
 
-
   ImageProvider _buildProfileImageProvider(String? imageUrl) {
     final baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://your-api.com';
-
     if (imageUrl == null || imageUrl.isEmpty) {
       return const AssetImage('assets/default_profile.png');
     } else if (imageUrl.startsWith('http')) {
@@ -268,27 +339,76 @@ class _ReviewListState extends State<ReviewList> {
     }
   }
 
-  Widget _buildReviewImage(String? imageUrl, int index) {
-    if (imageUrl == null || imageUrl.isEmpty) {
-      return const SizedBox.shrink(); // 👉 이미지가 없으면 아무 것도 안 보임
+  Widget _buildReviewImage(Review review) {
+    final imageUrls = review.imageUrls;
+    if (imageUrls == null || imageUrls.isEmpty) {
+      return const SizedBox.shrink();
     }
 
-    return Container(
-      width: double.infinity,
-      height: 150,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        image: DecorationImage(
-          image: imageUrl.startsWith("http")
-              ? NetworkImage(imageUrl)
-              : AssetImage(imageUrl) as ImageProvider,
-          fit: BoxFit.cover,
+    final aspectRatio = 4 / 3;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ReviewPhotoGallery(
+              review: review,
+              initialIndex: 0,
+            ),
+          ),
+        );
+      },
+      child: AspectRatio(
+        aspectRatio: aspectRatio,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: imageUrls.length == 1
+              ? Image(
+            image: imageUrls.first.startsWith("http")
+                ? NetworkImage(imageUrls.first)
+                : AssetImage(imageUrls.first) as ImageProvider,
+            fit: BoxFit.cover,
+          )
+              : Stack(
+            children: [
+              PageView.builder(
+                itemCount: imageUrls.length,
+                itemBuilder: (context, pageIndex) {
+                  return Image(
+                    image: imageUrls[pageIndex].startsWith("http")
+                        ? NetworkImage(imageUrls[pageIndex])
+                        : AssetImage(imageUrls[pageIndex]) as ImageProvider,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                  );
+                },
+              ),
+              Positioned(
+                bottom: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    "1/${imageUrls.length}",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
-
-
   String _formatDate(DateTime date) {
     return "${date.month}.${date.day}";
   }

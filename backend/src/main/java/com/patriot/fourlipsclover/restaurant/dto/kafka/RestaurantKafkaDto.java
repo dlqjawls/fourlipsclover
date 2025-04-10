@@ -1,5 +1,6 @@
 package com.patriot.fourlipsclover.restaurant.dto.kafka;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,18 +14,37 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class RestaurantKafkaDto {
     // 메인 데이터
+    @JsonProperty("restaurant_id")
     private Integer restaurantId;
+
+    @JsonProperty("place_name")
     private String placeName;
+
+    @JsonProperty("address_name")
     private String addressName;
+
+    @JsonProperty("road_address_name")
     private String roadAddressName;
+
+    @JsonProperty("category_name")
     private String categoryName;
+
     private String phone;
+
+    @JsonProperty("place_url")
     private String placeUrl;
+
     private Double x;
     private Double y;
+
+    @JsonProperty("city_id")
     private Integer cityId;
+
+    @JsonProperty("food_category_id")
     private Integer foodCategoryId;
-    private String kakaoPlaceId; // Added Kakao Place ID field
+
+    @JsonProperty("kakao_place_id")
+    private String kakaoPlaceId;
 
     // CDC 메타데이터
     private String op;  // 작업 유형: c=create, u=update, d=delete
@@ -53,34 +73,72 @@ public class RestaurantKafkaDto {
 
     @Data
     public static class Before {
+        @JsonProperty("restaurant_id")
         private Integer restaurantId;
+
+        @JsonProperty("place_name")
         private String placeName;
+
+        @JsonProperty("address_name")
         private String addressName;
+
+        @JsonProperty("road_address_name")
         private String roadAddressName;
+
+        @JsonProperty("category_name")
         private String categoryName;
+
         private String phone;
+
+        @JsonProperty("place_url")
         private String placeUrl;
+
         private Double x;
         private Double y;
+
+        @JsonProperty("city_id")
         private Integer cityId;
+
+        @JsonProperty("food_category_id")
         private Integer foodCategoryId;
-        private String kakaoPlaceId; // Added Kakao Place ID field
+
+        @JsonProperty("kakao_place_id")
+        private String kakaoPlaceId;
     }
 
     @Data
     public static class After {
+        @JsonProperty("restaurant_id")
         private Integer restaurantId;
+
+        @JsonProperty("place_name")
         private String placeName;
+
+        @JsonProperty("address_name")
         private String addressName;
+
+        @JsonProperty("road_address_name")
         private String roadAddressName;
+
+        @JsonProperty("category_name")
         private String categoryName;
+
         private String phone;
+
+        @JsonProperty("place_url")
         private String placeUrl;
+
         private Double x;
         private Double y;
+
+        @JsonProperty("city_id")
         private Integer cityId;
+
+        @JsonProperty("food_category_id")
         private Integer foodCategoryId;
-        private String kakaoPlaceId; // Added Kakao Place ID field
+
+        @JsonProperty("kakao_place_id")
+        private String kakaoPlaceId;
     }
 
     /**
@@ -111,21 +169,26 @@ public class RestaurantKafkaDto {
         } else {
             // 삽입/수정의 경우, after 데이터 사용
             if (payload.getAfter() != null) {
-                dto.setRestaurantId(payload.getAfter().getRestaurantId());
-                dto.setPlaceName(payload.getAfter().getPlaceName());
-                dto.setAddressName(payload.getAfter().getAddressName());
-                dto.setRoadAddressName(payload.getAfter().getRoadAddressName());
-                dto.setCategoryName(payload.getAfter().getCategoryName());
-                dto.setPhone(payload.getAfter().getPhone());
-                dto.setPlaceUrl(payload.getAfter().getPlaceUrl());
-                dto.setX(payload.getAfter().getX());
-                dto.setY(payload.getAfter().getY());
-                dto.setCityId(payload.getAfter().getCityId());
-                dto.setFoodCategoryId(payload.getAfter().getFoodCategoryId());
-                dto.setKakaoPlaceId(payload.getAfter().getKakaoPlaceId()); // Added Kakao Place ID
+                mapAfterToDto(payload.getAfter(), dto);
             }
         }
 
         return dto;
+    }
+
+    // 별도의 메서드로 매핑 로직 분리
+    private static void mapAfterToDto(After after, RestaurantKafkaDto dto) {
+        dto.setRestaurantId(after.getRestaurantId());
+        dto.setPlaceName(after.getPlaceName());
+        dto.setAddressName(after.getAddressName());
+        dto.setRoadAddressName(after.getRoadAddressName());
+        dto.setCategoryName(after.getCategoryName());
+        dto.setPhone(after.getPhone());
+        dto.setPlaceUrl(after.getPlaceUrl());
+        dto.setX(after.getX());
+        dto.setY(after.getY());
+        dto.setCityId(after.getCityId());
+        dto.setFoodCategoryId(after.getFoodCategoryId());
+        dto.setKakaoPlaceId(after.getKakaoPlaceId());
     }
 }

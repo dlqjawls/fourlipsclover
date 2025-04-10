@@ -8,19 +8,22 @@ import '../../models/plan/plan_list_model.dart';
 import '../../providers/plan_provider.dart';
 import '../../providers/group_provider.dart';
 import '../../config/theme.dart';
-import 'group_widgets/group_calendar.dart';
+import '../../widgets/toast_bar.dart';
+import 'bottomsheet/invitation/join_request_bottom_sheet.dart';
+import 'group_widgets/calendar/group_calendar.dart';
 import 'plan_widgets/empty_plan_view.dart';
 import 'plan_widgets/plan_list_view.dart';
-import 'bottomsheet/plan_create_bottom_sheet.dart';
-import 'bottomsheet/calendar_event_bottom_sheet.dart';
+import 'bottomsheet/plan/plan_create_bottom_sheet.dart';
+import 'bottomsheet/calendar/calendar_event_bottom_sheet.dart';
 import 'group_widgets/group_members_bar.dart';
 import 'group_widgets/group_edit_dialog.dart';
 import '../../models/plan/plan_model.dart';
 import '../../providers/user_provider.dart';
 import './plan_detail_screen.dart';
 import '../../widgets/clover_loading_spinner.dart';
-import '../../services/kakao_share_service.dart';
-import './group_widgets/group_invitation_dialog.dart';
+import '../../services/kakao/kakao_share_service.dart';
+import 'group_widgets/invitation/group_invitation_dialog.dart';
+import 'group_widgets/analysis/group_expenses_analysis_view.dart';
 
 class GroupDetailScreen extends StatefulWidget {
   final Group group;
@@ -87,9 +90,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             _isLoadingDetail = false;
           });
           // 선택적으로 사용자에게 오류 메시지 표시
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('그룹 상세 정보를 불러오는데 실패했습니다.')));
+          ToastBar.clover('그룹 상세 정보 로드 실패');
         }
       }
     } catch (e) {
@@ -226,7 +227,16 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         centerTitle: true,
         elevation: 0,
         actions: [
-          // 그룹장인 경우에만 메뉴 버튼 표시
+          // 가입 요청 관리 버튼 (그룹장인 경우에만 표시)
+          if (isGroupOwner())
+            IconButton(
+              icon: const Icon(Icons.person_add, color: AppColors.primary),
+              tooltip: '가입 요청 관리',
+              onPressed: () {
+                _showJoinRequestBottomSheet();
+              },
+            ),
+          // 기존 메뉴 버튼
           if (isGroupOwner())
             PopupMenuButton<String>(
               onSelected: (value) {
@@ -321,24 +331,14 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                                     );
 
                                 if (!success && mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('카카오톡 공유에 실패했습니다'),
-                                    ),
-                                  );
+                                  ToastBar.clover('카카오톡 공유 실패');
                                 }
                               },
                             ),
                       );
                     } else {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '초대 링크 생성 실패: ${groupProvider.error}',
-                            ),
-                          ),
-                        );
+                        ToastBar.clover('초대 링크 생성 실패');
                       }
                     }
                   } catch (e) {
@@ -347,9 +347,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                     });
 
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('초대 링크 생성 중 오류 발생: $e')),
-                      );
+                      ToastBar.clover('초대 링크 생성 실패패');
                     }
                   }
                 },
@@ -375,7 +373,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 children: [
                   _buildTabButton('캘린더', 0, Icons.calendar_today),
                   _buildTabButton('여행계획', 1, Icons.list_alt),
-                  _buildTabButton('공동앨범', 2, Icons.photo_library),
+                  _buildTabButton('그룹 분석', 2, Icons.bar_chart),
                 ],
               ),
             ),
@@ -532,7 +530,23 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                               'plan': plan,
                               'groupId': _currentGroup.groupId,
                             },
-                          );
+                          ).then((result) {
+                            // 계획에서 나갔다면 해당 계획을 목록에서 즉시 제거
+                            if (result != null &&
+                                result is Map &&
+                                result['action'] == 'leave') {
+                              int planId = result['planId'];
+                              setState(() {
+                                // UI에서 즉시 제거
+                                _plans?.removeWhere(
+                                  (plan) => plan.planId == planId,
+                                );
+                              });
+
+                              // 백그라운드에서 계획 목록 다시 로드 (UI는 이미 업데이트됨)
+                              _loadPlans();
+                            }
+                          });
                         },
                         treasurerNames: _getTreasurerNames(plans),
                         memberCounts: _getMemberCounts(plans),
@@ -540,40 +554,56 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             ),
           ],
         );
-
-      case 2: // 앨범
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.photo_library,
-                size: 80,
-                color: Colors.grey.withOpacity(0.5),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '공동 앨범',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.withOpacity(0.7),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '앨범 기능이 곧 추가될 예정입니다',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.withOpacity(0.7),
-                ),
-              ),
-            ],
-          ),
-        );
+      case 2:
+        return GroupExpensesAnalysisView(groupId: _currentGroup.groupId);
 
       default:
         return Container();
+    }
+  }
+
+  // 가입 요청 바텀시트 표시
+  void _showJoinRequestBottomSheet() async {
+    // 로딩 상태 설정
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 가입 요청 목록 가져오기
+      final groupProvider = Provider.of<GroupProvider>(context, listen: false);
+      final requests = await groupProvider.fetchJoinRequestList(
+        _currentGroup.groupId,
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder:
+              (context) => JoinRequestBottomSheet(
+                groupId: _currentGroup.groupId,
+                requests: requests ?? [],
+                onRequestProcessed: () {
+                  // 요청 처리 후 그룹 상세 정보 새로고침
+                  _loadGroupDetail();
+                },
+              ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ToastBar.clover('가입 요청 목록 로드 실패');
+      }
     }
   }
 
@@ -637,6 +667,9 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.mediumGray,
+                ),
                 child: const Text('취소'),
               ),
               TextButton(
@@ -671,16 +704,12 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
         if (mounted) {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('그룹이 삭제되었습니다.')));
+          ToastBar.clover('그룹이 삭제 되었습니다.');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('그룹 삭제 중 오류 발생: $e')));
+        ToastBar.clover('그룹 삭제 실패');
       }
     } finally {
       if (mounted) {
@@ -698,7 +727,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
     if (userProvider.userProfile != null) {
       try {
-        return int.parse(userProvider.userProfile!.userId);
+        return userProvider.userProfile!.memberId;
       } catch (e) {
         debugPrint('userId를 정수로 변환하는 중 오류: $e');
       }
@@ -713,10 +742,6 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
     // 그룹 생성자 ID와 비교
     final isOwner = _currentGroup.memberId == myId;
-    debugPrint(
-      '현재 사용자 ID: $myId, 그룹장 ID: ${_currentGroup.memberId}, 그룹장 여부: $isOwner',
-    );
-
     return isOwner;
   }
 

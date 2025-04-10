@@ -16,6 +16,7 @@ public interface ExpenseMapper {
 	@Mapping(source = "expense.paymentApproval.amount.total", target = "totalPayment")
 	@Mapping(source = "expense.paymentApproval.approvedAt", target = "approvedAt")
 	@Mapping(source = "participants", target = "expenseParticipants")
+	@Mapping(source = "expense.paymentApproval.itemName", target = "itemName")
 	ExpenseResponse toDto(Expense expense, List<ExpenseParticipant> participants);
 
 

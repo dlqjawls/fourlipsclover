@@ -18,6 +18,10 @@ class Review {
   final List<String> menu;
   bool isLiked;
   bool isDisliked;
+  final List<String> imageUrls;
+  final int? totalAmount;
+  final int? visitorCount;
+
 
   Review({
     required this.id,
@@ -36,40 +40,61 @@ class Review {
     required this.menu,
     this.isLiked = false,
     this.isDisliked = false,
+    required this.imageUrls,
+    this.totalAmount,
+    this.visitorCount,
   });
 
   factory Review.fromResponse(ReviewResponse response) {
-    final baseUrl = dotenv.env['API_BASE_URL'] ?? '';
-
     final imageUrl = (response.reviewImageUrls.isNotEmpty)
         ? response.reviewImageUrls.first
         : null;
 
     final profileImageUrl = response.reviewer?.profileImageUrl;
 
-    print('📸 리뷰 이미지 URL: $imageUrl');
-    print('👤 작성자: ${response.reviewer?.nickname}, 리뷰 내용: ${response.content}');
-    print('🧑‍💼 프로필 이미지 URL: $profileImageUrl');
+    // 필수 값 없으면 null 반환 (리뷰 무시)
+    if (response.reviewId == null || response.reviewer == null || response.restaurant == null) {
+      print("⚠️ 필수 데이터 누락으로 리뷰 제외: $response");
+      throw Exception("리뷰 필수 데이터 누락");
+    }
+
+    String normalizeUrl(String url) {
+      if (url.startsWith('http')) return url;
+      return 'http://43.203.123.220:9000/review-images/$url';
+    }
+
+    int parseLocalGrade(String? grade) {
+      switch (grade?.toUpperCase()) {
+        case 'ONE': return 1;
+        case 'TWO': return 2;
+        case 'THREE': return 3;
+        case 'FOUR': return 4;
+        default: return 0;
+      }
+    }
 
     return Review(
-      id: response.reviewId?.toString() ?? '',
-      restaurantId: response.restaurant?.restaurantId?.toString() ?? '',
-      memberId: response.reviewer?.memberId ?? 0,
-      username: response.reviewer?.nickname ?? '익명',
-      content: response.content,
-      imageUrl: imageUrl,
-      profileImageUrl: profileImageUrl ?? 'assets/default_profile.png',
-      visitCount: 1,
-      isLocal: false,
-      localRank: 0,
-      likes: response.likedCount,
-      dislikes: response.dislikedCount,
-      date: response.visitedAt ?? DateTime.now(),
-      menu: [],
-      isLiked: false,
-      isDisliked: false,
+    id: response.reviewId.toString(),
+    restaurantId: response.restaurant!.kakaoPlaceId,
+    memberId: response.reviewer!.memberId,
+    username: response.reviewer!.nickname ?? '익명',
+    content: response.content,
+    imageUrl: imageUrl,
+    profileImageUrl: profileImageUrl ?? 'assets/default_profile.png',
+    visitCount: 1,
+    isLocal: response.isLocal ?? false,
+    localRank: parseLocalGrade(response.localGrade),
+    likes: response.likedCount,
+    dislikes: response.dislikedCount,
+    date: response.visitedAt ?? DateTime.now(),
+    menu: [],
+    isLiked: response.userLiked ?? false,
+    isDisliked: response.userDisliked ?? false,
+    imageUrls: response.reviewImageUrls.map((url) => normalizeUrl(url)).toList(),
     );
   }
+
+
 
   factory Review.fromJson(Map<String, dynamic> json) {
     return Review(
@@ -91,6 +116,7 @@ class Review {
       menu: (json['menu'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       isLiked: json['is_liked'] ?? false,
       isDisliked: json['is_disliked'] ?? false,
+      imageUrls: List<String>.from(json['image_urls'] ?? []),
     );
   }
 
@@ -112,6 +138,7 @@ class Review {
       'menu': menu,
       'is_liked': isLiked,
       'is_disliked': isDisliked,
+      'image_urls': imageUrls,
     };
   }
 }

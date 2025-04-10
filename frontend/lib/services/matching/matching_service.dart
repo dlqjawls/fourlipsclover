@@ -1,10 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/matching/matching_main_model.dart';
 import '../../models/matching/matching_detail.dart';
+import 'package:frontend/config/api_config.dart';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../auth_helper.dart';
 
 class MatchingService {
   static final MatchingService _instance = MatchingService._internal();
@@ -15,7 +19,7 @@ class MatchingService {
 
   MatchingService._internal();
 
-  final String baseUrl = dotenv.env['API_BASE_URL'] ?? '';
+  final String baseUrl = ApiConfig.baseUrl;
 
   static Future<void> initializeMatches() async {
     try {
@@ -42,9 +46,9 @@ class MatchingService {
     }
   }
 
-  Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('jwtToken');
+  // 토큰 가져오기
+  static Future<String?> _getToken() async {
+    return await AuthHelper.getJwtToken();
   }
 
   Future<Map<String, int>> getMatchingCounts() async {
@@ -268,7 +272,7 @@ class MatchingService {
       debugPrint('매칭 ID: $matchId');
 
       final response = await http.put(
-        Uri.parse('$baseUrl/api/match/guide/confirmed'),
+        Uri.parse('$baseUrl/api/match/guide/confirm/$matchId'),
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           'Authorization': 'Bearer $token',
@@ -283,6 +287,31 @@ class MatchingService {
     } catch (e) {
       debugPrint('매칭 확인 중 오류: $e');
       throw Exception('매칭 확인 실패: $e');
+    }
+  }
+
+  Future<void> rejectMatch(int matchId) async {
+    try {
+      final token = await _getToken();
+      debugPrint('=== 매칭 거절 요청 시작 ===');
+      debugPrint('매칭 ID: $matchId');
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/match/guide/reject/$matchId'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('매칭 거절 성공');
+      } else {
+        throw Exception('매칭 거절 실패 (${response.statusCode})');
+      }
+    } catch (e) {
+      debugPrint('매칭 거절 중 오류: $e');
+      throw Exception('매칭 거절 실패: $e');
     }
   }
 

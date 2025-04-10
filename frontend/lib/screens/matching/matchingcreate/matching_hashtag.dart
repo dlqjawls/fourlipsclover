@@ -6,6 +6,7 @@ import 'package:frontend/models/matching/matching_tag_model.dart';
 import 'package:frontend/screens/matching/matchingcreate/matching_location.dart';
 import 'package:frontend/services/matching/tag_service.dart';
 import 'package:frontend/screens/matching/matchingcreate/styles/matching_styles.dart';
+import 'package:frontend/widgets/loading_overlay.dart';
 
 class MatchingCreateHashtagScreen extends StatefulWidget {
   const MatchingCreateHashtagScreen({Key? key}) : super(key: key);
@@ -114,41 +115,44 @@ class _MatchingCreateHashtagScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) return _buildLoadingScreen();
     if (isNetworkError) return _buildErrorScreen();
 
     return Scaffold(
       appBar: MatchingStyles.buildAppBar(context, '선호하는 맛집 스타일'),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            MatchingStyles.buildProgressIndicator(0.3),
-            const SizedBox(height: 12),
-            _buildCategories(),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Text(
-                '최대 3개 선택 가능 (선택됨: ${selectedHashtags.length})',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.mediumGray,
+      body: LoadingOverlay(
+        isLoading: isLoading,
+        overlayColor: Colors.white.withOpacity(0.7),
+        minDisplayTime: const Duration(milliseconds: 1200),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              MatchingStyles.buildProgressIndicator(0.3),
+              const SizedBox(height: 12),
+              _buildCategories(),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                child: Text(
+                  '최대 3개 선택 가능 (선택됨: ${selectedHashtags.length})',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.darkGray,
+                  ),
                 ),
               ),
-            ),
-            if (selectedHashtags.isNotEmpty) _buildSelectedTagsList(),
-            if (selectedCategory != null) _buildTagsForCategory(),
-            const SizedBox(height: 80),
-          ],
+              if (selectedHashtags.isNotEmpty) _buildSelectedTagsList(),
+              if (selectedCategory != null) _buildTagsForCategory(),
+              const SizedBox(height: 80),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: _buildNextButton(),
     );
   }
-
-  Widget _buildLoadingScreen() => const Scaffold(
-    body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
-  );
 
   Widget _buildErrorScreen() => Scaffold(
     body: Center(
@@ -333,7 +337,7 @@ class _MatchingCreateHashtagScreenState
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: AppColors.mediumGray,
+                          color: AppColors.darkGray,
                         ),
                       ),
                     ),

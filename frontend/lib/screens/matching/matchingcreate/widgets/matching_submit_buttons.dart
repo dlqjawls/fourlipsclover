@@ -3,6 +3,7 @@ import 'package:frontend/config/theme.dart';
 import 'package:frontend/models/group/group_model.dart';
 import 'package:frontend/screens/matching/matchingcreate/widgets/bottomsheet_widget.dart';
 import 'package:frontend/services/matching/matching_create.dart';
+import 'package:frontend/widgets/clover_loading_spinner.dart';
 
 class MatchingSubmitButtons extends StatefulWidget {
   final Group? selectedGroup;
@@ -73,10 +74,21 @@ class _MatchingSubmitButtonsState extends State<MatchingSubmitButtons> {
       return;
     }
 
+    // 그룹 확인
+    if (widget.selectedGroup == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('그룹을 선택해주세요.')));
+      return;
+    }
+
     debugPrint('가이드 정보: ${widget.guide}');
     final guideMemberId = widget.guide['memberId'];
     debugPrint('사용할 가이드 ID: $guideMemberId');
     debugPrint('전송할 요청사항: ${widget.requestController.text}');
+    debugPrint(
+      '선택된 그룹: ${widget.selectedGroup!.name} (ID: ${widget.selectedGroup!.groupId})',
+    );
 
     setState(() => _isLoading = true);
 
@@ -85,6 +97,7 @@ class _MatchingSubmitButtonsState extends State<MatchingSubmitButtons> {
         tagIds: widget.tagIds,
         regionId: widget.regionId,
         guideMemberId: guideMemberId, // memberId 전달
+        groupId: widget.selectedGroup!.groupId, // 그룹 ID 전달
         transportation: widget.selectedTransport ?? '',
         foodPreference: widget.selectedFoodCategory ?? '',
         tastePreference: widget.selectedTaste ?? '',
@@ -92,7 +105,7 @@ class _MatchingSubmitButtonsState extends State<MatchingSubmitButtons> {
         startDate: widget.startDate!,
         endDate: widget.endDate!,
       );
-      
+
       if (!mounted) return;
 
       showModalBottomSheet(
@@ -177,12 +190,7 @@ class _MatchingSubmitButtonsState extends State<MatchingSubmitButtons> {
                       ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
+                        child: CloverLoadingSpinner(size: 20),
                       )
                       : const Text(
                         '신청하기',

@@ -5,7 +5,10 @@ import 'package:frontend/screens/home/home_screen.dart';
 import 'package:frontend/screens/auth/login_screen.dart';
 import 'package:frontend/screens/common/base_screen.dart';
 import 'package:frontend/screens/user/user_screen.dart';
-import 'package:frontend/screens/user/user_edit.dart';
+import 'package:frontend/screens/chat/chat_list_screen.dart'; // 채팅 목록 화면 import
+import 'package:frontend/screens/splash/splash_screen.dart'; // 스플래시 화면 import
+import 'package:frontend/screens/onboarding/onboarding_screen.dart'; // 온보딩 화면 import
+
 import 'package:frontend/screens/user/user_profile.dart';
 // import 'package:frontend/screens/user/my_consumption_pattern_screen.dart'; // MyConsumptionPatternScreen import 추가
 import 'package:frontend/screens/group_plan/group_detail_screen.dart';
@@ -15,20 +18,21 @@ import 'package:frontend/models/plan/plan_model.dart';
 import 'package:frontend/screens/map/full_map_screen.dart';
 import 'package:frontend/screens/payment/kakao_pay_screen.dart';
 import '../screens/group_plan/group_invitation_screen.dart';
+import '../screens/group_plan/settlement_situation_screen.dart';
 import '../screens/payment/kakao_pay_official_screen.dart';
 
 class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
+    '/splash': (context) => const SplashScreen(), // 스플래시 화면
+    '/onboarding': (context) => const OnboardingScreen(), // 온보딩 화면
     '/journal': (context) => const BaseScreen(),
     '/ai_plan': (context) => const BaseScreen(),
     '/group': (context) => const BaseScreen(),
     '/login': (context) => const LoginScreen(),
     '/user': (context) => const UserScreen(),
     '/home': (context) => const BaseScreen(),
-    '/user_edit': (context) {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      return UserEditScreen(profile: userProvider.userProfile!);
-    },
+    '/chat': (context) => const ChatListScreen(), // 채팅 목록 화면 경로 추가
+
     '/user_profile': (context) => const MyConsumptionPatternScreen(),
 
     '/kakaopay_test': (context) => KakaoPayScreen(),
@@ -68,6 +72,14 @@ class AppRoutes {
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>;
       final token = args['token'] as String;
       return GroupInvitationScreen(token: token);
+    },
+
+    '/settlement/situation': (context) {
+      final args =
+          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      final planId = args['planId'] as int;
+      final planTitle = args['planTitle'] as String;
+      return SettlementSituationScreen(planId: planId, planTitle: planTitle);
     },
 
     // 앱의 경로를 여기에 등록

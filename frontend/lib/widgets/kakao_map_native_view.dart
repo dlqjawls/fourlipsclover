@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/map_provider.dart';
-import '../services/kakao_map_service.dart';
+import '../services/kakao/kakao_map_service.dart';
 import '../utils/map_utils.dart';
 
 class KakaoMapNativeView extends StatefulWidget {

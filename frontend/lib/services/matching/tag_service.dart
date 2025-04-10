@@ -1,17 +1,10 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart';
 import '../../models/matching/matching_tag_model.dart';
-
+import 'package:frontend/config/api_config.dart';
 class TagService {
-   String get baseUrl {
-    final url = dotenv.env['API_BASE_URL'];
-    if (url == null) {
-      throw Exception('API_BASE_URL이 .env 파일에 정의되지 않았습니다.');
-    }
-    return url;
-  }
+  final String baseUrl = ApiConfig.baseUrl;
   Future<List<Tag>> getTags() async {
     try {
       final response = await http.get(
@@ -29,7 +22,7 @@ class TagService {
         List<dynamic> jsonData = json.decode(decodedBody);
         debugPrint('Tag API Response: $jsonData'); // 디버깅용
         return jsonData.map((json) => Tag.fromJson(json)).toList();
-      } 
+      }
       throw Exception('태그 로드에 실패했습니다. 상태 코드: ${response.statusCode}');
     } catch (e) {
       debugPrint('Tag API Error: $e'); // 디버깅용

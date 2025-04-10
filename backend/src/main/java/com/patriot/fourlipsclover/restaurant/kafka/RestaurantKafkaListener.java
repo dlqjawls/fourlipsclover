@@ -22,7 +22,7 @@ public class RestaurantKafkaListener {
     public void listen(ConsumerRecord<String, String> record) {
         try {
             String message = record.value();
-            log.info("Received message from Kafka: {}", message);
+            log.info("Full Kafka Message: {}", message);
 
             // 메시지를 먼저 JsonNode로 파싱
             JsonNode rootNode = objectMapper.readTree(message);
@@ -35,13 +35,10 @@ public class RestaurantKafkaListener {
             }
 
             // 작업 유형 추출
-            String operation = "r"; // 기본값
-            if (!payloadNode.path("op").isMissingNode()) {
-                operation = payloadNode.path("op").asText();
-            }
+            String operation = payloadNode.path("op").asText("r"); // 기본값 'r'
 
             JsonNode afterNode = payloadNode.path("after");
-            if (afterNode == null || afterNode.isMissingNode() || afterNode.isNull()) {
+            if (afterNode.isMissingNode() || afterNode.isNull()) {
                 log.warn("After node is missing or null in Kafka message");
                 return;
             }
@@ -52,53 +49,47 @@ public class RestaurantKafkaListener {
                 return;
             }
 
-            try {
-                // afterNode에서 필요한 필드 추출해서 DTO 생성
-                RestaurantKafkaDto restaurantDto = objectMapper.treeToValue(afterNode, RestaurantKafkaDto.class);
+            // 로그 추가: AfterNode 상세 내용 출력
+            log.info("AfterNode Details: {}", afterNode.toString());
 
-                // 작업 유형 설정
-                restaurantDto.setOp(operation);
+            RestaurantKafkaDto restaurantDto = createRestaurantDto(afterNode, operation);
 
-                // ID 필드 다시 확인
-                if (restaurantDto.getRestaurantId() == null) {
-                    restaurantDto.setRestaurantId(afterNode.path("restaurant_id").asInt());
-                }
-
-                // null 필드에 기본값 설정
-                if (restaurantDto.getPlaceName() == null) {
-                    restaurantDto.setPlaceName(""); // 빈 문자열 기본값
-                }
-
-                if (restaurantDto.getKakaoPlaceId() == null && afterNode.has("kakao_place_id")) {
-                    restaurantDto.setKakaoPlaceId(afterNode.path("kakao_place_id").asText(""));
-                }
-
-                // 서비스를 통해 처리
-                restaurantService.processKafkaMessage(restaurantDto);
-            } catch (Exception e) {
-                log.error("Failed to convert JSON to DTO: {}", e.getMessage());
-
-                // 수동으로 DTO 생성 시도
-                RestaurantKafkaDto restaurantDto = new RestaurantKafkaDto();
-                restaurantDto.setOp(operation);
-                restaurantDto.setRestaurantId(afterNode.path("restaurant_id").asInt());
-
-                // 다른 필드들도 수동으로 설정
-                if (afterNode.has("place_name")) {
-                    restaurantDto.setPlaceName(afterNode.path("place_name").asText(""));
-                }
-                if (afterNode.has("kakao_place_id")) {
-                    restaurantDto.setKakaoPlaceId(afterNode.path("kakao_place_id").asText(""));
-                }
-                if (afterNode.has("food_category_id") && !afterNode.path("food_category_id").isNull()) {
-                    restaurantDto.setFoodCategoryId(afterNode.path("food_category_id").asInt());
-                }
-
-                restaurantService.processKafkaMessage(restaurantDto);
-            }
+            // 서비스를 통해 처리
+            restaurantService.processKafkaMessage(restaurantDto);
 
         } catch (Exception e) {
             log.error("Error processing Kafka message for restaurant: {}", e.getMessage(), e);
+        }
+    }
+
+    private RestaurantKafkaDto createRestaurantDto(JsonNode afterNode, String operation) {
+        RestaurantKafkaDto restaurantDto = new RestaurantKafkaDto();
+
+        // 작업 유형 설정
+        restaurantDto.setOp(operation);
+
+        // 각 필드 안전하게 설정
+        setIfExists(afterNode, "restaurant_id", id -> restaurantDto.setRestaurantId(id.asInt()));
+        setIfExists(afterNode, "place_name", name -> restaurantDto.setPlaceName(name.asText("")));
+        setIfExists(afterNode, "address_name", addr -> restaurantDto.setAddressName(addr.asText("")));
+        setIfExists(afterNode, "road_address_name", roadAddr -> restaurantDto.setRoadAddressName(roadAddr.asText("")));
+        setIfExists(afterNode, "category_name", category -> restaurantDto.setCategoryName(category.asText("")));
+        setIfExists(afterNode, "phone", phone -> restaurantDto.setPhone(phone.asText("")));
+        setIfExists(afterNode, "place_url", url -> restaurantDto.setPlaceUrl(url.asText("")));
+        setIfExists(afterNode, "x", x -> restaurantDto.setX(x.asDouble()));
+        setIfExists(afterNode, "y", y -> restaurantDto.setY(y.asDouble()));
+        setIfExists(afterNode, "city_id", cityId -> restaurantDto.setCityId(cityId.asInt()));
+        setIfExists(afterNode, "food_category_id", foodCategoryId -> restaurantDto.setFoodCategoryId(foodCategoryId.asInt()));
+        setIfExists(afterNode, "kakao_place_id", kakaoPlaceId -> restaurantDto.setKakaoPlaceId(kakaoPlaceId.asText("")));
+
+        return restaurantDto;
+    }
+
+    // 안전한 필드 설정을 위한 제네릭 유틸리티 메서드
+    private void setIfExists(JsonNode node, String fieldName, java.util.function.Consumer<JsonNode> setter) {
+        JsonNode field = node.path(fieldName);
+        if (!field.isMissingNode() && !field.isNull()) {
+            setter.accept(field);
         }
     }
 }

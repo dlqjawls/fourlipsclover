@@ -78,6 +78,22 @@ dependencies {
     // MapStruct 의존성
     implementation 'org.mapstruct:mapstruct:1.5.5.Final'
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
+
+    // 머신러닝 라이브러리
+//    implementation 'org.apache.spark:spark-mllib_2.12:3.1.2'
+    // Weka 라이브러리
+    implementation 'nz.ac.waikato.cms.weka:weka-stable:3.8.5'
+
+    implementation 'javax.annotation:javax.annotation-api:1.3.2'
+
+    // 부하 테스트 도구
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.micrometer:micrometer-registry-prometheus'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+
+    implementation 'org.springframework.boot:spring-boot-starter-logging'
+    implementation 'org.jfree:jfreechart:1.5.3'
+
 }
 
 tasks.named('test') {

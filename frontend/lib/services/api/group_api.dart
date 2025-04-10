@@ -7,6 +7,7 @@ import '../../models/group/group_model.dart';
 import '../../models/group/group_detail_model.dart';
 import '../../models/group/group_invitation_model.dart';
 import '../../models/group/group_join_request_model.dart';
+import 'api_util.dart';
 
 /// 그룹 API 클래스
 /// 백엔드 서버와의 HTTP 통신을 담당합니다.
@@ -15,27 +16,14 @@ class GroupApi {
   static String get baseUrl => dotenv.env['API_BASE_URL'] ?? '';
   static const String apiPrefix = '/api/group';
 
-  // 인증 토큰 가져오기 (SharedPreferences에서 직접 가져오도록 수정)
+  // 인증 토큰 가져오기 (ApiUtil 사용)
   Future<String?> _getAuthToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwtToken');
-
-    // 디버깅을 위해 토큰 존재 여부 출력
-    debugPrint('토큰 존재 여부: ${token != null}');
-    if (token == null) {
-      debugPrint('경고: JWT 토큰이 SharedPreferences에 저장되어 있지 않습니다.');
-    }
-
-    return token;
+    return await ApiUtil.getJwtToken();
   }
 
-  // 토큰 유효성 검사
+  // 토큰 유효성 검사 (ApiUtil 사용)
   bool _validateToken(String? token) {
-    if (token == null || token.isEmpty) {
-      debugPrint('오류: 인증 토큰이 없습니다. 로그인이 필요합니다.');
-      return false;
-    }
-    return true;
+    return ApiUtil.validateToken(token);
   }
 
   /// 그룹 생성하기
@@ -82,7 +70,7 @@ class GroupApi {
       if (response.statusCode == 201) {
         return Group.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
       } else {
-        throw Exception( 
+        throw Exception(
           '그룹 생성에 실패했습니다: ${response.statusCode}, ${response.body}',
         );
       }
@@ -312,18 +300,30 @@ class GroupApi {
     }
 
     final url = Uri.parse('$baseUrl$apiPrefix/join-requests-list/$groupId');
-    final response = await http.get(
-      url,
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    debugPrint('가입 요청 목록 API 호출: $url');
 
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
-      return data.map((json) => GroupJoinRequest.fromJson(json)).toList();
-    } else {
-      throw Exception(
-        '가입 요청 목록 조회에 실패했습니다: ${response.statusCode}, ${response.body}',
+    try {
+      final response = await http.get(
+        url,
+        headers: {'Authorization': 'Bearer $token'},
       );
+
+      debugPrint('응답 코드: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final responseBody = utf8.decode(response.bodyBytes);
+        debugPrint('응답 데이터: $responseBody');
+
+        final List<dynamic> data = jsonDecode(responseBody);
+        return data.map((json) => GroupJoinRequest.fromJson(json)).toList();
+      } else {
+        throw Exception(
+          '가입 요청 목록 조회에 실패했습니다: ${response.statusCode}, ${response.body}',
+        );
+      }
+    } catch (e) {
+      debugPrint('가입 요청 API 호출 오류: $e');
+      rethrow;
     }
   }
 
@@ -339,7 +339,7 @@ class GroupApi {
 
     debugPrint('그룹 삭제 API 호출: groupId=$groupId');
     final url = Uri.parse('$baseUrl$apiPrefix/$groupId');
-    
+
     try {
       final response = await http.delete(
         url,

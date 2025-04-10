@@ -3,8 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../config/theme.dart';
-import '../../../screens/search_results/search_results_screen.dart';
 import '../../../providers/search_provider.dart';
+import '../../../providers/tag_provider.dart';
+import '../../../models/tag_model.dart';
+import '../../../widgets/clover_loading_spinner.dart';
 
 class HashtagSelector extends StatefulWidget {
   // 태그 선택 콜백 추가 (필요한 경우)
@@ -37,114 +39,19 @@ class _HashtagSelectorState extends State<HashtagSelector> with AutomaticKeepAli
     {'name': '작업', 'icon': Icons.laptop, 'color': Color(0xFF5E35B1)}, // 짙은 보라색
   ];
 
-  // 카테고리별 해시태그 데이터
-  final Map<String, List<String>> categoryTags = {
-    '맛': ['#매운맛', '#단맛', '#짠맛', '#고소한', '#양많이', '#담백한', '#새콤한', '#진한', '#신선한'],
-    '분위기': [
-      '#조용한',
-      '#아늑한',
-      '#활기찬',
-      '#모던한',
-      '#전통적인',
-      '#이색적인',
-      '#낭만적인',
-      '#분위기좋은',
-      '#데이트코스',
-      '#노포감성',
-      '#데이트맛집',
-      '#캐주얼한',
-      '#세련된',
-      '#편안한',
-      '#도심의여유',
-    ],
-    '서비스': [
-      '#친절한',
-      '#세심한',
-      '#빠른',
-      '#프로페셔널한',
-      '#웨이팅',
-      '#재방문많은곳',
-      '#정확한',
-      '#따뜻한',
-      '#개인맞춤형',
-    ],
-    '인테리어/공간': [
-      '#모던',
-      '#빈티지',
-      '#인더스트리얼',
-      '#심플',
-      '#감각적인',
-      '#넓은',
-      '#아담한',
-      '#프라이빗한',
-      '#오픈스페이스',
-      '#넓은매장',
-      '#사진명당',
-      '#깨끗한화장실',
-      '#뷰맛집',
-      '#세련된인테리어',
-      '#따뜻한조명',
-    ],
-    '가격/가성비': [
-      '#고급',
-      '#중간',
-      '#저렴한',
-      '#가성비좋은',
-      '#점심특선',
-      '#특가메뉴',
-      '#프리미엄',
-      '#할인이벤트',
-    ],
-    '음식종류/스타일': [
-      '#한식',
-      '#양식',
-      '#중식',
-      '#일식',
-      '#퓨전',
-      '#건강식',
-      '#채식',
-      '#해산물전문',
-      '#구워주는고기집',
-      '#인당주문',
-      '#파인다이닝',
-      '#이자카야',
-      '#무한리필',
-      '#야식',
-      '#스트리트푸드',
-    ],
-    '편의/서비스': [
-      '#주차가능',
-      '#혼밥',
-      '#단체모임',
-      '#가족과함께',
-      '#회식가능',
-      '#24시운영',
-      '#이벤트가능',
-      '#예약가능',
-      '#키즈존',
-      '#혼술',
-    ],
-    '작업': [
-      '#모각코가능',
-      '#조용한분위기',
-      '#편안한책상',
-      '#와이파이완비',
-      '#전기콘센트풍부',
-      '#작업하기좋은',
-      '#공유오피스느낌',
-      '#커피맛집',
-      '#집중력UP',
-      '#공부하기좋은',
-      '#노트북최적화',
-      '#모임에적합한',
-      '#비즈니스캐주얼',
-      '#창의적인공간',
-      '#커뮤니티활성화',
-    ],
-  };
-
   // 초기에 보여줄 카테고리 개수
   final int initialCategoryCount = 3;
+
+  @override
+  void initState() {
+    super.initState();
+    // 컴포넌트가 로드될 때 태그 데이터 불러오기
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // API에서 태그 데이터 가져오기
+      final tagProvider = Provider.of<TagProvider>(context, listen: false);
+      tagProvider.fetchTags();
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -162,24 +69,47 @@ class _HashtagSelectorState extends State<HashtagSelector> with AutomaticKeepAli
     });
   }
 
-void _handleTagSelection(String hashtag) {
-  print('HashtagSelector: 태그 선택됨 - $hashtag');
-  
-  // SearchProvider에 태그 추가
-  final searchProvider = Provider.of<SearchProvider>(context, listen: false);
-  print('HashtagSelector: 기존 태그 목록 - ${searchProvider.selectedTags}');
-  
-  // IMPORTANT: If tag is already in the list, don't add it again
-  if (!searchProvider.selectedTags.contains(hashtag)) {
-    searchProvider.addTag(hashtag);
-    print('HashtagSelector: 업데이트된 태그 목록 - ${searchProvider.selectedTags}');
+  void _handleTagSelection(TagModel tag) {
+    final tagName = '#${tag.name}';
+    print('HashtagSelector: 태그 선택됨 - $tagName, ID: ${tag.tagId}');
+    
+    // SearchProvider에 태그 추가
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    print('HashtagSelector: 기존 태그 목록 - ${searchProvider.selectedTags}');
+    
+    // 태그가 이미 목록에 있으면 추가하지 않음
+    if (!searchProvider.selectedTags.contains(tagName)) {
+      // 태그 이름과 ID를 함께 추가
+      searchProvider.addTagWithId(tagName, tag.tagId);
+      print('HashtagSelector: 업데이트된 태그 목록 - ${searchProvider.selectedTags}');
+      print('HashtagSelector: 업데이트된 태그 ID 목록 - ${searchProvider.selectedTagIds}');
+    }
+    
+    // 태그 선택 콜백이 있으면 호출
+    if (widget.onTagSelected != null) {
+      widget.onTagSelected!(tagName);
+    }
   }
-  
-  // 태그 선택 콜백이 있으면 호출
-  if (widget.onTagSelected != null) {
-    widget.onTagSelected!(hashtag);
+
+  // 하드코딩된 태그 선택 핸들러 (API 실패 시 폴백용)
+  void _handleHardcodedTagSelection(String hashtag) {
+    print('HashtagSelector: 하드코딩된 태그 선택됨 - $hashtag');
+    
+    // SearchProvider에 태그 추가
+    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
+    print('HashtagSelector: 기존 태그 목록 - ${searchProvider.selectedTags}');
+    
+    // 태그가 이미 목록에 있으면 추가하지 않음
+    if (!searchProvider.selectedTags.contains(hashtag)) {
+      searchProvider.addTag(hashtag);
+      print('HashtagSelector: 업데이트된 태그 목록 - ${searchProvider.selectedTags}');
+    }
+    
+    // 태그 선택 콜백이 있으면 호출
+    if (widget.onTagSelected != null) {
+      widget.onTagSelected!(hashtag);
+    }
   }
-}
 
   // 카테고리 아이콘 가져오기
   IconData _getCategoryIcon(String categoryName) {
@@ -203,8 +133,8 @@ void _handleTagSelection(String hashtag) {
   Widget build(BuildContext context) {
     super.build(context); // AutomaticKeepAliveClientMixin 요구사항
     
-    return Consumer<SearchProvider>(
-      builder: (context, searchProvider, child) {
+    return Consumer2<SearchProvider, TagProvider>(
+      builder: (context, searchProvider, tagProvider, child) {
         final selectedTags = searchProvider.selectedTags;
         
         return Padding(
@@ -251,7 +181,7 @@ void _handleTagSelection(String hashtag) {
                 ],
               ),
     
-              // 선택된 카테고리가 있으면 해당 카테고리의 태그 표시 (화살표 상태와 관계없이)
+              // 선택된 카테고리가 있으면 해당 카테고리의 태그 표시
               if (selectedCategory != null)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,21 +215,125 @@ void _handleTagSelection(String hashtag) {
                       ),
                     ),
     
-                    // 해당 카테고리의 태그들 표시 (이미 선택된 태그는 제외)
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: categoryTags[selectedCategory!]!
-                          .where((tag) => !selectedTags.contains(tag)) // 이미 선택된 태그 제외
-                          .map((tag) => _buildHashtagItem(tag))
-                          .toList(),
-                    ),
+                    // API 로딩 중인 경우 로딩 스피너 표시
+                    if (tagProvider.isLoading)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CloverLoadingSpinner(size: 24),
+                        ),
+                      )
+                    // API 에러가 있는 경우 에러 메시지와 하드코딩된 태그 표시
+                    else if (tagProvider.error != null)
+                      _buildHardcodedTagsSection(selectedCategory!, selectedTags)
+                    // API에서 가져온 태그 표시
+                    else if (tagProvider.tags.isNotEmpty)
+                      _buildApiTagsSection(tagProvider, selectedCategory!, selectedTags)
+                    // API 응답은 성공했으나 태그가 없는 경우 하드코딩된 태그 표시
+                    else
+                      _buildHardcodedTagsSection(selectedCategory!, selectedTags),
                   ],
                 ),
             ],
           ),
         );
       },
+    );
+  }
+
+  // API에서 가져온 태그 목록 표시 (카테고리별)
+  Widget _buildApiTagsSection(TagProvider tagProvider, String category, List<String> selectedTags) {
+    // 선택된 카테고리에 해당하는 태그만 필터링
+    final categoryTags = tagProvider.tagsByCategory[category] ?? [];
+    
+    // 이미 선택된 태그와 충돌하지 않도록 해시태그(#) 접두사를 포함해 비교
+    final filteredTags = categoryTags
+        .where((tag) => !selectedTags.contains('#${tag.name}'))
+        .toList();
+    
+    if (filteredTags.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(8.0),
+        child: Text(
+          '이 카테고리에 표시할 태그가 없습니다',
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.mediumGray,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
+    
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: filteredTags
+          .map((tag) => _buildApiTagItem(tag))
+          .toList(),
+    );
+  }
+
+  // 하드코딩된 태그 목록 표시 (API 실패 시 폴백)
+  Widget _buildHardcodedTagsSection(String category, List<String> selectedTags) {
+    // 하드코딩된 카테고리별 태그 맵
+    final Map<String, List<String>> hardcodedTags = {
+      '맛': ['#매운맛', '#단맛', '#짠맛', '#고소한', '#양많이', '#담백한', '#새콤한', '#진한', '#신선한'],
+      '분위기': [
+        '#조용한', '#아늑한', '#활기찬', '#모던한', '#전통적인', '#이색적인', '#낭만적인',
+        '#분위기좋은', '#데이트코스', '#노포감성', '#데이트맛집', '#캐주얼한', '#세련된',
+      ],
+      '서비스': [
+        '#친절한', '#세심한', '#빠른', '#프로페셔널한', '#웨이팅', '#재방문많은곳',
+        '#정확한', '#따뜻한', '#개인맞춤형',
+      ],
+      '인테리어/공간': [
+        '#모던', '#빈티지', '#인더스트리얼', '#심플', '#감각적인', '#넓은', '#아담한',
+        '#프라이빗한', '#오픈스페이스', '#넓은매장', '#사진명당', '#깨끗한화장실', '#뷰맛집',
+      ],
+      '가격/가성비': [
+        '#고급', '#중간', '#저렴한', '#가성비좋은', '#점심특선', '#특가메뉴', '#프리미엄', '#할인이벤트',
+      ],
+      '음식종류/스타일': [
+        '#한식', '#양식', '#중식', '#일식', '#퓨전', '#건강식', '#채식', '#해산물전문',
+        '#구워주는고기집', '#인당주문', '#파인다이닝', '#이자카야', '#무한리필', '#야식',
+      ],
+      '편의/서비스': [
+        '#주차가능', '#혼밥', '#단체모임', '#가족과함께', '#회식가능', '#24시운영',
+        '#이벤트가능', '#예약가능', '#키즈존', '#혼술',
+      ],
+      '작업': [
+        '#모각코가능', '#조용한분위기', '#편안한책상', '#와이파이완비', '#전기콘센트풍부',
+        '#작업하기좋은', '#공유오피스느낌', '#커피맛집', '#집중력UP', '#공부하기좋은',
+      ],
+    };
+    
+    // 현재 카테고리의 태그 목록 가져오기 (없으면 빈 목록)
+    final tags = hardcodedTags[category] ?? [];
+    
+    // 이미 선택된 태그 제외
+    final filteredTags = tags.where((tag) => !selectedTags.contains(tag)).toList();
+    
+    if (filteredTags.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(8.0),
+        child: Text(
+          '더 이상 선택할 수 있는 태그가 없습니다',
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.mediumGray,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
+    
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: filteredTags
+          .map((tag) => _buildHardcodedTagItem(tag))
+          .toList(),
     );
   }
 
@@ -341,9 +375,31 @@ void _handleTagSelection(String hashtag) {
     );
   }
 
-  Widget _buildHashtagItem(String hashtag) {
+  Widget _buildApiTagItem(TagModel tag) {
     return GestureDetector(
-      onTap: () => _handleTagSelection(hashtag),
+      onTap: () => _handleTagSelection(tag),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.lightGray),
+        ),
+        child: Text(
+          '#${tag.name}',
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppColors.darkGray,
+            fontWeight: FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHardcodedTagItem(String hashtag) {
+    return GestureDetector(
+      onTap: () => _handleHardcodedTagSelection(hashtag),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
@@ -353,7 +409,7 @@ void _handleTagSelection(String hashtag) {
         ),
         child: Text(
           hashtag,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
             color: AppColors.darkGray,
             fontWeight: FontWeight.normal,

@@ -19,6 +19,7 @@ class _DataVizPageState extends State<DataVizPage> {
   Map<String, dynamic>? categoryData;
   bool isLoading = true;
   String errorMessage = '';
+  int touchedIndex = -1;
 
   @override
   void initState() {
@@ -28,16 +29,7 @@ class _DataVizPageState extends State<DataVizPage> {
 
   Future<void> _loadData() async {
     try {
-      final now = DateTime.now();
-      final startDate = DateFormat(
-        'yyyy-MM-dd',
-      ).format(now.subtract(const Duration(days: 30)));
-      final endDate = DateFormat('yyyy-MM-dd').format(now);
-
-      final data = await _userService.getCategoryAnalysis(
-        startDate: startDate,
-        endDate: endDate,
-      );
+      final data = await _userService.getCategoryAnalysis();
 
       setState(() {
         categoryData = data;
@@ -147,7 +139,9 @@ class _DataVizPageState extends State<DataVizPage> {
                 ],
               ),
             ),
-          _buildCategoryChart(data),
+          _buildPieChart(data),
+          const SizedBox(height: 24),
+          _buildLegends(data),
         ],
       ),
     );
@@ -160,63 +154,53 @@ class _DataVizPageState extends State<DataVizPage> {
     };
   }
 
-  Widget _buildCategoryChart(Map<String, dynamic> data) {
-    final categories = data['categories'] as List<dynamic>;
-    final amounts = data['amounts'] as List<dynamic>;
-
-    double maxY = amounts
-        .map((amount) => double.tryParse(amount.toString()) ?? 0.0)
-        .reduce((max, value) => value > max ? value : max);
-
-    return _buildChartCard(
-      title: '카테고리별 지출',
-      maxY: maxY,
-      buildBarGroups:
-          () => List.generate(
-            categories.length,
-            (index) => _buildBarGroup(
-              x: index,
-              y: double.tryParse(amounts[index].toString()) ?? 0.0,
-            ),
-          ),
-      getTitleText: (value) => categories[value.toInt()].toString(),
-    );
-  }
-
-  Widget _buildChartCard({
-    required String title,
-    required double maxY,
-    required List<BarChartGroupData> Function() buildBarGroups,
-    required String Function(double) getTitleText,
-  }) {
+  Widget _buildPieChart(Map<String, dynamic> data) {
     return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 4,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(
+            const Text(
+              '카테고리별 지출',
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppColors.darkGray,
               ),
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 300,
-              child: BarChart(
-                BarChartData(
-                  alignment: BarChartAlignment.spaceAround,
-                  maxY: maxY * 1.1,
-                  barGroups: buildBarGroups(),
-                  titlesData: _buildTitlesData(getTitleText),
-                  gridData: _buildGridData(maxY),
+            const SizedBox(height: 10),
+            Container(
+              height: 320,
+              padding: const EdgeInsets.only(bottom: 20),
+              child: PieChart(
+                PieChartData(
+                  pieTouchData: PieTouchData(
+                    touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                      setState(() {
+                        if (!event.isInterestedForInteractions ||
+                            pieTouchResponse == null ||
+                            pieTouchResponse.touchedSection == null) {
+                          touchedIndex = -1;
+                          return;
+                        }
+                        touchedIndex =
+                            pieTouchResponse
+                                .touchedSection!
+                                .touchedSectionIndex;
+                      });
+                    },
+                  ),
+                  startDegreeOffset: 180,
                   borderData: FlBorderData(show: false),
+                  sectionsSpace: 1,
+                  centerSpaceRadius: 40,
+                  sections: _buildPieSections(data),
                 ),
+                swapAnimationDuration: const Duration(milliseconds: 300),
               ),
             ),
           ],
@@ -225,70 +209,209 @@ class _DataVizPageState extends State<DataVizPage> {
     );
   }
 
-  BarChartGroupData _buildBarGroup({required int x, required double y}) {
-    return BarChartGroupData(
-      x: x,
-      barRods: [
-        BarChartRodData(
-          toY: y,
-          color: AppColors.primary,
-          width: 20,
-          borderRadius: BorderRadius.circular(4),
+  List<PieChartSectionData> _buildPieSections(Map<String, dynamic> data) {
+    final categories = data['categories'] as List<dynamic>;
+    final amounts = data['amounts'] as List<dynamic>;
+
+    // 색상 리스트 생성
+    final colors = [
+      AppColors.primary, // 기본 앱 컬러
+      const Color(0xfff8b250), // 주황색
+      const Color(0xff845bef), // 보라색
+      const Color(0xff13d38e), // 초록색
+      const Color(0xfffd8c73), // 연한 빨강
+    ];
+
+    // 전체 합계 계산
+    double total = 0;
+    for (var amount in amounts) {
+      total += (double.tryParse(amount.toString()) ?? 0.0);
+    }
+
+    return List.generate(categories.length, (i) {
+      final isTouched = i == touchedIndex;
+      final double fontSize = isTouched ? 18 : 14;
+      final double radius = isTouched ? 105 : 95;
+      final double value = double.tryParse(amounts[i].toString()) ?? 0.0;
+
+      // 비율 계산 (백분율)
+      final percentage = total > 0 ? (value / total * 100) : 0;
+
+      // 카테고리 이름 가져오기
+      final categoryName = categories[i].toString();
+
+      return PieChartSectionData(
+        color: colors[i % colors.length],
+        value: value,
+        title: '${percentage.toStringAsFixed(0)}%',
+        radius: radius,
+        titleStyle: TextStyle(
+          fontSize: fontSize,
+          fontWeight: FontWeight.bold,
+          color: const Color(0xffffffff),
+          shadows: [
+            Shadow(
+              color: Colors.black26,
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
         ),
-      ],
+        badgeWidget: _getCategoryBadge(
+          categoryName,
+          colors[i % colors.length],
+          isTouched,
+        ),
+        badgePositionPercentageOffset: 1.15,
+      );
+    });
+  }
+
+  Widget _getCategoryBadge(String categoryName, Color color, bool isSelected) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            spreadRadius: 1,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: isSelected ? color : Colors.transparent,
+          width: 1.5,
+        ),
+      ),
+      child: Text(
+        categoryName,
+        style: TextStyle(
+          color: isSelected ? color : AppColors.darkGray,
+          fontSize: 11,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
     );
   }
 
-  FlTitlesData _buildTitlesData(String Function(double) getTitleText) {
-    return FlTitlesData(
-      show: true,
-      bottomTitles: AxisTitles(
-        sideTitles: SideTitles(
-          showTitles: true,
-          getTitlesWidget:
-              (value, meta) => SideTitleWidget(
-                axisSide: meta.axisSide,
-                child: Text(
-                  getTitleText(value),
-                  style: const TextStyle(
-                    color: AppColors.darkGray,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-          reservedSize: 30,
-        ),
-      ),
-      leftTitles: AxisTitles(
-        sideTitles: SideTitles(
-          showTitles: true,
-          getTitlesWidget:
-              (value, meta) => SideTitleWidget(
-                axisSide: meta.axisSide,
-                child: Text(
-                  '${(value / 10000).toStringAsFixed(0)}만원',
-                  style: const TextStyle(
-                    color: AppColors.darkGray,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-          reservedSize: 50,
-        ),
-      ),
-      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-    );
-  }
+  Widget _buildLegends(Map<String, dynamic> data) {
+    final categories = data['categories'] as List<dynamic>;
+    final amounts = data['amounts'] as List<dynamic>;
 
-  FlGridData _buildGridData(double maxY) {
-    return FlGridData(
-      show: true,
-      drawHorizontalLine: true,
-      drawVerticalLine: false,
-      horizontalInterval: maxY / 5,
-      getDrawingHorizontalLine:
-          (value) => FlLine(color: AppColors.lightGray, strokeWidth: 1),
+    // 색상 리스트 생성
+    final colors = [
+      AppColors.primary, // 기본 앱 컬러
+      const Color(0xfff8b250), // 주황색
+      const Color(0xff845bef), // 보라색
+      const Color(0xff13d38e), // 초록색
+      const Color(0xfffd8c73), // 연한 빨강
+    ];
+
+    // 카테고리에 맞는 아이콘 매핑
+    final Map<String, IconData> categoryIcons = {
+      '양식': Icons.restaurant,
+      '일식': Icons.ramen_dining,
+      '한식': Icons.rice_bowl,
+      '디저트': Icons.cake,
+      '분식': Icons.lunch_dining,
+      '중식': Icons.restaurant_menu,
+      '패스트푸드': Icons.fastfood,
+      '카페': Icons.coffee,
+      '주류': Icons.local_bar,
+      '편의점': Icons.local_convenience_store,
+      '쇼핑': Icons.shopping_bag,
+      '교통': Icons.directions_bus,
+      '문화': Icons.movie,
+      '건강': Icons.fitness_center,
+      '의료': Icons.medical_services,
+      '여행': Icons.flight,
+      '주거': Icons.home,
+      '교육': Icons.school,
+      '취미': Icons.sports_esports,
+      '금융': Icons.account_balance,
+      '기타': Icons.more_horiz,
+    };
+
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '카테고리 상세',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkGray,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Column(
+              children: List.generate(categories.length, (index) {
+                final isSelected = index == touchedIndex;
+                final categoryName = categories[index].toString();
+                final iconData = categoryIcons[categoryName] ?? Icons.category;
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: colors[index % colors.length].withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Icon(
+                            iconData,
+                            color: colors[index % colors.length],
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          categoryName,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight:
+                                isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                            color: AppColors.darkGray,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${NumberFormat('#,###').format(amounts[index])}원',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          color:
+                              isSelected
+                                  ? colors[index % colors.length]
+                                  : AppColors.darkGray,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -11,18 +11,25 @@ class ReviewService {
   static String get baseUrl => dotenv.env['API_BASE_URL'] ?? '';
   static const String apiPrefix = '/api/restaurant';
 
-  /// ✅ 리뷰 목록 조회
-  static Future<List<Review>> fetchReviews(String restaurantId) async {
-    print("📌 리뷰 데이터 요청: restaurantId = $restaurantId");
+  /// ✅ 리뷰 목록 조회 (accessToken 포함 가능)
+  static Future<List<Review>> fetchReviews(String kakaoPlaceId, {String? accessToken}) async {
+    print("📍 리뷰 데이터 요청: restaurantId = $kakaoPlaceId");
 
     List<Review> allReviews = [];
 
     try {
-      final url = Uri.parse('$baseUrl$apiPrefix/$restaurantId/reviews');
-      final response = await http.get(url);
+      final url = Uri.parse('$baseUrl$apiPrefix/$kakaoPlaceId/reviews');
+      final headers = {
+        'Content-Type': 'application/json',
+        if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+      };
+
+      final response = await http.get(url, headers: headers);
 
       if (response.statusCode == 200) {
         final String decodedBody = utf8.decode(response.bodyBytes);
+        print("🔎 응답 바디:\n$decodedBody");
+
         List<dynamic> apiData = jsonDecode(decodedBody);
 
         List<Review> apiReviews = apiData.map<Review>((json) {
@@ -80,22 +87,33 @@ class ReviewService {
     required String kakaoPlaceId,
     required String content,
     required DateTime visitedAt,
-    File? imageFile,
+    List<File>? imageFiles,
     required String accessToken,
+    int amount = 0,
+    int visitedPersonnel = 1,
+    DateTime? paidAt,
   }) async {
     final url = Uri.parse('$baseUrl$apiPrefix/reviews');
     final request = http.MultipartRequest('POST', url);
 
     request.headers['Authorization'] = 'Bearer $accessToken';
 
+    String toIso8601WithoutMicroseconds(DateTime dt) {
+      return dt.toIso8601String().split('.').first;
+    }
+
     final jsonMap = {
       "memberId": memberId,
       "kakaoPlaceId": kakaoPlaceId,
       "content": content,
-      "visitedAt": visitedAt.toIso8601String(),
+      "visitedAt": toIso8601WithoutMicroseconds(visitedAt),
+      "amount": amount,
+      "visitedPersonnel": visitedPersonnel,
+      "paidAt": toIso8601WithoutMicroseconds(paidAt ?? visitedAt),
     };
     final jsonString = jsonEncode(jsonMap);
     final jsonBytes = utf8.encode(jsonString);
+    print('[💾 리뷰 JSON 데이터] ${jsonString}');
 
     request.files.add(http.MultipartFile.fromBytes(
       'data',
@@ -104,14 +122,16 @@ class ReviewService {
       filename: 'data.json',
     ));
 
-    if (imageFile != null) {
-      final mimeType = lookupMimeType(imageFile.path) ?? 'image/jpeg';
-      final mimeParts = mimeType.split('/');
-      request.files.add(await http.MultipartFile.fromPath(
-        'images',
-        imageFile.path,
-        contentType: MediaType(mimeParts[0], mimeParts[1]),
-      ));
+    if (imageFiles != null && imageFiles.isNotEmpty) {
+      for (var imageFile in imageFiles) {
+        final mimeType = lookupMimeType(imageFile.path) ?? 'image/jpeg';
+        final mimeParts = mimeType.split('/');
+        request.files.add(await http.MultipartFile.fromPath(
+          'images',
+          imageFile.path,
+          contentType: MediaType(mimeParts[0], mimeParts[1]),
+        ));
+      }
     }
 
     final streamedResponse = await request.send();
@@ -128,42 +148,79 @@ class ReviewService {
     }
   }
 
-  /// ✅ 리뷰 수정
+  /// ✅ 리뷰 수정 (이미지 추가/삭제 지원)
   static Future<ReviewResponse> updateReview({
     required int reviewId,
     required String content,
     required DateTime visitedAt,
+    List<String> deleteImageUrls = const [],
+    List<File> newImages = const [],
     required String accessToken,
   }) async {
-    print("📦 수정 요청 reviewId: $reviewId");
-    print("✏️ 수정 내용: $content");
-    print("📅 방문일시: ${visitedAt.toIso8601String()}");
-    print("🔐 토큰: $accessToken");
+    final url = Uri.parse('$baseUrl$apiPrefix/reviews/$reviewId');
+    final request = http.MultipartRequest('PUT', url);
+    request.headers['Authorization'] = 'Bearer $accessToken';
 
-    try {
-      final url = Uri.parse('$baseUrl$apiPrefix/reviews/$reviewId');
-      final response = await http.put(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $accessToken',
-        },
-        body: jsonEncode({
-          "content": content,
-          "visitedAt": visitedAt.toIso8601String(),
-        }),
-      );
+    // ✅ JSON 본문을 문자열로 전송
+    final dataMap = {
+    "content": content,
+    "visitedAt": visitedAt.toIso8601String(),
+    };
+    final jsonString = jsonEncode({
+      "content": content,
+      "visitedAt": visitedAt.toIso8601String(),
+    });
+    request.files.add(http.MultipartFile.fromBytes(
+      'data',
+      utf8.encode(jsonString),
+      filename: 'data.json',
+      contentType: MediaType('application', 'json'),
+    ));
 
-      if (response.statusCode == 200) {
-        final decodedBody = utf8.decode(response.bodyBytes);
-        return ReviewResponse.fromJson(jsonDecode(decodedBody));
-      } else {
-        throw Exception('Failed to update review: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Error updating review: $e');
+    final trimmedDeleteUrls = deleteImageUrls
+        .map((url) => Uri.decodeComponent(url.split('/').last))
+        .toList();
+
+    if (trimmedDeleteUrls.isNotEmpty) {
+      final deleteJson = jsonEncode(trimmedDeleteUrls);
+      request.files.add(http.MultipartFile.fromBytes(
+        'deleteImageUrls',
+        utf8.encode(deleteJson),
+        filename: 'deleteImageUrls.json',
+        contentType: MediaType('application', 'json'),
+      ));
+    }
+
+
+
+    // ✅ 새 이미지 파일 추가
+    for (final image in newImages) {
+    final mimeType = lookupMimeType(image.path) ?? 'image/jpeg';
+    final parts = mimeType.split('/');
+    request.files.add(await http.MultipartFile.fromPath(
+    'images',
+    image.path,
+    contentType: MediaType(parts[0], parts[1]),
+    ));
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    final decodedBody = utf8.decode(response.bodyBytes);
+
+    print("응답코드: ${response.statusCode}");
+    print("응답본문: $decodedBody");
+
+    if (response.statusCode == 200) {
+    return ReviewResponse.fromJson(jsonDecode(decodedBody));
+    } else {
+    throw Exception("리뷰 수정 실패: ${response.statusCode} $decodedBody");
     }
   }
+
+
+
+
 
   /// ✅ 리뷰 삭제
   static Future<bool> deleteReview({

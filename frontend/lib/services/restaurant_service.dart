@@ -8,7 +8,7 @@ class RestaurantService {
   static const String apiPrefix = '/api/restaurant';
 
   /// ✅ 가게 상세 정보 가져오기 (실제 API 연동)
-  static Future<Map<String, dynamic>> fetchRestaurantDetails(String restaurantId) async {
+  static Future<RestaurantResponse> fetchRestaurantDetails(String restaurantId) async {
     print("Fetching restaurant details for restaurantId: $restaurantId");
 
     try {
@@ -26,7 +26,7 @@ class RestaurantService {
         // }
 
         print("JSON 데이터 확인: $jsonData");
-        return jsonData;
+        return RestaurantResponse.fromJson(jsonData);
       } else {
         print("Error: 서버 응답 코드 ${response.statusCode}");
         throw Exception('Failed to get restaurant: ${response.statusCode}');
@@ -44,7 +44,8 @@ class RestaurantService {
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
-        return RestaurantResponse.fromJson(jsonDecode(response.body));
+        final utf8Decoded = utf8.decode(response.bodyBytes);
+        return RestaurantResponse.fromJson(jsonDecode(utf8Decoded));
       } else {
         throw Exception('Failed to get restaurant: ${response.statusCode}');
       }

@@ -5,7 +5,7 @@ import '../models/group/member_model.dart';
 import '../services/api/group_api.dart';
 import 'package:flutter/widgets.dart';
 import '../models/group/group_join_request_model.dart';
-import '../services/deep_link_service.dart';
+import '../services/invitation/deep_link_service.dart';
 
 class GroupProvider with ChangeNotifier {
   final GroupApi _groupApi = GroupApi();
@@ -341,20 +341,27 @@ Future<String?> generateInviteLinkWithDeepLink(int groupId) async {
   }
 
   // 가입 요청 목록 조회 메서드 추가
-  Future<List<GroupJoinRequest>?> fetchJoinRequestList(int groupId) async {
-    _setLoading(true);
-    try {
-      final requests = await _groupApi.getJoinRequestList(groupId);
-      _error = null;
-      return requests;
-    } catch (e) {
-      _error = '가입 요청 목록 조회에 실패했습니다: $e';
-      debugPrint(_error);
-      return null;
-    } finally {
-      _setLoading(false);
+Future<List<GroupJoinRequest>?> fetchJoinRequestList(int groupId) async {
+  _setLoading(true);
+  try {
+    final requests = await _groupApi.getJoinRequestList(groupId);
+    _error = null;
+    
+    // 디버깅 로그 추가
+    debugPrint('가입 요청 목록 조회 성공: ${requests.length}개 요청');
+    for (var req in requests) {
+      debugPrint('요청 ID: ${req.id}, 멤버: ${req.member.nickname}, 상태: ${req.status}');
     }
+    
+    return requests;
+  } catch (e) {
+    _error = '가입 요청 목록 조회에 실패했습니다: $e';
+    debugPrint(_error);
+    return null;
+  } finally {
+    _setLoading(false);
   }
+}
 
   void _setLoading(bool loading) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -378,4 +385,30 @@ Future<String?> generateInviteLinkWithDeepLink(int groupId) async {
     }
     return null;
   }
+
+  // 이미 그룹에 속한 사용자만 접근할 수 있는 API를 사용하면 권한 문제가 발생할 수 있으므로
+// 초대 링크에서 얻은 정보를 기반으로 기본적인 그룹 정보 객체를 생성
+Future<GroupDetail?> createBasicGroupInfo(int groupId) async {
+  try {
+    // 기본적인 GroupDetail 객체 생성
+    final basicInfo = GroupDetail(
+      groupId: groupId,
+      name: '초대된 그룹',
+      description: '그룹에 참여하시겠습니까?',
+      isPublic: true,
+      members: [
+        Member(
+          memberId: 0,
+          email: 'unknown@example.com',
+          nickname: '그룹 관리자',
+          role: 'OWNER'
+        )
+      ],
+    );
+    return basicInfo;
+  } catch (e) {
+    debugPrint('기본 그룹 정보 생성 오류: $e');
+    return null;
+  }
+}
 }

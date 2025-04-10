@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
 import '../../providers/app_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../config/routes.dart';
 import '../../config/theme.dart'; // 테마 import 추가
+import '../../models/user_model.dart';
+import '../../services/user_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,17 +16,78 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _clearPreviousSession();
+  }
+
+  Future<void> _clearPreviousSession() async {
+    try {
+      // 카카오 SDK 세션 정리
+      await UserApi.instance.logout();
+      debugPrint('이전 카카오 세션 정리 완료');
+    } catch (e) {
+      debugPrint('세션 정리 중 오류: $e');
+    }
+  }
+
   Future<void> _handleKakaoLogin(BuildContext context) async {
     try {
-      await context.read<AppProvider>().kakaoLogin();
+      debugPrint('카카오 로그인 시작');
+      final appProvider = context.read<AppProvider>();
+
+      // 카카오 로그인 시도
+      await appProvider.kakaoLogin();
+      debugPrint('카카오 로그인 성공');
+
+      // UserProvider에서 프로필 정보 설정
+      final userProvider = context.read<UserProvider>();
+      final userService = UserService(userProvider: userProvider);
+
+      try {
+        final userProfile = await userService.getUserProfile();
+        debugPrint('서버에서 사용자 프로필 가져오기 성공: ${userProfile.toJson()}');
+      } catch (e) {
+        debugPrint('서버에서 사용자 프로필 가져오기 실패: $e');
+        // 임시 프로필 생성
+        if (appProvider.user != null) {
+          final kakaoUser = appProvider.user!;
+          final tempProfile = UserProfile(
+            memberId: 0,
+            email: kakaoUser.kakaoAccount?.email ?? '',
+            nickname: kakaoUser.kakaoAccount?.profile?.nickname ?? '',
+            profileUrl: kakaoUser.kakaoAccount?.profile?.profileImageUrl,
+            createdAt: DateTime.now(),
+            trustScore: 0.0,
+            reviewCount: 0,
+            groupCount: 0,
+            recentPayments: [],
+            planResponses: [],
+            localAuth: false,
+            localRank: '',
+            localRegion: '',
+            badgeName: '',
+            tags: [],
+          );
+          userProvider.setUserProfile(tempProfile);
+          debugPrint('임시 프로필 설정 완료: ${userProvider.userProfile?.toJson()}');
+        }
+      }
+
       if (mounted) {
-        AppRoutes.navigateTo(context, '/home');
+        Navigator.pushReplacementNamed(context, '/home');
       }
     } catch (error) {
+      debugPrint('로그인 오류: $error');
+
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('로그인에 실패했습니다')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('로그인에 실패했습니다: ${error.toString()}'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     }
   }
@@ -32,26 +97,57 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset('assets/images/logo.png', width: 250, height: 250),
-              const SizedBox(height: 50),
-              const Text(
-                '네입클로버',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                '입안에 행운을 담다',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
+        child: Column(
+          children: [
+            const SizedBox(height: 100),
 
-              const SizedBox(height: 50),
-              Container(
-                width: 300,
-                height: 45,
+            // 상단 텍스트
+            const Text(
+              '환영합니다!',
+              style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 60),
+
+            // 이미지 (왼쪽으로 치우치게)
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 50.0),
+                  child: Image.asset(
+                    'assets/images/start.png',
+                    width: 600,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // 하단 텍스트
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24.0),
+              child: Text(
+                '입안에 행운을 담을\n 준비되셨나요?',
+                style: TextStyle(
+                  fontSize: 20,
+                  color: AppColors.darkGray,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+
+            const Spacer(),
+
+            // 하단 버튼
+            Padding(
+              padding: const EdgeInsets.only(bottom: 100.0),
+              child: Container(
+                width: 340,
+                height: 50,
                 decoration: BoxDecoration(
                   color: const Color(0xFFFEE500),
                   borderRadius: BorderRadius.circular(12),
@@ -82,72 +178,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-
-              // 여기부터 임시 홈 화면 이동 버튼
-              const SizedBox(height: 20),
-              Container(
-                width: 300,
-                height: 45,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      // 임시로 홈 화면으로 이동
-                      AppRoutes.navigateTo(context, '/home');
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: const Center(
-                      child: Text(
-                        '임시: 홈 화면으로 이동',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // 여기까지 임시 홈 화면 이동 버튼
-
-              const SizedBox(height: 20),
-
-              // 여기부터 카카오페이 테스트 결제 버튼
-              Container(
-                width: 300,
-                height: 45,
-                decoration: BoxDecoration(
-                  color: Colors.deepPurple, // 원하는 색으로 변경 가능
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      AppRoutes.navigateTo(context, '/kakaopay_official'); //kakaopay_test
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: const Center(
-                      child: Text(
-                        '💳 카카오페이 테스트 결제',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // 여기까지 카카오페이 테스트 결제 버튼
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -2,9 +2,10 @@
 import 'package:intl/intl.dart';
 
 enum SettlementStatus {
-  PENDING,
-  COMPLETED,
-  CANCELLED
+  PENDING, // 진행 중
+  IN_PROGRESS, // 정산 요청됨
+  COMPLETED, // 완료됨
+  CANCELED, // 취소됨
 }
 
 class Settlement {
@@ -42,19 +43,19 @@ class Settlement {
   // 멤버별 지불해야 할 금액
   Map<int, int> getMemberPayments() {
     Map<int, int> memberCosts = {};
-    
+
     for (var expense in expenses) {
       final participantCount = expense.expenseParticipants.length;
       if (participantCount == 0) continue;
-      
+
       final costPerPerson = (expense.totalPayment / participantCount).ceil();
-      
+
       for (var participant in expense.expenseParticipants) {
         final memberId = participant.memberId;
         memberCosts[memberId] = (memberCosts[memberId] ?? 0) + costPerPerson;
       }
     }
-    
+
     return memberCosts;
   }
 
@@ -64,6 +65,23 @@ class Settlement {
     return '${dateFormat.format(startDate)} ~ ${dateFormat.format(endDate)}';
   }
 
+  // toJson 메서드 추가
+  Map<String, dynamic> toJson() {
+    return {
+      'settlementId': settlementId,
+      'planName': planName,
+      'planId': planId,
+      'treasurerName': treasurerName,
+      'treasurerId': treasurerId,
+      'settlementStatus': settlementStatus.toString().split('.').last,
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+      'expenseResponses': expenses.map((expense) => expense.toJson()).toList(),
+    };
+  }
+
   factory Settlement.fromJson(Map<String, dynamic> json) {
     return Settlement(
       settlementId: json['settlementId'],
@@ -71,15 +89,18 @@ class Settlement {
       planId: json['planId'],
       treasurerName: json['treasurerName'],
       treasurerId: json['treasurerId'],
-      settlementStatus: SettlementStatus.values
-          .firstWhere((e) => e.toString().split('.').last == json['settlementStatus']),
+      settlementStatus: SettlementStatus.values.firstWhere(
+        (e) => e.toString().split('.').last == json['settlementStatus'],
+      ),
       startDate: DateTime.parse(json['startDate']),
       endDate: DateTime.parse(json['endDate']),
       createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
-      expenses: (json['expenseResponses'] as List)
-          .map((expense) => Expense.fromJson(expense))
-          .toList(),
+      updatedAt:
+          json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      expenses:
+          (json['expenseResponses'] as List)
+              .map((expense) => Expense.fromJson(expense))
+              .toList(),
     );
   }
 }
@@ -87,6 +108,7 @@ class Settlement {
 class Expense {
   final int expenseId;
   final int paymentApprovalId;
+  final String itemName;
   final int totalPayment;
   final DateTime approvedAt;
   final List<ExpenseParticipant> expenseParticipants;
@@ -94,20 +116,38 @@ class Expense {
   Expense({
     required this.expenseId,
     required this.paymentApprovalId,
+    required this.itemName,
     required this.totalPayment,
     required this.approvedAt,
     required this.expenseParticipants,
   });
 
+  // toJson 메서드 추가
+  Map<String, dynamic> toJson() {
+    return {
+      'expenseId': expenseId,
+      'paymentApprovalId': paymentApprovalId,
+      'itemName' : itemName,
+      'totalPayment': totalPayment,
+      'approvedAt': approvedAt.toIso8601String(),
+      'expenseParticipants':
+          expenseParticipants
+              .map((participant) => participant.toJson())
+              .toList(),
+    };
+  }
+
   factory Expense.fromJson(Map<String, dynamic> json) {
     return Expense(
       expenseId: json['expenseId'],
       paymentApprovalId: json['paymentApprovalId'],
+      itemName: json['itemName'],
       totalPayment: json['totalPayment'],
       approvedAt: DateTime.parse(json['approvedAt']),
-      expenseParticipants: (json['expenseParticipants'] as List)
-          .map((participant) => ExpenseParticipant.fromJson(participant))
-          .toList(),
+      expenseParticipants:
+          (json['expenseParticipants'] as List)
+              .map((participant) => ExpenseParticipant.fromJson(participant))
+              .toList(),
     );
   }
 
@@ -137,6 +177,17 @@ class ExpenseParticipant {
     required this.nickname,
     this.profileUrl,
   });
+
+  // toJson 메서드 추가
+  Map<String, dynamic> toJson() {
+    return {
+      'expenseParticipantId': expenseParticipantId,
+      'memberId': memberId,
+      'email': email,
+      'nickname': nickname,
+      'profileUrl': profileUrl,
+    };
+  }
 
   factory ExpenseParticipant.fromJson(Map<String, dynamic> json) {
     return ExpenseParticipant(

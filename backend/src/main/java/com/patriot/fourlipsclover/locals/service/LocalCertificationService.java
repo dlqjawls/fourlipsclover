@@ -44,6 +44,11 @@ public class LocalCertificationService {
 
 	@Transactional
 	public LocalCertificationResponse create(Long memberId, LocalCertificationCreate request) {
+		Optional<LocalCertification> existLocalCertification = localCertificationRepository.findByMember_MemberId(
+				memberId);
+		if (existLocalCertification.isPresent()) {
+			return localCertificationMapper.toDto(existLocalCertification.get());
+		}
 		String url =
 				"https://dapi.kakao.com/v2/local/geo/coord2address.json?x=" + request.getLongitude()
 						+ "&y=" + request.getLatitude() + "&input_coord=WGS84";
