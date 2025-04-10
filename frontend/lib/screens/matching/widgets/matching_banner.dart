@@ -14,7 +14,7 @@ class MatchingBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (confirmedCount == 0) {
+    if (confirmedCount == 0 && pendingCount == 0) {
       return const SizedBox.shrink();
     }
 
@@ -70,14 +70,17 @@ class MatchingBanner extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (confirmedCount > 0)
-                    Text(
-                      '진행중인 매칭 ${confirmedCount}건',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  Text(
+                    confirmedCount > 0
+                        ? '진행중인 매칭 ${confirmedCount}건'
+                        : pendingCount > 0
+                        ? '대기중인 매칭 ${pendingCount}건'
+                        : '매칭을 시작해보세요',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
+                  ),
                   const Text(
                     '확인하러 가기',
                     style: TextStyle(fontSize: 14, color: Colors.grey),
