@@ -106,7 +106,7 @@ class _ReviewDetailState extends State<ReviewDetail> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        Navigator.pop(context, _isUpdated); // ✅ 수정됐으면 true 넘김
+        Navigator.pop(context, _isUpdated);
         return false;
       },
       child: Scaffold(
@@ -227,7 +227,7 @@ class _ReviewDetailState extends State<ReviewDetail> {
   }
 
   ImageProvider _buildProfileImageProvider(String? imageUrl) {
-    final baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://your-api.com';
+    final baseUrl = dotenv.env['API_BASE_URL'];
 
     if (imageUrl == null || imageUrl.isEmpty) {
       return const AssetImage('assets/default_profile.png');

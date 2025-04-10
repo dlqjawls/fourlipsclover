@@ -22,6 +22,7 @@ class _ReviewPhotoGalleryState extends State<ReviewPhotoGallery> {
   final Map<int, TransformationController> _transformationControllers = {};
   bool _canChangePage = true;
   bool _showZoomHint = true;
+  bool _isExpanded = false;
 
   @override
   void initState() {
@@ -270,14 +271,36 @@ class _ReviewPhotoGalleryState extends State<ReviewPhotoGallery> {
                           ),
                           if (widget.review.content.isNotEmpty) ...[
                             const SizedBox(height: 8),
-                            Text(
-                              widget.review.content,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _isExpanded = !_isExpanded;
+                                });
+                              },
+                              child: AnimatedCrossFade(
+                                firstChild: Text(
+                                  widget.review.content,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                secondChild: SingleChildScrollView(
+                                  child: Text(
+                                    widget.review.content,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                crossFadeState: _isExpanded
+                                    ? CrossFadeState.showSecond
+                                    : CrossFadeState.showFirst,
+                                duration: const Duration(milliseconds: 200),
                               ),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ],
