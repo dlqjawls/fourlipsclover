@@ -363,45 +363,63 @@ public class RestaurantService {
 	}
 
 	private void saveOrUpdateFromKafka(RestaurantKafkaDto dto) {
-		Restaurant restaurant = restaurantRepository.findById(dto.getRestaurantId())
-				.orElse(new Restaurant());
-
-		// DTO에서 엔티티로 데이터 복사
-		restaurant.setRestaurantId(dto.getRestaurantId());
-		restaurant.setPlaceName(dto.getPlaceName());
-		restaurant.setAddressName(dto.getAddressName());
-		restaurant.setRoadAddressName(dto.getRoadAddressName());
-		restaurant.setCategoryName(dto.getCategoryName());
-		restaurant.setPhone(dto.getPhone());
-		restaurant.setPlaceUrl(dto.getPlaceUrl());
-		restaurant.setX(dto.getX());
-		restaurant.setY(dto.getY());
-
-		// 모든 필수 필드 검증
-		if (dto.getRestaurantId() == null) {
-			log.error("Cannot save restaurant with null ID");
+		// null 체크 및 로깅
+		if (dto == null || dto.getRestaurantId() == null) {
+			log.error("Cannot process restaurant Kafka message: DTO or RestaurantId is null");
 			return;
 		}
 
-		if (dto.getFoodCategoryId() != null) {
-			FoodCategory foodCategory = foodCategoryRepository.findById(dto.getFoodCategoryId())
-					.orElse(null);
-			restaurant.setFoodCategory(foodCategory);
-		}
-		// 연관 엔티티 설정 (City와 FoodCategory 레퍼런스를 찾아서 설정)
-		if (dto.getCityId() != null) {
-			City city = cityRepository.findById(dto.getCityId()).orElse(null);
-			restaurant.setCity(city);
-		}
+		try {
+			// 기존 레스토랑 조회 또는 새 객체 생성
+			Restaurant restaurant = restaurantRepository.findById(dto.getRestaurantId())
+					.orElseGet(Restaurant::new);
 
-		if (dto.getFoodCategoryId() != null) {
-			FoodCategory foodCategory = foodCategoryRepository.findById(dto.getFoodCategoryId())
-					.orElse(null);
-			restaurant.setFoodCategory(foodCategory);
-		}
+			// 안전한 값 설정 (null 체크 포함)
+			restaurant.setRestaurantId(dto.getRestaurantId());
 
-		restaurantRepository.save(restaurant);
-		log.info("Restaurant saved/updated from Kafka: {}", restaurant.getRestaurantId());
+			// 각 필드에 대해 null 체크 후 설정
+			Optional.ofNullable(dto.getPlaceName())
+					.ifPresent(restaurant::setPlaceName);
+			Optional.ofNullable(dto.getAddressName())
+					.ifPresent(restaurant::setAddressName);
+			Optional.ofNullable(dto.getRoadAddressName())
+					.ifPresent(restaurant::setRoadAddressName);
+			Optional.ofNullable(dto.getCategoryName())
+					.ifPresent(restaurant::setCategoryName);
+			Optional.ofNullable(dto.getPhone())
+					.ifPresent(restaurant::setPhone);
+			Optional.ofNullable(dto.getPlaceUrl())
+					.ifPresent(restaurant::setPlaceUrl);
+
+			// X, Y 좌표 설정
+			if (dto.getX() != null && dto.getY() != null) {
+				restaurant.setX(dto.getX());
+				restaurant.setY(dto.getY());
+			}
+
+			// 연관 엔티티 설정 (City)
+			if (dto.getCityId() != null) {
+				cityRepository.findById(dto.getCityId())
+						.ifPresent(restaurant::setCity);
+			}
+
+			// 연관 엔티티 설정 (FoodCategory)
+			if (dto.getFoodCategoryId() != null) {
+				foodCategoryRepository.findById(dto.getFoodCategoryId())
+						.ifPresent(restaurant::setFoodCategory);
+			}
+
+			// 엔티티 저장
+			Restaurant savedRestaurant = restaurantRepository.save(restaurant);
+
+			// 저장 로깅
+			log.info("Restaurant successfully saved/updated from Kafka: {} - {}",
+					savedRestaurant.getRestaurantId(), savedRestaurant.getPlaceName());
+		} catch (Exception e) {
+			// 예외 상세 로깅
+			log.error("Error processing Kafka message for restaurant {}: {}",
+					dto.getRestaurantId(), e.getMessage(), e);
+		}
 	}
 
 	private void deleteFromKafka(RestaurantKafkaDto dto) {
