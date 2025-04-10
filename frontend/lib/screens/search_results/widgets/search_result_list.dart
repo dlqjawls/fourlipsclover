@@ -83,11 +83,6 @@ class _SearchResultListState extends State<SearchResultList> {
       return List.from(results);
     }
 
-    // 디버깅: 각 결과의 score 출력
-    for (var result in results) {
-      print('Restaurant: ${result.placeName}, Score: ${result.score}');
-    }
-
     // score 기준으로 정렬
     final sortedResults = List<RestaurantResponse>.from(results)..sort((a, b) {
       final scoreA = a.score ?? 0.0;
@@ -328,12 +323,27 @@ class _SearchResultListState extends State<SearchResultList> {
                               ),
                               SizedBox(height: 4),
                               // 점수 표시 추가
-                              Text(
-                                "${(restaurant.score ?? 0.0).toStringAsFixed(0)}점",
-                                style: TextStyle(
-                                  fontFamily: 'Anemone',
-                                  fontSize: 12,
-                                  color: AppColors.primary,
+                              RichText(
+                                text: TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text:
+                                          "${(restaurant.score ?? 0.0).toStringAsFixed(0)}",
+                                      style: TextStyle(
+                                        fontFamily: 'Anemone',
+                                        fontSize: 14,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: " 점",
+                                      style: TextStyle(
+                                        fontFamily: 'Anemone_air',
+                                        fontSize: 14,
+                                        color: AppColors.darkGray,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
