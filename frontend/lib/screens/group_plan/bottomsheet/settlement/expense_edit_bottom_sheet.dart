@@ -257,10 +257,6 @@ class _ExpenseEditBottomSheetState extends State<ExpenseEditBottomSheet> {
       final planId = widget.planId;
       final expenseId = widget.expense.expenseId;
 
-      debugPrint('업데이트할 참여자 ID 목록: $memberIds');
-      debugPrint('expenseId: $expenseId, planId: $planId');
-      debugPrint('몰빵 모드: ${_molbbangParticipant != null}');
-
       // 참여자 업데이트 API 호출
       final result = await _settlementProvider.updateParticipants(
         expenseId,
@@ -376,7 +372,7 @@ class _ExpenseEditBottomSheetState extends State<ExpenseEditBottomSheet> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '결제 내역 #${widget.expense.paymentApprovalId}',
+                              '${widget.expense.itemName}',
                               style: const TextStyle(
                                 fontFamily: 'Anemone_air',
                                 fontSize: 16,

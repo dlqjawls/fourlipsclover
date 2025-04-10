@@ -145,7 +145,7 @@ class ReceiptWidget extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '결제 #${expense.paymentApprovalId}',
+                                    expense.itemName,
                                     style: TextStyle(
                                       fontFamily: 'Anemone_air',
                                       fontSize: 14,

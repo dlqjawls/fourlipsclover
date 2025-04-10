@@ -332,9 +332,10 @@ class _PlanSettlementViewState extends State<PlanSettlementView> {
                 );
               },
               icon: const Icon(Icons.account_balance_wallet),
-              label: const Text('정산 현황 보기'),
+              label: const Text('정산 현황 보기', style: TextStyle(fontSize: 18)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.background,
                 minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
