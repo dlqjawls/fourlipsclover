@@ -74,10 +74,21 @@ class _MatchingSubmitButtonsState extends State<MatchingSubmitButtons> {
       return;
     }
 
+    // 그룹 확인
+    if (widget.selectedGroup == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('그룹을 선택해주세요.')));
+      return;
+    }
+
     debugPrint('가이드 정보: ${widget.guide}');
     final guideMemberId = widget.guide['memberId'];
     debugPrint('사용할 가이드 ID: $guideMemberId');
     debugPrint('전송할 요청사항: ${widget.requestController.text}');
+    debugPrint(
+      '선택된 그룹: ${widget.selectedGroup!.name} (ID: ${widget.selectedGroup!.groupId})',
+    );
 
     setState(() => _isLoading = true);
 
@@ -86,6 +97,7 @@ class _MatchingSubmitButtonsState extends State<MatchingSubmitButtons> {
         tagIds: widget.tagIds,
         regionId: widget.regionId,
         guideMemberId: guideMemberId, // memberId 전달
+        groupId: widget.selectedGroup!.groupId, // 그룹 ID 전달
         transportation: widget.selectedTransport ?? '',
         foodPreference: widget.selectedFoodCategory ?? '',
         tastePreference: widget.selectedTaste ?? '',

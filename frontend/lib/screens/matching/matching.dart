@@ -4,12 +4,14 @@ import 'package:frontend/config/theme.dart';
 import 'package:frontend/screens/matching/matchingcreate/matching_hashtag.dart';
 import 'package:frontend/screens/matching/matching_detail.dart';
 import 'package:frontend/screens/matching/matchinglocal/matching_local_list.dart';
-import 'package:frontend/screens/matching/matchingchat/matching_chat.dart';
 import 'package:frontend/providers/matching_provider.dart';
 import 'package:frontend/screens/matching/widgets/matching_banner.dart';
 import 'package:frontend/screens/matching/widgets/matching_empty_state.dart';
 import 'package:frontend/models/matching/matching_main_model.dart';
 import 'package:frontend/widgets/loading_overlay.dart';
+import 'package:frontend/screens/chat/chat_room_screen.dart';
+import 'package:frontend/services/chat_service.dart';
+import 'package:frontend/models/chat_model.dart';
 
 class MatchingScreen extends StatefulWidget {
   const MatchingScreen({Key? key}) : super(key: key);
@@ -27,17 +29,27 @@ class _MatchingScreenState extends State<MatchingScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MatchingProvider>().checkUserRole();
+      _initializeData();
     });
+  }
+
+  Future<void> _initializeData() async {
+    try {
+      await context.read<MatchingProvider>().checkUserRole();
+      await context.read<MatchingProvider>().fetchMatches();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('데이터 로드 중 오류가 발생했습니다: $e')));
+      }
+    }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final isFromNavBar = ModalRoute.of(context)?.settings.name == null;
-    if (isFromNavBar) {
-      context.read<MatchingProvider>().fetchMatches();
-    }
+    // 이전 로직 제거
   }
 
   void _navigateToCreateMatch() {
@@ -245,13 +257,42 @@ class _MatchingScreenState extends State<MatchingScreen>
     );
   }
 
-  void _navigateToChat(dynamic match) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder:
-            (context) => MatchingChatScreen(groupId: match.matchId.toString()),
-      ),
-    );
+  void _navigateToChat(dynamic match) async {
+    try {
+      final chatService = ChatService();
+      final chatRooms = await chatService.getChatRooms();
+
+      // 매칭 ID와 일치하는 채팅방 찾기
+      final matchingChatRoom = chatRooms.firstWhere(
+        (room) => room.matchId == match.matchId,
+        orElse:
+            () => ChatRoom(
+              chatRoomId: match.matchId,
+              groupId: match.matchId,
+              name: match.guideNickname ?? '채팅방',
+              participantNum: 2,
+              matchId: match.matchId,
+            ),
+      );
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => ChatRoomScreen(
+                  chatRoomId: matchingChatRoom.chatRoomId,
+                  groupId: matchingChatRoom.groupId,
+                ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('채팅방 이동 중 오류가 발생했습니다: $e')));
+      }
+    }
   }
 }

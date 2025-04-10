@@ -4,11 +4,15 @@ class ChatRoom {
   final int chatRoomId;
   final String name;
   final int participantNum;
+  final int groupId;
+  final int matchId;
 
   ChatRoom({
     required this.chatRoomId,
     required this.name,
     required this.participantNum,
+    required this.groupId,
+    required this.matchId,
   });
 
   factory ChatRoom.fromJson(Map<String, dynamic> json) {
@@ -16,6 +20,8 @@ class ChatRoom {
       chatRoomId: json['chatRoomId'],
       name: json['name'],
       participantNum: json['participantNum'],
+      groupId: json['groupId'],
+      matchId: json['matchId'],
     );
   }
 }
