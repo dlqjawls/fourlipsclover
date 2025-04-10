@@ -13,7 +13,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Intege
 
     List<ChatMessage> findByChatRoom_ChatRoomId(Integer chatRoomId);
 
-    List<ChatMessage> findByChatRoom_ChatRoomIdOrderByCreatedAtDesc(Integer chatRoomId, PageRequest of);
+    List<ChatMessage> findByChatRoom_ChatRoomIdOrderByCreatedAtAsc(Integer chatRoomId, PageRequest of);
 
     void deleteAllByChatRoom_ChatRoomId(Integer chatRoomId);
 }

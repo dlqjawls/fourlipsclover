@@ -1,7 +1,6 @@
 package com.patriot.fourlipsclover.restaurant.service;
 
 import static co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType.BestFields;
-import static co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType.CrossFields;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.SortOrder;
@@ -32,6 +31,7 @@ public class RestaurantElasticsearchService {
 	private final ElasticsearchClient elasticsearchClient;
 	private final RestaurantSearchMapper restaurantSearchMapper;
 	private final TagRepository tagRepository;
+
 
 	public List<RestaurantResponse> searchRestaurantsByLocation(double lat, double lon,
 			int distanceInMeters) {
@@ -141,7 +141,8 @@ public class RestaurantElasticsearchService {
 																	.fieldValueFactor(fvf -> fvf
 																			.field("tags.frequency")
 																			.factor(1.2)
-																			.modifier(FieldValueFactorModifier.Ln)
+																			.modifier(
+																					FieldValueFactorModifier.Ln)
 																			.missing(1.0)
 																	)
 															)

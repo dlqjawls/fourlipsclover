@@ -1,5 +1,7 @@
 package com.patriot.fourlipsclover.restaurant.controller;
 
+import com.patriot.fourlipsclover.locals.service.LocalsElasticsearchService;
+import com.patriot.fourlipsclover.restaurant.document.RestaurantDocument;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewLikeCreate;
 import com.patriot.fourlipsclover.restaurant.dto.request.ReviewUpdate;
@@ -38,6 +40,15 @@ public class RestaurantController {
 
 	private final RestaurantService restaurantService;
 	private final RestaurantElasticsearchService restaurantElasticsearchService;
+	private final LocalsElasticsearchService localsElasticsearchService;
+
+	@Operation(summary = "그룹 맞춤 식당 추천", description = "그룹 ID를 기반으로 그룹 멤버들의 선호도에 맞는 식당을 추천합니다")
+	@GetMapping("/{groupId}/recommend")
+	public ResponseEntity<List<RestaurantDocument>> recommendRestaurantsForGroup(
+			@Parameter(description = "그룹 ID") @PathVariable Integer groupId) {
+		return ResponseEntity.ok(
+				localsElasticsearchService.recommendSimilarRestaurants(groupId));
+	}
 
 	@GetMapping("/nearby")
 	@Operation(
@@ -59,7 +70,8 @@ public class RestaurantController {
 			description = "태그 ID 목록과 검색어를 조합하여 식당을 검색합니다."
 	)
 	public ResponseEntity<List<RestaurantResponse>> searchByTagsAndQuery(
-			@RequestParam(required = false) String query, @RequestParam(required = false) List<Long> tagIds	) {
+			@RequestParam(required = false) String query,
+			@RequestParam(required = false) List<Long> tagIds) {
 		if ((query == null || query.isBlank()) && (tagIds == null || tagIds.isEmpty())) {
 			throw new IllegalArgumentException("검색어 또는 태그 중 최소 하나는 제공해야 합니다.");
 		}
