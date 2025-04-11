@@ -98,7 +98,7 @@ class MapProvider extends ChangeNotifier {
   bool _isRouteFetching = false;
   String? _routeError;
   List<String> _routeLineIds = [];
-  
+
   // 출발지/목적지 위치 속성
   MapLabel? _originLabel;
   MapLabel? _destinationLabel;
@@ -114,14 +114,14 @@ class MapProvider extends ChangeNotifier {
   String? get lastError => _lastError;
   bool get showLabels => _showLabels;
   bool get showCurrentLocation => _showCurrentLocation;
-  
+
   // 길찾기 관련 getter
   KakaoRouteResponse? get routeResponse => _routeResponse;
   bool get isRouteFetching => _isRouteFetching;
   String? get routeError => _routeError;
   bool get hasRoute => _routeResponse != null;
   List<String> get routeLineIds => List.unmodifiable(_routeLineIds);
-  
+
   // 출발지/목적지 getter
   MapLabel? get originLabel => _originLabel;
   MapLabel? get destinationLabel => _destinationLabel;
@@ -171,6 +171,7 @@ class MapProvider extends ChangeNotifier {
     bool isVisible = true,
     bool select = false,
     String? id,
+    bool isRestaurantLabel = false, 
   }) {
     // 좌표 유효성 검사 - 경고만 출력하고 진행
     if (!MapUtils.isValidKoreaCoordinate(latitude, longitude)) {
@@ -226,9 +227,10 @@ class MapProvider extends ChangeNotifier {
     _selectedLabelId = id;
 
     // 라벨 상태 업데이트
-    final updatedLabels = _labels.map((label) {
-      return label.copyWith(isSelected: label.id == id);
-    }).toList();
+    final updatedLabels =
+        _labels.map((label) {
+          return label.copyWith(isSelected: label.id == id);
+        }).toList();
 
     _labels = updatedLabels;
     notifyListeners();
@@ -388,10 +390,15 @@ class MapProvider extends ChangeNotifier {
       // 경유지 좌표 리스트 생성
       List<Map<String, double>>? waypoints;
       if (_waypointLabels.isNotEmpty) {
-        waypoints = _waypointLabels.map((label) => {
-            'longitude': label.longitude,
-            'latitude': label.latitude,
-          }).toList();
+        waypoints =
+            _waypointLabels
+                .map(
+                  (label) => {
+                    'longitude': label.longitude,
+                    'latitude': label.latitude,
+                  },
+                )
+                .toList();
       }
 
       // 기존 경로 제거
@@ -446,7 +453,10 @@ class MapProvider extends ChangeNotifier {
         }
 
         if (allCoordinates.isNotEmpty) {
-          final routeId = MapUtils.generateLabelId("route", "${DateTime.now().millisecondsSinceEpoch}_$sectionIndex");
+          final routeId = MapUtils.generateLabelId(
+            "route",
+            "${DateTime.now().millisecondsSinceEpoch}_$sectionIndex",
+          );
 
           // 섹션 별로 다른 색상 사용
           final colors = [
@@ -479,7 +489,7 @@ class MapProvider extends ChangeNotifier {
       if (bound != null) {
         final centerLat = (bound.minY + bound.maxY) / 2;
         final centerLng = (bound.minX + bound.maxX) / 2;
-        
+
         // 줌 레벨 계산
         final latDiff = bound.maxY - bound.minY;
         final lngDiff = bound.maxX - bound.minX;
@@ -517,20 +527,20 @@ class MapProvider extends ChangeNotifier {
   // 모든 길찾기 관련 상태 초기화
   void resetRouteState() {
     clearRoutes();
-    
+
     // 출발지, 목적지, 경유지 라벨 제거
     if (_originLabel != null) {
       removeLabel(_originLabel!.id);
       _originLabel = null;
     }
-    
+
     if (_destinationLabel != null) {
       removeLabel(_destinationLabel!.id);
       _destinationLabel = null;
     }
-    
+
     clearWaypoints();
-    
+
     _routeResponse = null;
     _routeError = null;
     _isRouteFetching = false;

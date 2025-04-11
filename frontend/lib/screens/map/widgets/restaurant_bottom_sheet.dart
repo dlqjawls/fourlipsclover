@@ -202,6 +202,8 @@ class RestaurantBottomSheet extends StatelessWidget {
                     onPressed: () {
                       // 도착지로 설정하고 길찾기 시작
                       onRouteButtonPressed(restaurant.kakaoPlaceId);
+                      // 바텀시트 닫기
+                      Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
