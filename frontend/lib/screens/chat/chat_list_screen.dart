@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'chat_room_screen.dart';
 import 'package:frontend/widgets/toast_bar.dart';
+import 'package:frontend/screens/matching/matchingcreate/matching_hashtag.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({Key? key}) : super(key: key);
@@ -156,10 +157,18 @@ class _ChatListScreenState extends State<ChatListScreen>
     return FloatingActionButton(
       heroTag: 'chatFab',
       onPressed: () {
-        // TODO: 새로운 채팅방 생성 기능 추가
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const MatchingCreateHashtagScreen(),
+          ),
+        );
         ToastBar.clover('새 채팅방은 매칭을 통해 생성됩니다');
       },
       backgroundColor: AppColors.primary,
+      foregroundColor: Colors.white,
+      hoverColor: AppColors.primary.withOpacity(0.8),
+      highlightElevation: 8,
       child: const Icon(Icons.chat, color: Colors.white),
       elevation: 4,
     );
@@ -691,10 +700,15 @@ class _ChatListScreenState extends State<ChatListScreen>
           const SizedBox(height: 32),
           ElevatedButton.icon(
             onPressed: () {
-              // TODO: 매칭 화면으로 이동하는 로직 추가
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MatchingCreateHashtagScreen(),
+                ),
+              );
               ToastBar.clover('매칭 화면으로 이동합니다');
             },
-            icon: const Icon(Icons.people_alt),
+            icon: const Icon(Icons.people_alt, color: Colors.white, size: 24),
             label: const Text('매칭하러 가기'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
