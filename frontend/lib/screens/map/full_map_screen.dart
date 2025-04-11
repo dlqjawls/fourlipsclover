@@ -218,16 +218,16 @@ class _FullMapScreenState extends State<FullMapScreen> {
   Widget build(BuildContext context) {
     final mapProvider = Provider.of<MapProvider>(context);
 
-    // 경로 검색 체크
-    if (_showRoutePanel &&
-        mapProvider.originLabel != null &&
-        mapProvider.destinationLabel != null) {
-      Future.microtask(() {
-        _routeService.checkAndSearchRoute(
-          setLoading: (value) => setState(() => _isLoading = value),
-        );
-      });
-    }
+    // // 경로 검색 체크
+    // if (_showRoutePanel &&
+    //     mapProvider.originLabel != null &&
+    //     mapProvider.destinationLabel != null) {
+    //   Future.microtask(() {
+    //     _routeService.checkAndSearchRoute(
+    //       setLoading: (value) => setState(() => _isLoading = value),
+    //     );
+    //   });
+    // }
 
     return Scaffold(
       // 전체 상태바 설정
